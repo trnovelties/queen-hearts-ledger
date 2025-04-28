@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("login");
@@ -22,25 +23,26 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // This would connect to Supabase auth in a real implementation
-      console.log("Login attempt with:", { email, password });
-      
-      // Simulated authentication success
-      // In a real app, we would verify credentials with Supabase
-      localStorage.setItem("token", "dummy-token");
-      localStorage.setItem("user", JSON.stringify({ email, role: "admin" }));
-      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Login successful!",
         description: "Welcome back to Queen of Hearts Manager.",
       });
       
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description: error?.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
     } finally {
@@ -63,24 +65,41 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // This would connect to Supabase auth in a real implementation
-      console.log("Signup attempt with:", { email, password });
-      
-      // Simulated signup success
-      localStorage.setItem("token", "dummy-token");
-      localStorage.setItem("user", JSON.stringify({ email, role: "organizer" }));
-      
-      toast({
-        title: "Account created!",
-        description: "Welcome to Queen of Hearts Manager.",
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            email: email
+          }
+        }
       });
-      
-      navigate("/dashboard");
-    } catch (error) {
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        toast({
+          title: "Account created!",
+          description: "Welcome to Queen of Hearts Manager.",
+        });
+        
+        // Auto-login after signup
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (!loginError) {
+          navigate("/dashboard");
+        }
+      }
+    } catch (error: any) {
       console.error("Signup error:", error);
       toast({
         title: "Signup failed",
-        description: "There was an issue creating your account.",
+        description: error?.message || "There was an issue creating your account.",
         variant: "destructive",
       });
     } finally {
