@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -352,7 +351,7 @@ export default function IncomeExpense() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(2) : value} />
                 <Legend />
                 <Bar dataKey="Sales" fill="#1F4E4A" />
                 <Bar dataKey="Payouts" fill="#A1E96C" />
