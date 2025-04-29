@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +50,7 @@ export function Dashboard() {
   const [deleteType, setDeleteType] = useState<"game" | "week" | "entry" | "expense">('game');
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const { toast } = useToast();
+  const [currentGameName, setCurrentGameName] = useState<string>("");
 
   useEffect(() => {
     fetchGames();
@@ -724,9 +726,67 @@ export function Dashboard() {
     }
   };
 
-  const openExpenseModal = (gameId: string) => {
+  const openExpenseModal = (gameId: string, gameName: string) => {
     setCurrentGameId(gameId);
+    setCurrentGameName(gameName);
     setExpenseModalOpen(true);
+  };
+
+  const toggleGame = (gameId: string) => {
+    setExpandedGame(expandedGame === gameId ? null : gameId);
+    setExpandedWeek(null);
+  };
+
+  const toggleWeek = (weekId: string) => {
+    setExpandedWeek(expandedWeek === weekId ? null : weekId);
+  };
+
+  const openGameForm = () => {
+    // Set default values for new game
+    setGameForm({
+      name: `Game ${games.length > 0 ? games[games.length - 1].game_number + 1 : 1}`,
+      gameNumber: games.length > 0 ? games[games.length - 1].game_number + 1 : 1,
+      startDate: new Date().toISOString().split('T')[0],
+      ticketPrice: 2,
+      lodgePercentage: 40,
+      jackpotPercentage: 60,
+      carryoverJackpot: 0,
+    });
+    setGameFormOpen(true);
+  };
+
+  const openWeekForm = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    
+    // Find the last week number for this game
+    const lastWeekNumber = game.weeks.length > 0 
+      ? Math.max(...game.weeks.map((w: any) => w.week_number))
+      : 0;
+    
+    setWeekForm({
+      weekNumber: lastWeekNumber + 1,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString().split('T')[0],
+    });
+    setCurrentGameId(gameId);
+    setWeekFormOpen(true);
+  };
+
+  const openRowForm = (gameId: string, weekId: string) => {
+    setRowForm({
+      date: new Date().toISOString().split('T')[0],
+      ticketsSold: 0,
+    });
+    setCurrentGameId(gameId);
+    setCurrentWeekId(weekId);
+    setRowFormOpen(true);
+  };
+
+  const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
+    setDeleteItemId(id);
+    setDeleteType(type);
+    setDeleteDialogOpen(true);
   };
 
   const formatCurrency = (amount: number) => {
@@ -798,6 +858,16 @@ export function Dashboard() {
                   <Button 
                     onClick={(e) => {
                       e.stopPropagation();
+                      openExpenseModal(game.id, game.name);
+                    }} 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    Manage Expenses
+                  </Button>
+                  <Button 
+                    onClick={(e) => {
+                      e.stopPropagation();
                       openDeleteConfirm(game.id, 'game');
                     }} 
                     variant="ghost" 
@@ -818,96 +888,6 @@ export function Dashboard() {
               
               {expandedGame === game.id && (
                 <CardContent className="p-0 border-t">
-                  <div className="p-4 bg-muted/30 flex flex-wrap gap-2">
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Start Date:</span> {format(new Date(game.start_date), 'MMM d, yyyy')}
-                    </div>
-                    {game.end_date && (
-                      <div className="text-sm mr-4">
-                        <span className="font-semibold">End Date:</span> {format(new Date(game.end_date), 'MMM d, yyyy')}
-                      </div>
-                    )}
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Ticket Price:</span> {formatCurrency(game.ticket_price)}
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Lodge %:</span> {game.lodge_percentage}%
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Jackpot %:</span> {game.jackpot_percentage}%
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Carryover:</span> {formatCurrency(game.carryover_jackpot)}
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Total Sales:</span> {formatCurrency(game.total_sales)}
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Total Payouts:</span> {formatCurrency(game.total_payouts)}
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Total Expenses:</span> {formatCurrency(game.total_expenses)}
-                    </div>
-                    <div className="text-sm mr-4">
-                      <span className="font-semibold">Total Donations:</span> {formatCurrency(game.total_donations)}
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-semibold">Lodge Net Profit:</span> {formatCurrency(game.lodge_net_profit)}
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 border-t">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Expenses & Donations</h3>
-                      <Button 
-                        onClick={() => openExpenseModal(game.id)}
-                        size="sm" 
-                        variant="outline"
-                        className="text-sm"
-                      >
-                        Manage Expenses
-                      </Button>
-                    </div>
-                    
-                    {game.expenses && game.expenses.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Type</TableHead>
-                              <TableHead>Memo</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {game.expenses.map((expense) => (
-                              <TableRow key={expense.id}>
-                                <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                                <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
-                                <TableCell>{expense.memo}</TableCell>
-                                <TableCell className="text-right">
-                                  <Button 
-                                    onClick={() => openDeleteConfirm(expense.id, 'expense')} 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>
-                    )}
-                  </div>
-                  
                   <div className="p-4 border-t">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Weeks</h3>
@@ -1059,6 +1039,58 @@ export function Dashboard() {
                       </div>
                     )}
                   </div>
+
+                  <div className="p-4 border-t">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Expenses & Donations</h3>
+                      <Button 
+                        onClick={() => openExpenseModal(game.id, game.name)}
+                        size="sm" 
+                        variant="outline"
+                        className="text-sm"
+                      >
+                        Add Expense/Donation
+                      </Button>
+                    </div>
+                    
+                    {game.expenses && game.expenses.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Memo</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {game.expenses.map((expense) => (
+                              <TableRow key={expense.id}>
+                                <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
+                                <TableCell>{expense.memo}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    onClick={() => openDeleteConfirm(expense.id, 'expense')} 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>
+                    )}
+                  </div>
                 </CardContent>
               )}
             </Card>
@@ -1193,7 +1225,7 @@ export function Dashboard() {
             >
               Cancel
             </Button>
-            <Button onClick={createGame}>Create Game</Button>
+            <Button onClick={() => createGame()}>Create Game</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1261,7 +1293,7 @@ export function Dashboard() {
             >
               Cancel
             </Button>
-            <Button onClick={createWeek}>Add Week</Button>
+            <Button onClick={() => createWeek()}>Add Week</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1313,7 +1345,7 @@ export function Dashboard() {
             >
               Cancel
             </Button>
-            <Button onClick={addRow}>Add Entry</Button>
+            <Button onClick={() => addRow()}>Add Entry</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1389,7 +1421,7 @@ export function Dashboard() {
             >
               Cancel
             </Button>
-            <Button onClick={submitWinner}>Submit Winner</Button>
+            <Button onClick={() => submitWinner()}>Submit Winner</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1428,7 +1460,8 @@ export function Dashboard() {
       <ExpenseModal 
         open={expenseModalOpen} 
         onOpenChange={setExpenseModalOpen} 
-        gameId={currentGameId} 
+        gameId={currentGameId || ""} 
+        gameName={currentGameName}
         onExpenseAdded={fetchGames}
       />
     </div>

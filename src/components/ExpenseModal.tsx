@@ -79,7 +79,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName, onExpenseAd
       });
       
       setExpenseData({
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toISOString().split('T')[0],
         amount: "",
         memo: "",
         type: "expense",
