@@ -677,7 +677,7 @@ export function Dashboard() {
                     </div>
                     
                     {game.weeks.length === 0 ? <p className="text-muted-foreground text-sm">No weeks added yet.</p> : <div className="space-y-2">
-                        {game.weeks.map(week => <Card key={week.id} className="overflow-hidden">
+                        {game.weeks.map(week => <Card key={week.id} className="overflow-hidden" style={{ backgroundColor: '#C3FFFA' }}>
                             <CardHeader className={`py-3 flex flex-row items-center justify-between cursor-pointer ${expandedWeek === week.id ? 'bg-accent/30' : ''}`} onClick={() => toggleWeek(week.id)}>
                               <div className="font-semibold">Week {week.week_number}</div>
                               <div className="flex items-center space-x-4">
