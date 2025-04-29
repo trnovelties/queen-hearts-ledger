@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Plus, DollarSign } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Game {
   id: string;
@@ -50,6 +50,7 @@ interface DailyEntry {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [newGame, setNewGame] = useState({
     gameName: "",
@@ -76,9 +77,7 @@ export default function Dashboard() {
   const [addDailyEntryOpen, setAddDailyEntryOpen] = useState(false);
   const [addWinnerOpen, setAddWinnerOpen] = useState(false);
 
-  // Function to create a new game
   const handleCreateGame = () => {
-    // Validate percentages
     if (newGame.lodgePercentage + newGame.jackpotPercentage !== 100) {
       toast({
         title: "Validation Error",
@@ -109,7 +108,6 @@ export default function Dashboard() {
     });
   };
 
-  // Function to add a new week to a game
   const handleAddWeek = (gameId: string) => {
     const gameIndex = games.findIndex(game => game.id === gameId);
     if (gameIndex === -1) return;
@@ -121,7 +119,7 @@ export default function Dashboard() {
       id: weekId,
       weekNumber,
       startDate: new Date().toISOString().split("T")[0],
-      endDate: "", // Will be set when week is complete
+      endDate: "",
       weeklySales: 0,
       weeklyTicketsSold: 0,
       winnerName: null,
@@ -141,7 +139,6 @@ export default function Dashboard() {
     });
   };
 
-  // Function to add a daily entry to a week
   const handleAddDailyEntry = () => {
     const gameIndex = games.findIndex(game => 
       game.weeks.some(week => week.id === newDailyEntry.weekId)
@@ -158,18 +155,15 @@ export default function Dashboard() {
     const game = games[gameIndex];
     const week = game.weeks[weekIndex];
     
-    // Calculate financial values
     const amountCollected = newDailyEntry.ticketsSold * game.ticketPrice;
     const lodgeTotal = amountCollected * (game.lodgePercentage / 100);
     const jackpotTotal = amountCollected * (game.jackpotPercentage / 100);
     
-    // Calculate cumulative collected for this game
     const previousCumulative = week.dailyEntries.length > 0 
       ? week.dailyEntries[week.dailyEntries.length - 1].cumulativeCollected
       : 0;
     const cumulativeCollected = previousCumulative + amountCollected;
     
-    // Calculate ending jackpot (for now, no payouts yet)
     const previousJackpot = week.dailyEntries.length > 0 
       ? week.dailyEntries[week.dailyEntries.length - 1].endingJackpotTotal
       : 0;
@@ -184,26 +178,22 @@ export default function Dashboard() {
       cumulativeCollected,
       lodgeTotal,
       jackpotTotal,
-      weeklyPayoutAmount: 0, // Will be updated when winner is selected
+      weeklyPayoutAmount: 0,
       endingJackpotTotal,
     };
 
-    // Add the daily entry
     const updatedGames = [...games];
     updatedGames[gameIndex].weeks[weekIndex].dailyEntries.push(dailyEntry);
     
-    // Update week totals
     updatedGames[gameIndex].weeks[weekIndex].weeklySales += amountCollected;
     updatedGames[gameIndex].weeks[weekIndex].weeklyTicketsSold += newDailyEntry.ticketsSold;
     
-    // Update game totals
     updatedGames[gameIndex].totalSales += amountCollected;
     updatedGames[gameIndex].lodgeNetProfit += lodgeTotal;
 
     setGames(updatedGames);
     setAddDailyEntryOpen(false);
     
-    // Check if this is the 7th daily entry, if so prompt for winner
     if (updatedGames[gameIndex].weeks[weekIndex].dailyEntries.length === 7) {
       setWinnerDetails({ ...winnerDetails, weekId: newDailyEntry.weekId });
       setAddWinnerOpen(true);
@@ -215,7 +205,6 @@ export default function Dashboard() {
     });
   };
 
-  // Function to add winner details
   const handleAddWinner = () => {
     const gameIndex = games.findIndex(game => 
       game.weeks.some(week => week.id === winnerDetails.weekId)
@@ -229,42 +218,34 @@ export default function Dashboard() {
     
     if (weekIndex === -1) return;
 
-    // Get the current jackpot from the last daily entry
     const dailyEntries = games[gameIndex].weeks[weekIndex].dailyEntries;
     const lastEntry = dailyEntries[dailyEntries.length - 1];
     
-    // Determine payout based on card selected (simplified for now)
     let payoutAmount = 0;
     if (winnerDetails.cardSelected === "Queen of Hearts") {
       payoutAmount = lastEntry.endingJackpotTotal;
     } else {
-      // For demo, other cards get a fixed payout
       const cardPayouts: Record<string, number> = {
         "Joker": 100,
         "Ace of Hearts": 50,
         "King of Hearts": 25,
-        // More card payouts would be defined here
       };
-      payoutAmount = cardPayouts[winnerDetails.cardSelected] || 10; // Default payout
+      payoutAmount = cardPayouts[winnerDetails.cardSelected] || 10;
     }
     
-    // Apply penalty if winner is not present
     if (!winnerDetails.isPresent) {
-      // 10% penalty, payoutAmount is reduced
       payoutAmount = payoutAmount * 0.9;
     }
 
     const updatedGames = [...games];
     const week = updatedGames[gameIndex].weeks[weekIndex];
     
-    // Update winner details
     week.winnerName = winnerDetails.winnerName;
     week.slotChosen = winnerDetails.slotChosen;
     week.cardSelected = winnerDetails.cardSelected;
     week.weeklyPayout = payoutAmount;
     week.endDate = new Date().toISOString().split("T")[0];
     
-    // Update the last daily entry with payout amount
     const lastDailyEntry = week.dailyEntries[week.dailyEntries.length - 1];
     lastDailyEntry.weeklyPayoutAmount = payoutAmount;
     lastDailyEntry.endingJackpotTotal -= payoutAmount;
@@ -272,7 +253,6 @@ export default function Dashboard() {
     setGames(updatedGames);
     setAddWinnerOpen(false);
 
-    // If Queen of Hearts was found, end the game
     if (winnerDetails.cardSelected === "Queen of Hearts") {
       toast({
         title: "Game Over!",
@@ -286,12 +266,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleViewFinanceReport = (gameId: string) => {
+    navigate(`/income-expense?game=${gameId}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-primary">Game Management</h2>
         
-        {/* Create Game Dialog */}
         <Dialog open={createGameOpen} onOpenChange={setCreateGameOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -373,7 +356,6 @@ export default function Dashboard() {
         </Dialog>
       </div>
       
-      {/* Games List */}
       {games.length === 0 ? (
         <Card className="text-center py-10">
           <CardContent>
@@ -401,110 +383,111 @@ export default function Dashboard() {
                 </CardHeader>
                 <AccordionContent>
                   <CardContent className="pt-4 pb-0">
-                    {/* Add Week Button */}
-                    <Button 
-                      variant="outline" 
-                      className="mb-4"
-                      onClick={() => handleAddWeek(game.id)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Week
-                    </Button>
-                    
-                    {/* Weeks List */}
-                    <div className="space-y-4">
-                      {game.weeks.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No weeks added yet.</p>
-                      ) : (
-                        <Accordion type="single" collapsible className="space-y-2">
-                          {game.weeks.map((week) => (
-                            <Card key={week.id} className="overflow-hidden">
-                              <AccordionItem value={week.id} className="border-none">
-                                <CardHeader className="p-0 border-b">
-                                  <AccordionTrigger className="px-4 py-3 hover:bg-accent/50 hover:no-underline">
-                                    <div className="flex flex-col text-left">
-                                      <CardTitle className="text-base">Week {week.weekNumber}</CardTitle>
-                                      <CardDescription className="text-sm">
-                                        Sales: ${week.weeklySales.toFixed(2)} • 
-                                        Tickets: {week.weeklyTicketsSold} •
-                                        {week.winnerName ? 
-                                          ` Winner: ${week.winnerName} (${week.cardSelected})` : 
-                                          ' No winner yet'}
-                                      </CardDescription>
-                                    </div>
-                                  </AccordionTrigger>
-                                </CardHeader>
-                                <AccordionContent>
-                                  <CardContent className="pt-4 pb-0">
-                                    {/* Daily Entries Table */}
-                                    <div className="overflow-x-auto">
-                                      <table className="w-full text-sm">
-                                        <thead>
-                                          <tr className="border-b">
-                                            <th className="px-2 py-2 text-left">Date</th>
-                                            <th className="px-2 py-2 text-right">Tickets</th>
-                                            <th className="px-2 py-2 text-right">Price</th>
-                                            <th className="px-2 py-2 text-right">Collected</th>
-                                            <th className="px-2 py-2 text-right">Cumulative</th>
-                                            <th className="px-2 py-2 text-right">Lodge</th>
-                                            <th className="px-2 py-2 text-right">Jackpot</th>
-                                            <th className="px-2 py-2 text-right">Payout</th>
-                                            <th className="px-2 py-2 text-right">Ending Jackpot</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {week.dailyEntries.length === 0 ? (
-                                            <tr>
-                                              <td colSpan={9} className="text-center py-4">
-                                                No entries yet
-                                              </td>
-                                            </tr>
-                                          ) : (
-                                            week.dailyEntries.map((entry) => (
-                                              <tr key={entry.id} className="border-b hover:bg-muted/50">
-                                                <td className="px-2 py-2">{entry.date}</td>
-                                                <td className="px-2 py-2 text-right">{entry.ticketsSold}</td>
-                                                <td className="px-2 py-2 text-right">${entry.ticketPrice.toFixed(2)}</td>
-                                                <td className="px-2 py-2 text-right">${entry.amountCollected.toFixed(2)}</td>
-                                                <td className="px-2 py-2 text-right">${entry.cumulativeCollected.toFixed(2)}</td>
-                                                <td className="px-2 py-2 text-right">${entry.lodgeTotal.toFixed(2)}</td>
-                                                <td className="px-2 py-2 text-right">${entry.jackpotTotal.toFixed(2)}</td>
-                                                <td className="px-2 py-2 text-right">
-                                                  {entry.weeklyPayoutAmount > 0 ? 
-                                                    `$${entry.weeklyPayoutAmount.toFixed(2)}` : '-'}
-                                                </td>
-                                                <td className="px-2 py-2 text-right">${entry.endingJackpotTotal.toFixed(2)}</td>
-                                              </tr>
-                                            ))
-                                          )}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                    
-                                    {/* Add Daily Entry Button */}
-                                    {week.dailyEntries.length < 7 && !week.winnerName && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-4"
-                                        onClick={() => {
-                                          setNewDailyEntry({
-                                            ...newDailyEntry,
-                                            weekId: week.id,
-                                          });
-                                          setAddDailyEntryOpen(true);
-                                        }}
-                                      >
-                                        <Plus className="h-3 w-3 mr-1" /> Add Daily Entry
-                                      </Button>
-                                    )}
-                                  </CardContent>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Card>
-                          ))}
-                        </Accordion>
-                      )}
+                    <div className="flex gap-2 mb-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleAddWeek(game.id)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> Add Week
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleViewFinanceReport(game.id)}
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" /> Finance Report
+                      </Button>
                     </div>
+                    
+                    {game.weeks.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No weeks added yet.</p>
+                    ) : (
+                      <Accordion type="single" collapsible className="space-y-2">
+                        {game.weeks.map((week) => (
+                          <Card key={week.id} className="overflow-hidden">
+                            <AccordionItem value={week.id} className="border-none">
+                              <CardHeader className="p-0 border-b">
+                                <AccordionTrigger className="px-4 py-3 hover:bg-accent/50 hover:no-underline">
+                                  <div className="flex flex-col text-left">
+                                    <CardTitle className="text-base">Week {week.weekNumber}</CardTitle>
+                                    <CardDescription className="text-sm">
+                                      Sales: ${week.weeklySales.toFixed(2)} • 
+                                      Tickets: {week.weeklyTicketsSold} •
+                                      {week.winnerName ? 
+                                        ` Winner: ${week.winnerName} (${week.cardSelected})` : 
+                                        ' No winner yet'}
+                                    </CardDescription>
+                                  </div>
+                                </AccordionTrigger>
+                              </CardHeader>
+                              <AccordionContent>
+                                <CardContent className="pt-4 pb-0">
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                      <thead>
+                                        <tr className="border-b">
+                                          <th className="px-2 py-2 text-left">Date</th>
+                                          <th className="px-2 py-2 text-right">Tickets</th>
+                                          <th className="px-2 py-2 text-right">Price</th>
+                                          <th className="px-2 py-2 text-right">Collected</th>
+                                          <th className="px-2 py-2 text-right">Cumulative</th>
+                                          <th className="px-2 py-2 text-right">Lodge</th>
+                                          <th className="px-2 py-2 text-right">Jackpot</th>
+                                          <th className="px-2 py-2 text-right">Payout</th>
+                                          <th className="px-2 py-2 text-right">Ending Jackpot</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {week.dailyEntries.length === 0 ? (
+                                          <tr>
+                                            <td colSpan={9} className="text-center py-4">
+                                              No entries yet
+                                            </td>
+                                          </tr>
+                                        ) : (
+                                          week.dailyEntries.map((entry) => (
+                                            <tr key={entry.id} className="border-b hover:bg-muted/50">
+                                              <td className="px-2 py-2">{entry.date}</td>
+                                              <td className="px-2 py-2 text-right">{entry.ticketsSold}</td>
+                                              <td className="px-2 py-2 text-right">${entry.ticketPrice.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.amountCollected.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.cumulativeCollected.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.lodgeTotal.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.jackpotTotal.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">
+                                                {entry.weeklyPayoutAmount > 0 ? 
+                                                  `$${entry.weeklyPayoutAmount.toFixed(2)}` : '-'}
+                                              </td>
+                                              <td className="px-2 py-2 text-right">${entry.endingJackpotTotal.toFixed(2)}</td>
+                                            </tr>
+                                          ))
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  
+                                  {week.dailyEntries.length < 7 && !week.winnerName && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-4"
+                                      onClick={() => {
+                                        setNewDailyEntry({
+                                          ...newDailyEntry,
+                                          weekId: week.id,
+                                        });
+                                        setAddDailyEntryOpen(true);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" /> Add Daily Entry
+                                    </Button>
+                                  )}
+                                </CardContent>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Card>
+                        ))}
+                      </Accordion>
+                    )}
                   </CardContent>
                   <CardFooter className="pb-4 pt-0 flex justify-between">
                     <div className="text-sm">
@@ -521,7 +504,6 @@ export default function Dashboard() {
         </Accordion>
       )}
       
-      {/* Add Daily Entry Dialog */}
       <Dialog open={addDailyEntryOpen} onOpenChange={setAddDailyEntryOpen}>
         <DialogContent>
           <DialogHeader>
@@ -568,7 +550,6 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
       
-      {/* Add Winner Dialog */}
       <Dialog open={addWinnerOpen} onOpenChange={setAddWinnerOpen}>
         <DialogContent>
           <DialogHeader>
@@ -626,7 +607,6 @@ export default function Dashboard() {
                 <option value="Ace of Hearts">Ace of Hearts</option>
                 <option value="10 of Hearts">10 of Hearts</option>
                 <option value="Joker">Joker</option>
-                {/* More card options would be added here */}
               </select>
             </div>
             
