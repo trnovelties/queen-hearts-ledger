@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ExpenseModal } from "@/components/ExpenseModal";
 
 type Game = Tables<"games"> & {
   weeks: (Tables<"weeks"> & {
@@ -61,6 +61,8 @@ export default function Dashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<'game' | 'week' | 'entry'>('game');
   const [deleteItemId, setDeleteItemId] = useState<string>('');
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [activeGameForExpense, setActiveGameForExpense] = useState<{id: string, name: string} | null>(null);
 
   useEffect(() => {
     async function fetchConfigurations() {
@@ -777,6 +779,16 @@ export default function Dashboard() {
                       <Button 
                         variant="outline" 
                         onClick={() => {
+                          setActiveGameForExpense({id: game.id, name: game.name});
+                          setExpenseModalOpen(true);
+                        }}
+                        className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" /> Manage Expenses
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
                           setDeleteType('game');
                           setDeleteItemId(game.id);
                           setDeleteDialogOpen(true);
@@ -1087,6 +1099,14 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <ExpenseModal 
+        open={expenseModalOpen} 
+        onOpenChange={setExpenseModalOpen} 
+        gameId={activeGameForExpense?.id || ''} 
+        gameName={activeGameForExpense?.name || ''} 
+        onExpenseAdded={fetchGames}
+      />
     </div>
   );
 }
