@@ -1,581 +1,779 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
+import { Tables } from "@/integrations/supabase/types";
+import { Download, PlusCircle } from "lucide-react";
 
-// Sample data for demonstration
-const sampleGames = [
-  {
-    id: "game11",
-    name: "Game 11",
-    startDate: "2023-08-21",
-    endDate: "2024-04-21",
-    totalSales: 26552,
-    totalPayouts: 14461.6,
-    totalExpenses: 1485.08,
-    totalDonations: 5994,
-    lodgeNetProfit: 4611.36,
-    carryoverJackpot: 1606.84,
-    weeks: [
-      {
-        id: "week35",
-        weekNumber: 35,
-        startDate: "2024-04-15",
-        endDate: "2024-04-21",
-        ticketsSold: 1748,
-        weeklySales: 3496,
-        lodgePortion: 1398.4,
-        jackpotPortion: 2097.6,
-        weeklyPayout: 14461.6,
-        endingJackpot: 1606.84,
-        winnerName: "Buddy Dickson",
-        slotChosen: 31,
-        cardSelected: "Queen of Hearts",
-        winnerPresent: true
-      },
-      // More weeks would be here
-    ],
-    expenses: [
-      {
-        id: "exp1",
-        date: "2024-04-15",
-        amount: 50,
-        memo: "Ticket rolls",
-        type: "Expense"
-      },
-      {
-        id: "exp2",
-        date: "2024-04-15",
-        amount: 500,
-        memo: "Toys for Tots",
-        type: "Donation"
-      }
-      // More expenses would be here
-    ]
-  },
-  {
-    id: "game12",
-    name: "Game 12",
-    startDate: "2024-04-22",
-    endDate: null,
-    totalSales: 3200,
-    totalPayouts: 1100,
-    totalExpenses: 220.5,
-    totalDonations: 800,
-    lodgeNetProfit: 1079.5,
-    carryoverJackpot: 0,
-    weeks: [
-      {
-        id: "week1",
-        weekNumber: 1,
-        startDate: "2024-04-22",
-        endDate: "2024-04-28",
-        ticketsSold: 980,
-        weeklySales: 1960,
-        lodgePortion: 784,
-        jackpotPortion: 1176,
-        weeklyPayout: 50,
-        endingJackpot: 1126,
-        winnerName: "Jane Smith",
-        slotChosen: 12,
-        cardSelected: "10 of Clubs",
-        winnerPresent: true
-      }
-      // More weeks would be here
-    ],
-    expenses: [
-      {
-        id: "exp3",
-        date: "2024-04-25",
-        amount: 45.5,
-        memo: "Supplies",
-        type: "Expense"
-      }
-      // More expenses would be here
-    ]
-  }
-];
+// Define types for data structure
+type Game = Tables<"games">;
+type Week = Tables<"weeks">;
+type TicketSale = Tables<"ticket_sales">;
+type Expense = Tables<"expenses">;
 
-// Total cumulative data across all games
-const cumulativeData = {
-  totalSales: 204276,
-  totalPayouts: 122442,
-  totalExpenses: 17924.23,
-  totalDonations: 59467.6,
-  lodgeNetProfit: 4442.17,
-  lodgePortion: 81710.4, // 40% of total sales
-  expensesPercentage: 21.9,
-  donationsPercentage: 72.67,
-  lodgeNetPercentage: 5.43
+// Define aggregate data types
+type GameSummary = Game & {
+  weeks: Week[];
+  ticket_sales: TicketSale[];
+  expenses: Expense[];
+};
+
+type ChartData = {
+  name: string;
+  Sales: number;
+  Payouts: number;
+  Expenses: number;
+  Donations: number;
 };
 
 export default function IncomeExpense() {
-  const [selectedGame, setSelectedGame] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [reportType, setReportType] = useState("game");
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const [games, setGames] = useState<GameSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedGame, setSelectedGame] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [reportType, setReportType] = useState<"weekly" | "game" | "cumulative">("game");
+  const [chartData, setChartData] = useState<ChartData[]>([]);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [expenseDetails, setExpenseDetails] = useState({
+  const [newExpense, setNewExpense] = useState({
     gameId: "",
     date: new Date().toISOString().split("T")[0],
     amount: 0,
     memo: "",
-    isDonation: false
+    isDonation: false,
   });
   
-  // Chart data based on selected filters
-  const chartData = selectedGame === "all" 
-    ? sampleGames.map(game => ({
-        name: game.name,
-        Sales: game.totalSales,
-        Payouts: game.totalPayouts,
-        Expenses: game.totalExpenses,
-        Donations: game.totalDonations
-      }))
-    : sampleGames
-        .filter(game => game.id === selectedGame)
-        .flatMap(game => game.weeks.map(week => ({
-          name: `Week ${week.weekNumber}`,
-          Sales: week.weeklySales,
-          Payouts: week.weeklyPayout,
-          // Approximating expenses and donations per week for this demo
-          Expenses: game.totalExpenses / game.weeks.length,
-          Donations: game.totalDonations / game.weeks.length
-        })));
-
-  // Filter games by selected game and date range
-  const filteredGames = selectedGame === "all" 
-    ? sampleGames 
-    : sampleGames.filter(game => game.id === selectedGame);
-
+  // Set selected game from URL parameter
+  useEffect(() => {
+    const gameId = searchParams.get("game");
+    if (gameId) {
+      setSelectedGame(gameId);
+    }
+  }, [searchParams]);
+  
+  // Fetch all games and related data
+  useEffect(() => {
+    async function fetchFinancialData() {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // Fetch all games
+        const { data: gamesData, error: gamesError } = await supabase
+          .from('games')
+          .select('*')
+          .order('game_number', { ascending: false });
+        
+        if (gamesError) throw gamesError;
+        
+        if (gamesData) {
+          const gamesWithDetails: GameSummary[] = [];
+          
+          // Fetch additional data for each game
+          for (const game of gamesData) {
+            // Fetch weeks
+            const { data: weeksData, error: weeksError } = await supabase
+              .from('weeks')
+              .select('*')
+              .eq('game_id', game.id)
+              .order('week_number', { ascending: true });
+            
+            if (weeksError) throw weeksError;
+            
+            // Fetch ticket sales
+            const { data: salesData, error: salesError } = await supabase
+              .from('ticket_sales')
+              .select('*')
+              .eq('game_id', game.id)
+              .order('date', { ascending: true });
+            
+            if (salesError) throw salesError;
+            
+            // Fetch expenses
+            const { data: expensesData, error: expensesError } = await supabase
+              .from('expenses')
+              .select('*')
+              .eq('game_id', game.id)
+              .order('date', { ascending: true });
+            
+            if (expensesError) throw expensesError;
+            
+            gamesWithDetails.push({
+              ...game,
+              weeks: weeksData || [],
+              ticket_sales: salesData || [],
+              expenses: expensesData || [],
+            });
+          }
+          
+          setGames(gamesWithDetails);
+          
+          // Generate chart data
+          const chartDataArray = gamesWithDetails.map(game => ({
+            name: game.name,
+            Sales: game.total_sales,
+            Payouts: game.total_payouts,
+            Expenses: game.total_expenses,
+            Donations: game.total_donations,
+          }));
+          
+          setChartData(chartDataArray);
+        }
+      } catch (error: any) {
+        console.error('Error fetching financial data:', error);
+        toast({
+          title: "Error Loading Data",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchFinancialData();
+  }, [user, toast]);
+  
   // Handle adding a new expense/donation
-  const handleAddExpense = () => {
-    console.log("Adding expense:", expenseDetails);
-    setAddExpenseOpen(false);
+  const handleAddExpense = async () => {
+    try {
+      if (!newExpense.gameId || !newExpense.date || newExpense.amount <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Get selected game
+      const gameIndex = games.findIndex(game => game.id === newExpense.gameId);
+      if (gameIndex === -1) return;
+      const game = games[gameIndex];
+      
+      // Insert new expense into Supabase
+      const { data: newExpenseData, error } = await supabase
+        .from('expenses')
+        .insert({
+          game_id: newExpense.gameId,
+          date: newExpense.date,
+          amount: newExpense.amount,
+          memo: newExpense.memo,
+          is_donation: newExpense.isDonation,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Update game totals
+      const updatedDonations = newExpense.isDonation ? 
+        game.total_donations + newExpense.amount : 
+        game.total_donations;
+      
+      const updatedExpenses = !newExpense.isDonation ? 
+        game.total_expenses + newExpense.amount : 
+        game.total_expenses;
+      
+      const updatedLodgeNetProfit = game.lodge_net_profit - newExpense.amount;
+      
+      const { error: gameUpdateError } = await supabase
+        .from('games')
+        .update({
+          total_donations: updatedDonations,
+          total_expenses: updatedExpenses,
+          lodge_net_profit: updatedLodgeNetProfit,
+        })
+        .eq('id', newExpense.gameId);
+      
+      if (gameUpdateError) throw gameUpdateError;
+      
+      // Update local state
+      const updatedGames = [...games];
+      if (newExpense.isDonation) {
+        updatedGames[gameIndex].total_donations = updatedDonations;
+      } else {
+        updatedGames[gameIndex].total_expenses = updatedExpenses;
+      }
+      
+      updatedGames[gameIndex].lodge_net_profit = updatedLodgeNetProfit;
+      updatedGames[gameIndex].expenses = [...updatedGames[gameIndex].expenses, newExpenseData];
+      
+      setGames(updatedGames);
+      
+      // Update chart data
+      const updatedChartData = chartData.map(item => {
+        if (item.name === game.name) {
+          return {
+            ...item,
+            Expenses: !newExpense.isDonation ? item.Expenses + newExpense.amount : item.Expenses,
+            Donations: newExpense.isDonation ? item.Donations + newExpense.amount : item.Donations,
+          };
+        }
+        return item;
+      });
+      
+      setChartData(updatedChartData);
+      
+      setAddExpenseOpen(false);
+      toast({
+        title: `${newExpense.isDonation ? "Donation" : "Expense"} Added`,
+        description: `Added $${newExpense.amount.toFixed(2)} ${newExpense.isDonation ? "donation" : "expense"} to ${game.name}.`,
+      });
+      
+      // Reset form
+      setNewExpense({
+        gameId: "",
+        date: new Date().toISOString().split("T")[0],
+        amount: 0,
+        memo: "",
+        isDonation: false,
+      });
+    } catch (error: any) {
+      console.error('Error adding expense:', error);
+      toast({
+        title: "Error Adding Record",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Calculate summary data for the selected filter
+  const calculateSummaryData = () => {
+    let filteredGames = games;
+    
+    // Filter by selected game
+    if (selectedGame !== "all") {
+      filteredGames = games.filter(game => game.id === selectedGame);
+    }
+    
+    // Filter by date range if set
+    if (startDate && endDate) {
+      filteredGames = filteredGames.map(game => {
+        const filteredSales = game.ticket_sales.filter(sale => 
+          sale.date >= startDate && sale.date <= endDate
+        );
+        
+        const filteredExpenses = game.expenses.filter(expense => 
+          expense.date >= startDate && expense.date <= endDate
+        );
+        
+        const filteredWeeks = game.weeks.filter(week => 
+          week.start_date >= startDate && week.end_date <= endDate
+        );
+        
+        return {
+          ...game,
+          ticket_sales: filteredSales,
+          expenses: filteredExpenses,
+          weeks: filteredWeeks,
+        };
+      });
+    }
+    
+    // Calculate totals
+    let totalSales = 0;
+    let totalPayouts = 0;
+    let totalExpenses = 0;
+    let totalDonations = 0;
+    let lodgeTotalPortion = 0;
+    
+    filteredGames.forEach(game => {
+      // If using date filters, calculate from filtered data
+      if (startDate && endDate) {
+        totalSales += game.ticket_sales.reduce((sum, sale) => sum + sale.amount_collected, 0);
+        totalPayouts += game.ticket_sales.reduce((sum, sale) => sum + sale.weekly_payout_amount, 0);
+        
+        const expenses = game.expenses.filter(e => !e.is_donation);
+        const donations = game.expenses.filter(e => e.is_donation);
+        
+        totalExpenses += expenses.reduce((sum, expense) => sum + expense.amount, 0);
+        totalDonations += donations.reduce((sum, expense) => sum + expense.amount, 0);
+        
+        // Calculate lodge portion
+        const lodgePortion = game.ticket_sales.reduce((sum, sale) => sum + sale.lodge_total, 0);
+        lodgeTotalPortion += lodgePortion;
+      } else {
+        // Use pre-calculated totals
+        totalSales += game.total_sales;
+        totalPayouts += game.total_payouts;
+        totalExpenses += game.total_expenses;
+        totalDonations += game.total_donations;
+        
+        // Calculate lodge portion (total_sales * lodge_percentage / 100)
+        const lodgePortion = game.total_sales * (game.lodge_percentage / 100);
+        lodgeTotalPortion += lodgePortion;
+      }
+    });
+    
+    // Calculate net profit
+    const lodgeNetProfit = lodgeTotalPortion - totalExpenses - totalDonations;
+    
+    // Calculate percentages
+    const donationsPercentage = lodgeTotalPortion > 0 ? (totalDonations / lodgeTotalPortion) * 100 : 0;
+    const expensesPercentage = lodgeTotalPortion > 0 ? (totalExpenses / lodgeTotalPortion) * 100 : 0;
+    const netProfitPercentage = lodgeTotalPortion > 0 ? (lodgeNetProfit / lodgeTotalPortion) * 100 : 0;
+    
+    return {
+      totalSales,
+      totalPayouts,
+      totalExpenses,
+      totalDonations,
+      lodgeTotalPortion,
+      lodgeNetProfit,
+      donationsPercentage,
+      expensesPercentage,
+      netProfitPercentage,
+      filteredGames,
+    };
+  };
+  
+  const summary = calculateSummaryData();
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+  
+  // Generate PDF report (mock functionality for now)
+  const generatePdfReport = () => {
+    toast({
+      title: "PDF Export",
+      description: "Exporting to PDF is not implemented yet.",
+    });
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-3">
-        <div>
-          <Label htmlFor="gameSelect">Game</Label>
-          <Select 
-            value={selectedGame} 
-            onValueChange={setSelectedGame}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-[#1F4E4A]">Income vs. Expense</h2>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
+            onClick={generatePdfReport}
           >
-            <SelectTrigger id="gameSelect" className="w-full">
-              <SelectValue placeholder="Select Game" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Games</SelectItem>
-              {sampleGames.map(game => (
-                <SelectItem key={game.id} value={game.id}>
-                  {game.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label htmlFor="reportType">Report Type</Label>
-          <Select 
-            value={reportType} 
-            onValueChange={setReportType}
-          >
-            <SelectTrigger id="reportType" className="w-full">
-              <SelectValue placeholder="Report Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="game">Game</SelectItem>
-              <SelectItem value="cumulative">Cumulative</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex space-x-4">
-          <div className="w-1/2">
-            <Label htmlFor="startDate">Start Date</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="w-1/2">
-            <Label htmlFor="endDate">End Date</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Action Buttons */}
-      <div className="flex justify-between">
-        <Button variant="outline">Export as PDF</Button>
-        
-        <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" /> Add Expense/Donation
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Expense or Donation</DialogTitle>
-              <DialogDescription>
-                Record a new expense or donation for a game.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expenseGame" className="col-span-1">Game</Label>
-                <Select
-                  value={expenseDetails.gameId}
-                  onValueChange={(value) => setExpenseDetails({
-                    ...expenseDetails,
-                    gameId: value
-                  })}
-                >
-                  <SelectTrigger id="expenseGame" className="col-span-3">
-                    <SelectValue placeholder="Select Game" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sampleGames.map(game => (
-                      <SelectItem key={game.id} value={game.id}>
-                        {game.name}
-                      </SelectItem>
+            <Download className="h-4 w-4 mr-2" /> Export PDF
+          </Button>
+          <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#1F4E4A]">
+                <PlusCircle className="h-4 w-4 mr-2" /> Add Expense/Donation
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Expense or Donation</DialogTitle>
+                <DialogDescription>
+                  Record a new expense or donation for a game.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="gameSelect" className="col-span-1">Game</Label>
+                  <select
+                    id="gameSelect"
+                    value={newExpense.gameId}
+                    onChange={(e) => setNewExpense({ ...newExpense, gameId: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 col-span-3"
+                  >
+                    <option value="">Select a game</option>
+                    {games.map(game => (
+                      <option key={game.id} value={game.id}>{game.name}</option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
+                  <Input
+                    id="expenseDate"
+                    type="date"
+                    value={newExpense.date}
+                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="expenseAmount" className="col-span-1">Amount</Label>
+                  <Input
+                    id="expenseAmount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={newExpense.amount}
+                    onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })}
+                    className="col-span-3"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="expenseMemo" className="col-span-1">Memo</Label>
+                  <Input
+                    id="expenseMemo"
+                    value={newExpense.memo}
+                    onChange={(e) => setNewExpense({ ...newExpense, memo: e.target.value })}
+                    placeholder="e.g., Ticket rolls, Toys for Tots donation"
+                    className="col-span-3"
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isDonation"
+                    checked={newExpense.isDonation}
+                    onChange={(e) => setNewExpense({
+                      ...newExpense,
+                      isDonation: e.target.checked,
+                    })}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="isDonation">This is a donation</Label>
+                </div>
               </div>
               
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
-                <Input
-                  id="expenseDate"
-                  type="date"
-                  value={expenseDetails.date}
-                  onChange={(e) => setExpenseDetails({
-                    ...expenseDetails,
-                    date: e.target.value
-                  })}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expenseAmount" className="col-span-1">Amount ($)</Label>
-                <Input
-                  id="expenseAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={expenseDetails.amount}
-                  onChange={(e) => setExpenseDetails({
-                    ...expenseDetails,
-                    amount: parseFloat(e.target.value)
-                  })}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expenseMemo" className="col-span-1">Memo</Label>
-                <Input
-                  id="expenseMemo"
-                  value={expenseDetails.memo}
-                  onChange={(e) => setExpenseDetails({
-                    ...expenseDetails,
-                    memo: e.target.value
-                  })}
-                  className="col-span-3"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isDonation"
-                  checked={expenseDetails.isDonation}
-                  onChange={(e) => setExpenseDetails({
-                    ...expenseDetails,
-                    isDonation: e.target.checked
-                  })}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <Label htmlFor="isDonation">This is a donation</Label>
-              </div>
+              <DialogFooter>
+                <Button type="submit" onClick={handleAddExpense} className="bg-[#1F4E4A]">
+                  Add {newExpense.isDonation ? "Donation" : "Expense"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Report Filters</CardTitle>
+          <CardDescription>
+            Filter the financial data by game, date range, and report type.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="gameFilter">Game</Label>
+              <select
+                id="gameFilter"
+                value={selectedGame}
+                onChange={(e) => setSelectedGame(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="all">All Games</option>
+                {games.map(game => (
+                  <option key={game.id} value={game.id}>{game.name}</option>
+                ))}
+              </select>
             </div>
             
-            <DialogFooter>
-              <Button type="submit" onClick={handleAddExpense}>Add Record</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      {/* Chart */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Financial Overview</CardTitle>
-          <CardDescription>
-            Visualization of sales, payouts, expenses, and donations
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
+            <div>
+              <Label htmlFor="startDate">Start Date</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="endDate">End Date</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="reportType">Report Type</Label>
+              <select
+                id="reportType"
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value as "weekly" | "game" | "cumulative")}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(2) : value} />
-                <Legend />
-                <Bar dataKey="Sales" fill="#1F4E4A" />
-                <Bar dataKey="Payouts" fill="#A1E96C" />
-                <Bar dataKey="Expenses" fill="#F97316" />
-                <Bar dataKey="Donations" fill="#0EA5E9" />
-              </BarChart>
-            </ResponsiveContainer>
+                <option value="weekly">Weekly</option>
+                <option value="game">Game</option>
+                <option value="cumulative">Cumulative</option>
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>
       
-      {/* Game Cards List */}
-      <div className="space-y-4">
-        {filteredGames.map((game) => (
-          <Card key={game.id} className="overflow-hidden">
-            <Accordion type="single" collapsible>
-              <AccordionItem value={game.id} className="border-none">
-                <CardHeader className="p-0 border-b">
-                  <AccordionTrigger className="px-6 py-4 hover:bg-accent/50 hover:no-underline">
-                    <div className="flex flex-col text-left">
-                      <CardTitle className="text-lg">{game.name}</CardTitle>
-                      <CardDescription>
-                        {game.startDate} to {game.endDate || "Present"} • 
-                        Sales: ${game.totalSales.toFixed(2)} • 
-                        Net: ${game.lodgeNetProfit.toFixed(2)}
-                      </CardDescription>
-                    </div>
-                  </AccordionTrigger>
-                </CardHeader>
-                <AccordionContent>
-                  <CardContent className="p-4">
-                    {/* Weeks Table */}
-                    <h3 className="font-medium mb-2">Weekly Data</h3>
-                    <div className="overflow-x-auto mb-4">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="px-2 py-2 text-left">Week</th>
-                            <th className="px-2 py-2 text-left">Date Range</th>
-                            <th className="px-2 py-2 text-right">Tickets</th>
-                            <th className="px-2 py-2 text-right">Sales</th>
-                            <th className="px-2 py-2 text-right">Lodge</th>
-                            <th className="px-2 py-2 text-right">Jackpot</th>
-                            <th className="px-2 py-2 text-right">Payout</th>
-                            <th className="px-2 py-2 text-right">Ending Jackpot</th>
-                            <th className="px-2 py-2 text-left">Winner</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {game.weeks.map((week) => (
-                            <tr key={week.id} className="border-b hover:bg-muted/50">
-                              <td className="px-2 py-2">Week {week.weekNumber}</td>
-                              <td className="px-2 py-2">{week.startDate} - {week.endDate}</td>
-                              <td className="px-2 py-2 text-right">{week.ticketsSold}</td>
-                              <td className="px-2 py-2 text-right">${week.weeklySales.toFixed(2)}</td>
-                              <td className="px-2 py-2 text-right">${week.lodgePortion.toFixed(2)}</td>
-                              <td className="px-2 py-2 text-right">${week.jackpotPortion.toFixed(2)}</td>
-                              <td className="px-2 py-2 text-right">${week.weeklyPayout.toFixed(2)}</td>
-                              <td className="px-2 py-2 text-right">${week.endingJackpot.toFixed(2)}</td>
-                              <td className="px-2 py-2">
-                                {week.winnerName} ({week.cardSelected})
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    
-                    {/* Expenses Table */}
-                    <h3 className="font-medium mb-2">Expenses & Donations</h3>
-                    <div className="overflow-x-auto mb-4">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="px-2 py-2 text-left">Date</th>
-                            <th className="px-2 py-2 text-right">Amount</th>
-                            <th className="px-2 py-2 text-left">Memo</th>
-                            <th className="px-2 py-2 text-left">Type</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {game.expenses.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="text-center py-4">
-                                No expenses or donations recorded
-                              </td>
-                            </tr>
-                          ) : (
-                            game.expenses.map((expense) => (
-                              <tr key={expense.id} className="border-b hover:bg-muted/50">
-                                <td className="px-2 py-2">{expense.date}</td>
-                                <td className="px-2 py-2 text-right">${expense.amount.toFixed(2)}</td>
-                                <td className="px-2 py-2">{expense.memo}</td>
-                                <td className="px-2 py-2">
-                                  <span className={expense.type === "Donation" ? "text-blue-600" : "text-orange-600"}>
-                                    {expense.type}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                    
-                    {/* Game Summary */}
-                    <h3 className="font-medium mb-2">Game Summary</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <div className="bg-accent p-3 rounded-md">
-                        <div className="text-muted-foreground">Total Sales</div>
-                        <div className="font-medium text-lg">${game.totalSales.toFixed(2)}</div>
-                      </div>
-                      <div className="bg-accent p-3 rounded-md">
-                        <div className="text-muted-foreground">Total Payouts</div>
-                        <div className="font-medium text-lg">${game.totalPayouts.toFixed(2)}</div>
-                      </div>
-                      <div className="bg-accent p-3 rounded-md">
-                        <div className="text-muted-foreground">Total Expenses</div>
-                        <div className="font-medium text-lg">${game.totalExpenses.toFixed(2)}</div>
-                      </div>
-                      <div className="bg-accent p-3 rounded-md">
-                        <div className="text-muted-foreground">Total Donations</div>
-                        <div className="font-medium text-lg">${game.totalDonations.toFixed(2)}</div>
-                      </div>
-                      <div className="bg-accent p-3 rounded-md">
-                        <div className="text-muted-foreground">Lodge Net Profit</div>
-                        <div className="font-medium text-lg">${game.lodgeNetProfit.toFixed(2)}</div>
-                      </div>
-                      <div className="bg-accent p-3 rounded-md">
-                        <div className="text-muted-foreground">Carryover Jackpot</div>
-                        <div className="font-medium text-lg">${game.carryoverJackpot.toFixed(2)}</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </Card>
-        ))}
-      </div>
-      
-      {/* Cumulative Summary */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Cumulative Summary</CardTitle>
-          <CardDescription>
-            Overall financial summary across all games
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-accent p-3 rounded-md">
-              <div className="text-muted-foreground">Total Sales</div>
-              <div className="font-medium text-lg">${cumulativeData.totalSales.toFixed(2)}</div>
-            </div>
-            <div className="bg-accent p-3 rounded-md">
-              <div className="text-muted-foreground">Total Payouts</div>
-              <div className="font-medium text-lg">${cumulativeData.totalPayouts.toFixed(2)}</div>
-            </div>
-            <div className="bg-accent p-3 rounded-md">
-              <div className="text-muted-foreground">Total Expenses</div>
-              <div className="font-medium text-lg">${cumulativeData.totalExpenses.toFixed(2)}</div>
-            </div>
-            <div className="bg-accent p-3 rounded-md">
-              <div className="text-muted-foreground">Total Donations</div>
-              <div className="font-medium text-lg">${cumulativeData.totalDonations.toFixed(2)}</div>
-            </div>
-            <div className="bg-accent p-3 rounded-md">
-              <div className="text-muted-foreground">Lodge Net Profit</div>
-              <div className="font-medium text-lg">${cumulativeData.lodgeNetProfit.toFixed(2)}</div>
-            </div>
-          </div>
+      {loading ? (
+        <div className="text-center py-10">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1F4E4A] mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading financial data...</p>
+        </div>
+      ) : (
+        <Tabs defaultValue="summary">
+          <TabsList className="grid grid-cols-3 w-[400px]">
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="chart">Chart</TabsTrigger>
+          </TabsList>
           
-          <h3 className="font-medium mb-2">Lodge Portion Allocation</h3>
-          <div className="bg-muted/30 p-4 rounded-md">
-            <div className="mb-2">
-              <span className="font-medium">Lodge Portion:</span> ${cumulativeData.lodgePortion.toFixed(2)}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span>Donations</span>
-                  <span>${cumulativeData.totalDonations.toFixed(2)}</span>
+          <TabsContent value="summary">
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Summary</CardTitle>
+                <CardDescription>
+                  Overview of financial performance across {selectedGame === "all" ? "all games" : "selected game"}.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Overall Totals</h3>
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="font-medium">Total Sales</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.totalSales)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Total Payouts</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.totalPayouts)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Total Expenses</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Total Donations</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.totalDonations)}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-medium">Lodge Net Profit</TableCell>
+                          <TableCell className="text-right font-bold">{formatCurrency(summary.lodgeNetProfit)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Lodge Portion Allocation</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-right">Percentage</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="font-medium">Lodge Portion Total</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.lodgeTotalPortion)}</TableCell>
+                          <TableCell className="text-right">100%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Donations</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.totalDonations)}</TableCell>
+                          <TableCell className="text-right">{summary.donationsPercentage.toFixed(2)}%</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">Expenses</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
+                          <TableCell className="text-right">{summary.expensesPercentage.toFixed(2)}%</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-medium">Lodge Net Profit</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.lodgeNetProfit)}</TableCell>
+                          <TableCell className="text-right">{summary.netProfitPercentage.toFixed(2)}%</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1 mb-1">
-                  <div 
-                    className="bg-blue-500 h-2.5 rounded-full" 
-                    style={{width: `${cumulativeData.donationsPercentage}%`}}
-                  ></div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="details">
+            <Card>
+              <CardHeader>
+                <CardTitle>Detailed Financial Reports</CardTitle>
+                <CardDescription>
+                  Detailed breakdown by game and week.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {summary.filteredGames.map(game => (
+                    <div key={game.id} className="space-y-4">
+                      <h3 className="text-lg font-medium">{game.name}</h3>
+                      
+                      <div className="space-y-6">
+                        {/* Game Summary */}
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Game Summary</h4>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Total Sales</TableHead>
+                                <TableHead>Total Payouts</TableHead>
+                                <TableHead>Total Expenses</TableHead>
+                                <TableHead>Total Donations</TableHead>
+                                <TableHead>Lodge Net Profit</TableHead>
+                                <TableHead>Carryover Jackpot</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell>{formatCurrency(game.total_sales)}</TableCell>
+                                <TableCell>{formatCurrency(game.total_payouts)}</TableCell>
+                                <TableCell>{formatCurrency(game.total_expenses)}</TableCell>
+                                <TableCell>{formatCurrency(game.total_donations)}</TableCell>
+                                <TableCell>{formatCurrency(game.lodge_net_profit)}</TableCell>
+                                <TableCell>{formatCurrency(game.carryover_jackpot)}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                        
+                        {/* Weeks Table */}
+                        {game.weeks.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Weeks</h4>
+                            <div className="overflow-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Week #</TableHead>
+                                    <TableHead>Start Date</TableHead>
+                                    <TableHead>End Date</TableHead>
+                                    <TableHead>Tickets Sold</TableHead>
+                                    <TableHead>Weekly Sales</TableHead>
+                                    <TableHead>Lodge Portion</TableHead>
+                                    <TableHead>Jackpot Portion</TableHead>
+                                    <TableHead>Weekly Payout</TableHead>
+                                    <TableHead>Winner</TableHead>
+                                    <TableHead>Card Selected</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {game.weeks.map(week => {
+                                    const lodgePortion = week.weekly_sales * (game.lodge_percentage / 100);
+                                    const jackpotPortion = week.weekly_sales * (game.jackpot_percentage / 100);
+                                    
+                                    return (
+                                      <TableRow key={week.id}>
+                                        <TableCell>Week {week.week_number}</TableCell>
+                                        <TableCell>{format(new Date(week.start_date), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell>{format(new Date(week.end_date), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell>{week.weekly_tickets_sold}</TableCell>
+                                        <TableCell>{formatCurrency(week.weekly_sales)}</TableCell>
+                                        <TableCell>{formatCurrency(lodgePortion)}</TableCell>
+                                        <TableCell>{formatCurrency(jackpotPortion)}</TableCell>
+                                        <TableCell>{formatCurrency(week.weekly_payout)}</TableCell>
+                                        <TableCell>{week.winner_name || '-'}</TableCell>
+                                        <TableCell>{week.card_selected || '-'}</TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Expenses Table */}
+                        {game.expenses.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Expenses & Donations</h4>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Date</TableHead>
+                                  <TableHead>Type</TableHead>
+                                  <TableHead>Amount</TableHead>
+                                  <TableHead>Memo</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {game.expenses.map(expense => (
+                                  <TableRow key={expense.id}>
+                                    <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                    <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
+                                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                    <TableCell>{expense.memo || '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-xs text-right">{cumulativeData.donationsPercentage}%</div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span>Expenses</span>
-                  <span>${cumulativeData.totalExpenses.toFixed(2)}</span>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="chart">
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Chart</CardTitle>
+                <CardDescription>
+                  Visual representation of financial data.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 20,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                      <Legend />
+                      <Bar dataKey="Sales" fill="#A1E96C" />
+                      <Bar dataKey="Payouts" fill="#1F4E4A" />
+                      <Bar dataKey="Expenses" fill="#132E2C" />
+                      <Bar dataKey="Donations" fill="#7B8C8A" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1 mb-1">
-                  <div 
-                    className="bg-orange-500 h-2.5 rounded-full" 
-                    style={{width: `${cumulativeData.expensesPercentage}%`}}
-                  ></div>
-                </div>
-                <div className="text-xs text-right">{cumulativeData.expensesPercentage}%</div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span>Lodge Net</span>
-                  <span>${cumulativeData.lodgeNetProfit.toFixed(2)}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1 mb-1">
-                  <div 
-                    className="bg-green-500 h-2.5 rounded-full" 
-                    style={{width: `${cumulativeData.lodgeNetPercentage}%`}}
-                  ></div>
-                </div>
-                <div className="text-xs text-right">{cumulativeData.lodgeNetPercentage}%</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

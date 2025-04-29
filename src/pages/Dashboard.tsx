@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -8,50 +8,23 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useToast } from "@/hooks/use-toast";
 import { Plus, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { format, addDays } from "date-fns";
+import { Tables } from "@/integrations/supabase/types";
 
-interface Game {
-  id: string;
-  gameName: string;
-  startDate: string;
-  ticketPrice: number;
-  lodgePercentage: number;
-  jackpotPercentage: number;
-  totalSales: number;
-  lodgeNetProfit: number;
-  weeks: Week[];
-}
-
-interface Week {
-  id: string;
-  weekNumber: number;
-  startDate: string;
-  endDate: string;
-  weeklySales: number;
-  weeklyTicketsSold: number;
-  winnerName: string | null;
-  slotChosen: number | null;
-  cardSelected: string | null;
-  weeklyPayout: number;
-  dailyEntries: DailyEntry[];
-}
-
-interface DailyEntry {
-  id: string;
-  date: string;
-  ticketsSold: number;
-  ticketPrice: number;
-  amountCollected: number;
-  cumulativeCollected: number;
-  lodgeTotal: number;
-  jackpotTotal: number;
-  weeklyPayoutAmount: number;
-  endingJackpotTotal: number;
-}
+type Game = Tables<"games"> & {
+  weeks: (Tables<"weeks"> & {
+    dailyEntries: Tables<"ticket_sales">[]
+  })[]
+};
 
 export default function Dashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newGame, setNewGame] = useState({
     gameName: "",
     ticketPrice: 2,
@@ -76,8 +49,94 @@ export default function Dashboard() {
   const [createGameOpen, setCreateGameOpen] = useState(false);
   const [addDailyEntryOpen, setAddDailyEntryOpen] = useState(false);
   const [addWinnerOpen, setAddWinnerOpen] = useState(false);
+  const [configurations, setConfigurations] = useState<Tables<"configurations"> | null>(null);
 
-  const handleCreateGame = () => {
+  useEffect(() => {
+    async function fetchConfigurations() {
+      try {
+        const { data, error } = await supabase
+          .from('configurations')
+          .select('*')
+          .single();
+        
+        if (error) throw error;
+        if (data) setConfigurations(data);
+      } catch (error) {
+        console.error('Error fetching configurations:', error);
+      }
+    }
+    
+    fetchConfigurations();
+  }, []);
+
+  useEffect(() => {
+    async function fetchGames() {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        const { data: gamesData, error: gamesError } = await supabase
+          .from('games')
+          .select('*')
+          .order('game_number', { ascending: false });
+        
+        if (gamesError) throw gamesError;
+        
+        if (gamesData) {
+          const gamesWithDetails: Game[] = [];
+          
+          for (const game of gamesData) {
+            const { data: weeksData, error: weeksError } = await supabase
+              .from('weeks')
+              .select('*')
+              .eq('game_id', game.id)
+              .order('week_number', { ascending: true });
+            
+            if (weeksError) throw weeksError;
+            
+            const weeksWithEntries = [];
+            
+            if (weeksData) {
+              for (const week of weeksData) {
+                const { data: entriesData, error: entriesError } = await supabase
+                  .from('ticket_sales')
+                  .select('*')
+                  .eq('week_id', week.id)
+                  .order('date', { ascending: true });
+                
+                if (entriesError) throw entriesError;
+                
+                weeksWithEntries.push({
+                  ...week,
+                  dailyEntries: entriesData || []
+                });
+              }
+            }
+            
+            gamesWithDetails.push({
+              ...game,
+              weeks: weeksWithEntries
+            });
+          }
+          
+          setGames(gamesWithDetails);
+        }
+      } catch (error: any) {
+        console.error('Error fetching games:', error);
+        toast({
+          title: "Error Loading Data",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchGames();
+  }, [user, toast]);
+
+  const handleCreateGame = async () => {
     if (newGame.lodgePercentage + newGame.jackpotPercentage !== 100) {
       toast({
         title: "Validation Error",
@@ -86,182 +145,343 @@ export default function Dashboard() {
       });
       return;
     }
-
-    const gameId = Math.random().toString(36).substring(2, 9);
-    const newGameData: Game = {
-      id: gameId,
-      gameName: newGame.gameName,
-      startDate: new Date().toISOString().split("T")[0],
-      ticketPrice: newGame.ticketPrice,
-      lodgePercentage: newGame.lodgePercentage,
-      jackpotPercentage: newGame.jackpotPercentage,
-      totalSales: 0,
-      lodgeNetProfit: 0,
-      weeks: [],
-    };
-
-    setGames([...games, newGameData]);
-    setCreateGameOpen(false);
-    toast({
-      title: "Game Created",
-      description: `${newGame.gameName} has been created successfully.`,
-    });
-  };
-
-  const handleAddWeek = (gameId: string) => {
-    const gameIndex = games.findIndex(game => game.id === gameId);
-    if (gameIndex === -1) return;
-
-    const weekNumber = games[gameIndex].weeks.length + 1;
-    const weekId = Math.random().toString(36).substring(2, 9);
     
-    const newWeekData: Week = {
-      id: weekId,
-      weekNumber,
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: "",
-      weeklySales: 0,
-      weeklyTicketsSold: 0,
-      winnerName: null,
-      slotChosen: null,
-      cardSelected: null,
-      weeklyPayout: 0,
-      dailyEntries: [],
-    };
-
-    const updatedGames = [...games];
-    updatedGames[gameIndex].weeks.push(newWeekData);
-    setGames(updatedGames);
-    
-    toast({
-      title: "Week Added",
-      description: `Week ${weekNumber} has been added to ${games[gameIndex].gameName}.`,
-    });
-  };
-
-  const handleAddDailyEntry = () => {
-    const gameIndex = games.findIndex(game => 
-      game.weeks.some(week => week.id === newDailyEntry.weekId)
-    );
-    
-    if (gameIndex === -1) return;
-    
-    const weekIndex = games[gameIndex].weeks.findIndex(
-      week => week.id === newDailyEntry.weekId
-    );
-    
-    if (weekIndex === -1) return;
-
-    const game = games[gameIndex];
-    const week = game.weeks[weekIndex];
-    
-    const amountCollected = newDailyEntry.ticketsSold * game.ticketPrice;
-    const lodgeTotal = amountCollected * (game.lodgePercentage / 100);
-    const jackpotTotal = amountCollected * (game.jackpotPercentage / 100);
-    
-    const previousCumulative = week.dailyEntries.length > 0 
-      ? week.dailyEntries[week.dailyEntries.length - 1].cumulativeCollected
-      : 0;
-    const cumulativeCollected = previousCumulative + amountCollected;
-    
-    const previousJackpot = week.dailyEntries.length > 0 
-      ? week.dailyEntries[week.dailyEntries.length - 1].endingJackpotTotal
-      : 0;
-    const endingJackpotTotal = previousJackpot + jackpotTotal;
-
-    const dailyEntry: DailyEntry = {
-      id: Math.random().toString(36).substring(2, 9),
-      date: newDailyEntry.date,
-      ticketsSold: newDailyEntry.ticketsSold,
-      ticketPrice: game.ticketPrice,
-      amountCollected,
-      cumulativeCollected,
-      lodgeTotal,
-      jackpotTotal,
-      weeklyPayoutAmount: 0,
-      endingJackpotTotal,
-    };
-
-    const updatedGames = [...games];
-    updatedGames[gameIndex].weeks[weekIndex].dailyEntries.push(dailyEntry);
-    
-    updatedGames[gameIndex].weeks[weekIndex].weeklySales += amountCollected;
-    updatedGames[gameIndex].weeks[weekIndex].weeklyTicketsSold += newDailyEntry.ticketsSold;
-    
-    updatedGames[gameIndex].totalSales += amountCollected;
-    updatedGames[gameIndex].lodgeNetProfit += lodgeTotal;
-
-    setGames(updatedGames);
-    setAddDailyEntryOpen(false);
-    
-    if (updatedGames[gameIndex].weeks[weekIndex].dailyEntries.length === 7) {
-      setWinnerDetails({ ...winnerDetails, weekId: newDailyEntry.weekId });
-      setAddWinnerOpen(true);
-    }
-    
-    toast({
-      title: "Daily Entry Added",
-      description: `Added ${newDailyEntry.ticketsSold} tickets sold for $${amountCollected}.`,
-    });
-  };
-
-  const handleAddWinner = () => {
-    const gameIndex = games.findIndex(game => 
-      game.weeks.some(week => week.id === winnerDetails.weekId)
-    );
-    
-    if (gameIndex === -1) return;
-    
-    const weekIndex = games[gameIndex].weeks.findIndex(
-      week => week.id === winnerDetails.weekId
-    );
-    
-    if (weekIndex === -1) return;
-
-    const dailyEntries = games[gameIndex].weeks[weekIndex].dailyEntries;
-    const lastEntry = dailyEntries[dailyEntries.length - 1];
-    
-    let payoutAmount = 0;
-    if (winnerDetails.cardSelected === "Queen of Hearts") {
-      payoutAmount = lastEntry.endingJackpotTotal;
-    } else {
-      const cardPayouts: Record<string, number> = {
-        "Joker": 100,
-        "Ace of Hearts": 50,
-        "King of Hearts": 25,
-      };
-      payoutAmount = cardPayouts[winnerDetails.cardSelected] || 10;
-    }
-    
-    if (!winnerDetails.isPresent) {
-      payoutAmount = payoutAmount * 0.9;
-    }
-
-    const updatedGames = [...games];
-    const week = updatedGames[gameIndex].weeks[weekIndex];
-    
-    week.winnerName = winnerDetails.winnerName;
-    week.slotChosen = winnerDetails.slotChosen;
-    week.cardSelected = winnerDetails.cardSelected;
-    week.weeklyPayout = payoutAmount;
-    week.endDate = new Date().toISOString().split("T")[0];
-    
-    const lastDailyEntry = week.dailyEntries[week.dailyEntries.length - 1];
-    lastDailyEntry.weeklyPayoutAmount = payoutAmount;
-    lastDailyEntry.endingJackpotTotal -= payoutAmount;
-    
-    setGames(updatedGames);
-    setAddWinnerOpen(false);
-
-    if (winnerDetails.cardSelected === "Queen of Hearts") {
+    try {
+      const { data: lastGame, error: gameError } = await supabase
+        .from('games')
+        .select('game_number')
+        .order('game_number', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (gameError && gameError.code !== 'PGRST116') {
+        throw gameError;
+      }
+      
+      const gameNumber = lastGame ? lastGame.game_number + 1 : 1;
+      
+      const { data: newGameData, error } = await supabase
+        .from('games')
+        .insert({
+          game_number: gameNumber,
+          name: newGame.gameName,
+          start_date: new Date().toISOString().split('T')[0],
+          ticket_price: newGame.ticketPrice,
+          lodge_percentage: newGame.lodgePercentage,
+          jackpot_percentage: newGame.jackpotPercentage,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (newGameData) {
+        setGames(prevGames => [{
+          ...newGameData,
+          weeks: []
+        }, ...prevGames]);
+      }
+      
+      setCreateGameOpen(false);
       toast({
-        title: "Game Over!",
-        description: `${winnerDetails.winnerName} found the Queen of Hearts and won $${payoutAmount.toFixed(2)}!`,
+        title: "Game Created",
+        description: `${newGame.gameName} has been created successfully.`,
       });
-    } else {
+      
+      setNewGame({
+        gameName: "",
+        ticketPrice: 2,
+        lodgePercentage: 40,
+        jackpotPercentage: 60,
+      });
+    } catch (error: any) {
+      console.error('Error creating game:', error);
       toast({
-        title: "Winner Added",
-        description: `${winnerDetails.winnerName} selected ${winnerDetails.cardSelected} and won $${payoutAmount.toFixed(2)}.`,
+        title: "Error Creating Game",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddWeek = async (gameId: string) => {
+    try {
+      const game = games.find(g => g.id === gameId);
+      if (!game) return;
+      
+      const weekNumber = game.weeks.length + 1;
+      const startDate = new Date().toISOString().split('T')[0];
+      const endDate = addDays(new Date(startDate), 6).toISOString().split('T')[0];
+      
+      const { data: newWeekData, error } = await supabase
+        .from('weeks')
+        .insert({
+          game_id: gameId,
+          week_number: weekNumber,
+          start_date: startDate,
+          end_date: endDate,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (newWeekData) {
+        const updatedGames = games.map(game => {
+          if (game.id === gameId) {
+            return {
+              ...game,
+              weeks: [...game.weeks, {
+                ...newWeekData,
+                dailyEntries: []
+              }]
+            };
+          }
+          return game;
+        });
+        
+        setGames(updatedGames);
+      }
+      
+      toast({
+        title: "Week Added",
+        description: `Week ${weekNumber} has been added to ${game.name}.`,
+      });
+    } catch (error: any) {
+      console.error('Error adding week:', error);
+      toast({
+        title: "Error Adding Week",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddDailyEntry = async () => {
+    try {
+      const gameIndex = games.findIndex(game => 
+        game.weeks.some(week => week.id === newDailyEntry.weekId)
+      );
+      
+      if (gameIndex === -1) return;
+      
+      const weekIndex = games[gameIndex].weeks.findIndex(
+        week => week.id === newDailyEntry.weekId
+      );
+      
+      if (weekIndex === -1) return;
+      
+      const game = games[gameIndex];
+      const week = game.weeks[weekIndex];
+      
+      const amountCollected = newDailyEntry.ticketsSold * game.ticket_price;
+      const lodgeTotal = amountCollected * (game.lodge_percentage / 100);
+      const jackpotTotal = amountCollected * (game.jackpot_percentage / 100);
+      
+      const previousEntries = week.dailyEntries || [];
+      const previousCumulative = previousEntries.length > 0 
+        ? previousEntries[previousEntries.length - 1].cumulative_collected
+        : 0;
+      const cumulativeCollected = previousCumulative + amountCollected;
+      
+      const previousJackpot = previousEntries.length > 0 
+        ? previousEntries[previousEntries.length - 1].ending_jackpot_total
+        : game.carryover_jackpot;
+      const endingJackpotTotal = previousJackpot + jackpotTotal;
+      
+      const { data: newEntryData, error } = await supabase
+        .from('ticket_sales')
+        .insert({
+          game_id: game.id,
+          week_id: week.id,
+          date: newDailyEntry.date,
+          tickets_sold: newDailyEntry.ticketsSold,
+          ticket_price: game.ticket_price,
+          amount_collected: amountCollected,
+          cumulative_collected: cumulativeCollected,
+          lodge_total: lodgeTotal,
+          jackpot_total: jackpotTotal,
+          ending_jackpot_total: endingJackpotTotal,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const { error: weekUpdateError } = await supabase
+        .from('weeks')
+        .update({
+          weekly_sales: week.weekly_sales + amountCollected,
+          weekly_tickets_sold: week.weekly_tickets_sold + newDailyEntry.ticketsSold,
+        })
+        .eq('id', week.id);
+      
+      if (weekUpdateError) throw weekUpdateError;
+      
+      const { error: gameUpdateError } = await supabase
+        .from('games')
+        .update({
+          total_sales: game.total_sales + amountCollected,
+          lodge_net_profit: game.lodge_net_profit + lodgeTotal,
+        })
+        .eq('id', game.id);
+      
+      if (gameUpdateError) throw gameUpdateError;
+      
+      const updatedGames = [...games];
+      updatedGames[gameIndex].weeks[weekIndex].weekly_sales += amountCollected;
+      updatedGames[gameIndex].weeks[weekIndex].weekly_tickets_sold += newDailyEntry.ticketsSold;
+      updatedGames[gameIndex].total_sales += amountCollected;
+      updatedGames[gameIndex].lodge_net_profit += lodgeTotal;
+      
+      setGames(updatedGames);
+      setAddDailyEntryOpen(false);
+      
+      if (updatedGames[gameIndex].weeks[weekIndex].dailyEntries.length === 7) {
+        setWinnerDetails({ ...winnerDetails, weekId: newDailyEntry.weekId });
+        setAddWinnerOpen(true);
+      }
+      
+      toast({
+        title: "Daily Entry Added",
+        description: `Added ${newDailyEntry.ticketsSold} tickets sold for $${amountCollected}.`,
+      });
+      
+      setNewDailyEntry({
+        weekId: "",
+        date: new Date().toISOString().split("T")[0],
+        ticketsSold: 0,
+      });
+    } catch (error: any) {
+      console.error('Error adding daily entry:', error);
+      toast({
+        title: "Error Adding Daily Entry",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddWinner = async () => {
+    try {
+      const gameIndex = games.findIndex(game => 
+        game.weeks.some(week => week.id === winnerDetails.weekId)
+      );
+      
+      if (gameIndex === -1) return;
+      
+      const weekIndex = games[gameIndex].weeks.findIndex(
+        week => week.id === winnerDetails.weekId
+      );
+      
+      if (weekIndex === -1) return;
+      
+      const game = games[gameIndex];
+      const week = game.weeks[weekIndex];
+      const dailyEntries = week.dailyEntries;
+      const lastEntry = dailyEntries[dailyEntries.length - 1];
+      
+      let payoutAmount = 0;
+      const cardPayouts = configurations?.card_payouts as Record<string, any> || {};
+      
+      if (winnerDetails.cardSelected === "Queen of Hearts") {
+        payoutAmount = lastEntry.ending_jackpot_total;
+      } else {
+        const payoutValue = cardPayouts[winnerDetails.cardSelected];
+        payoutAmount = typeof payoutValue === 'number' ? payoutValue : 10;
+      }
+      
+      if (!winnerDetails.isPresent) {
+        const penaltyPercentage = configurations?.penalty_percentage || 10;
+        payoutAmount = payoutAmount * (1 - penaltyPercentage / 100);
+      }
+      
+      const { error: weekUpdateError } = await supabase
+        .from('weeks')
+        .update({
+          winner_name: winnerDetails.winnerName,
+          slot_chosen: winnerDetails.slotChosen,
+          card_selected: winnerDetails.cardSelected,
+          weekly_payout: payoutAmount,
+          winner_present: winnerDetails.isPresent,
+        })
+        .eq('id', week.id);
+      
+      if (weekUpdateError) throw weekUpdateError;
+      
+      const { error: saleUpdateError } = await supabase
+        .from('ticket_sales')
+        .update({
+          weekly_payout_amount: payoutAmount,
+          ending_jackpot_total: lastEntry.ending_jackpot_total - payoutAmount,
+        })
+        .eq('id', lastEntry.id);
+      
+      if (saleUpdateError) throw saleUpdateError;
+      
+      const { error: gameUpdateError } = await supabase
+        .from('games')
+        .update({
+          total_payouts: game.total_payouts + payoutAmount,
+        })
+        .eq('id', game.id);
+      
+      if (gameUpdateError) throw gameUpdateError;
+      
+      if (winnerDetails.cardSelected === "Queen of Hearts") {
+        const { error: endGameError } = await supabase
+          .from('games')
+          .update({
+            end_date: new Date().toISOString().split('T')[0],
+          })
+          .eq('id', game.id);
+        
+        if (endGameError) throw endGameError;
+      }
+      
+      const updatedGames = [...games];
+      updatedGames[gameIndex].weeks[weekIndex].winner_name = winnerDetails.winnerName;
+      updatedGames[gameIndex].weeks[weekIndex].slot_chosen = winnerDetails.slotChosen;
+      updatedGames[gameIndex].weeks[weekIndex].card_selected = winnerDetails.cardSelected;
+      updatedGames[gameIndex].weeks[weekIndex].weekly_payout = payoutAmount;
+      updatedGames[gameIndex].weeks[weekIndex].winner_present = winnerDetails.isPresent;
+      
+      updatedGames[gameIndex].total_payouts += payoutAmount;
+      updatedGames[gameIndex].weeks[weekIndex].dailyEntries[dailyEntries.length - 1].weekly_payout_amount = payoutAmount;
+      updatedGames[gameIndex].weeks[weekIndex].dailyEntries[dailyEntries.length - 1].ending_jackpot_total -= payoutAmount;
+      
+      if (winnerDetails.cardSelected === "Queen of Hearts") {
+        updatedGames[gameIndex].end_date = new Date().toISOString().split('T')[0];
+      }
+      
+      setGames(updatedGames);
+      setAddWinnerOpen(false);
+      
+      if (winnerDetails.cardSelected === "Queen of Hearts") {
+        toast({
+          title: "Game Over!",
+          description: `${winnerDetails.winnerName} found the Queen of Hearts and won $${payoutAmount.toFixed(2)}!`,
+        });
+      } else {
+        toast({
+          title: "Winner Added",
+          description: `${winnerDetails.winnerName} selected ${winnerDetails.cardSelected} and won $${payoutAmount.toFixed(2)}.`,
+        });
+      }
+      
+      setWinnerDetails({
+        weekId: "",
+        winnerName: "",
+        slotChosen: 0,
+        cardSelected: "",
+        isPresent: true,
+      });
+    } catch (error: any) {
+      console.error('Error adding winner:', error);
+      toast({
+        title: "Error Adding Winner",
+        description: error.message,
+        variant: "destructive",
       });
     }
   };
@@ -273,11 +493,11 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-primary">Game Management</h2>
+        <h2 className="text-2xl font-semibold text-[#1F4E4A]">Game Management</h2>
         
         <Dialog open={createGameOpen} onOpenChange={setCreateGameOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 bg-[#1F4E4A]">
               <Plus className="h-4 w-4" /> Create Game
             </Button>
           </DialogTrigger>
@@ -350,20 +570,25 @@ export default function Dashboard() {
             </div>
             
             <DialogFooter>
-              <Button type="submit" onClick={handleCreateGame}>Create Game</Button>
+              <Button type="submit" onClick={handleCreateGame} className="bg-[#1F4E4A]">Create Game</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
       
-      {games.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-10">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1F4E4A] mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading games...</p>
+        </div>
+      ) : games.length === 0 ? (
         <Card className="text-center py-10">
           <CardContent>
             <h3 className="text-xl font-medium mb-2">No Games Yet</h3>
             <p className="text-muted-foreground mb-4">
               Create your first Queen of Hearts game to get started.
             </p>
-            <Button onClick={() => setCreateGameOpen(true)}>Create Game</Button>
+            <Button onClick={() => setCreateGameOpen(true)} className="bg-[#1F4E4A]">Create Game</Button>
           </CardContent>
         </Card>
       ) : (
@@ -374,9 +599,11 @@ export default function Dashboard() {
                 <CardHeader className="p-0 border-b">
                   <AccordionTrigger className="px-6 py-4 hover:bg-accent/50 hover:no-underline">
                     <div className="flex flex-col text-left">
-                      <CardTitle className="text-lg">{game.gameName}</CardTitle>
+                      <CardTitle className="text-lg">{game.name}</CardTitle>
                       <CardDescription>
-                        Started: {game.startDate} • Total Sales: ${game.totalSales.toFixed(2)} • Net Profit: ${game.lodgeNetProfit.toFixed(2)}
+                        Started: {format(new Date(game.start_date), 'MMM d, yyyy')} 
+                        • Total Sales: ${game.total_sales.toFixed(2)} 
+                        • Net Profit: ${game.lodge_net_profit.toFixed(2)}
                       </CardDescription>
                     </div>
                   </AccordionTrigger>
@@ -387,12 +614,14 @@ export default function Dashboard() {
                       <Button 
                         variant="outline" 
                         onClick={() => handleAddWeek(game.id)}
+                        className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
                       >
                         <Plus className="h-4 w-4 mr-2" /> Add Week
                       </Button>
                       <Button 
                         variant="outline" 
                         onClick={() => handleViewFinanceReport(game.id)}
+                        className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
                       >
                         <DollarSign className="h-4 w-4 mr-2" /> Finance Report
                       </Button>
@@ -408,12 +637,12 @@ export default function Dashboard() {
                               <CardHeader className="p-0 border-b">
                                 <AccordionTrigger className="px-4 py-3 hover:bg-accent/50 hover:no-underline">
                                   <div className="flex flex-col text-left">
-                                    <CardTitle className="text-base">Week {week.weekNumber}</CardTitle>
+                                    <CardTitle className="text-base">Week {week.week_number}</CardTitle>
                                     <CardDescription className="text-sm">
-                                      Sales: ${week.weeklySales.toFixed(2)} • 
-                                      Tickets: {week.weeklyTicketsSold} •
-                                      {week.winnerName ? 
-                                        ` Winner: ${week.winnerName} (${week.cardSelected})` : 
+                                      Sales: ${week.weekly_sales.toFixed(2)} • 
+                                      Tickets: {week.weekly_tickets_sold} •
+                                      {week.winner_name ? 
+                                        ` Winner: ${week.winner_name} (${week.card_selected})` : 
                                         ' No winner yet'}
                                     </CardDescription>
                                   </div>
@@ -446,18 +675,18 @@ export default function Dashboard() {
                                         ) : (
                                           week.dailyEntries.map((entry) => (
                                             <tr key={entry.id} className="border-b hover:bg-muted/50">
-                                              <td className="px-2 py-2">{entry.date}</td>
-                                              <td className="px-2 py-2 text-right">{entry.ticketsSold}</td>
-                                              <td className="px-2 py-2 text-right">${entry.ticketPrice.toFixed(2)}</td>
-                                              <td className="px-2 py-2 text-right">${entry.amountCollected.toFixed(2)}</td>
-                                              <td className="px-2 py-2 text-right">${entry.cumulativeCollected.toFixed(2)}</td>
-                                              <td className="px-2 py-2 text-right">${entry.lodgeTotal.toFixed(2)}</td>
-                                              <td className="px-2 py-2 text-right">${entry.jackpotTotal.toFixed(2)}</td>
+                                              <td className="px-2 py-2">{format(new Date(entry.date), 'MMM d, yyyy')}</td>
+                                              <td className="px-2 py-2 text-right">{entry.tickets_sold}</td>
+                                              <td className="px-2 py-2 text-right">${entry.ticket_price.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.amount_collected.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.cumulative_collected.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.lodge_total.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.jackpot_total.toFixed(2)}</td>
                                               <td className="px-2 py-2 text-right">
-                                                {entry.weeklyPayoutAmount > 0 ? 
-                                                  `$${entry.weeklyPayoutAmount.toFixed(2)}` : '-'}
+                                                {entry.weekly_payout_amount > 0 ? 
+                                                  `$${entry.weekly_payout_amount.toFixed(2)}` : '-'}
                                               </td>
-                                              <td className="px-2 py-2 text-right">${entry.endingJackpotTotal.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-right">${entry.ending_jackpot_total.toFixed(2)}</td>
                                             </tr>
                                           ))
                                         )}
@@ -465,11 +694,11 @@ export default function Dashboard() {
                                     </table>
                                   </div>
                                   
-                                  {week.dailyEntries.length < 7 && !week.winnerName && (
+                                  {week.dailyEntries.length < 7 && !week.winner_name && (
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="mt-4"
+                                      className="mt-4 border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
                                       onClick={() => {
                                         setNewDailyEntry({
                                           ...newDailyEntry,
@@ -492,9 +721,9 @@ export default function Dashboard() {
                   <CardFooter className="pb-4 pt-0 flex justify-between">
                     <div className="text-sm">
                       <strong>Configuration:</strong> 
-                      ${game.ticketPrice.toFixed(2)} per ticket • 
-                      {game.lodgePercentage}% Lodge • 
-                      {game.jackpotPercentage}% Jackpot
+                      ${game.ticket_price.toFixed(2)} per ticket • 
+                      {game.lodge_percentage}% Lodge • 
+                      {game.jackpot_percentage}% Jackpot
                     </div>
                   </CardFooter>
                 </AccordionContent>
@@ -545,7 +774,7 @@ export default function Dashboard() {
           </div>
           
           <DialogFooter>
-            <Button type="submit" onClick={handleAddDailyEntry}>Add Entry</Button>
+            <Button type="submit" onClick={handleAddDailyEntry} className="bg-[#1F4E4A]">Add Entry</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -601,12 +830,11 @@ export default function Dashboard() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 col-span-3"
               >
                 <option value="">Select a card...</option>
-                <option value="Queen of Hearts">Queen of Hearts</option>
-                <option value="King of Hearts">King of Hearts</option>
-                <option value="Jack of Hearts">Jack of Hearts</option>
-                <option value="Ace of Hearts">Ace of Hearts</option>
-                <option value="10 of Hearts">10 of Hearts</option>
-                <option value="Joker">Joker</option>
+                {configurations && configurations.card_payouts && 
+                  Object.keys(configurations.card_payouts as Record<string, any>).map(card => (
+                    <option key={card} value={card}>{card}</option>
+                  ))
+                }
               </select>
             </div>
             
@@ -626,7 +854,7 @@ export default function Dashboard() {
           </div>
           
           <DialogFooter>
-            <Button type="submit" onClick={handleAddWinner}>Record Winner</Button>
+            <Button type="submit" onClick={handleAddWinner} className="bg-[#1F4E4A]">Record Winner</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
