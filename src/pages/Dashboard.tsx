@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,12 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, DollarSign } from "lucide-react";
+import { Plus, DollarSign, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, addDays } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Game = Tables<"games"> & {
   weeks: (Tables<"weeks"> & {
@@ -31,9 +42,6 @@ export default function Dashboard() {
     lodgePercentage: 40,
     jackpotPercentage: 60,
   });
-  const [newWeek, setNewWeek] = useState({
-    gameId: "",
-  });
   const [newDailyEntry, setNewDailyEntry] = useState({
     weekId: "",
     date: new Date().toISOString().split("T")[0],
@@ -50,6 +58,9 @@ export default function Dashboard() {
   const [addDailyEntryOpen, setAddDailyEntryOpen] = useState(false);
   const [addWinnerOpen, setAddWinnerOpen] = useState(false);
   const [configurations, setConfigurations] = useState<Tables<"configurations"> | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'game' | 'week' | 'entry'>('game');
+  const [deleteItemId, setDeleteItemId] = useState<string>('');
 
   useEffect(() => {
     async function fetchConfigurations() {
@@ -69,71 +80,110 @@ export default function Dashboard() {
     fetchConfigurations();
   }, []);
 
-  useEffect(() => {
-    async function fetchGames() {
-      if (!user) return;
+  const fetchGames = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select('*')
+        .order('game_number', { ascending: false });
       
-      setLoading(true);
-      try {
-        const { data: gamesData, error: gamesError } = await supabase
-          .from('games')
-          .select('*')
-          .order('game_number', { ascending: false });
+      if (gamesError) throw gamesError;
+      
+      if (gamesData) {
+        const gamesWithDetails: Game[] = [];
         
-        if (gamesError) throw gamesError;
-        
-        if (gamesData) {
-          const gamesWithDetails: Game[] = [];
+        for (const game of gamesData) {
+          const { data: weeksData, error: weeksError } = await supabase
+            .from('weeks')
+            .select('*')
+            .eq('game_id', game.id)
+            .order('week_number', { ascending: true });
           
-          for (const game of gamesData) {
-            const { data: weeksData, error: weeksError } = await supabase
-              .from('weeks')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('week_number', { ascending: true });
-            
-            if (weeksError) throw weeksError;
-            
-            const weeksWithEntries = [];
-            
-            if (weeksData) {
-              for (const week of weeksData) {
-                const { data: entriesData, error: entriesError } = await supabase
-                  .from('ticket_sales')
-                  .select('*')
-                  .eq('week_id', week.id)
-                  .order('date', { ascending: true });
-                
-                if (entriesError) throw entriesError;
-                
-                weeksWithEntries.push({
-                  ...week,
-                  dailyEntries: entriesData || []
-                });
-              }
+          if (weeksError) throw weeksError;
+          
+          const weeksWithEntries = [];
+          
+          if (weeksData) {
+            for (const week of weeksData) {
+              const { data: entriesData, error: entriesError } = await supabase
+                .from('ticket_sales')
+                .select('*')
+                .eq('week_id', week.id)
+                .order('date', { ascending: true });
+              
+              if (entriesError) throw entriesError;
+              
+              weeksWithEntries.push({
+                ...week,
+                dailyEntries: entriesData || []
+              });
             }
-            
-            gamesWithDetails.push({
-              ...game,
-              weeks: weeksWithEntries
-            });
           }
           
-          setGames(gamesWithDetails);
+          gamesWithDetails.push({
+            ...game,
+            weeks: weeksWithEntries
+          });
         }
-      } catch (error: any) {
-        console.error('Error fetching games:', error);
-        toast({
-          title: "Error Loading Data",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+        
+        setGames(gamesWithDetails);
       }
+    } catch (error: any) {
+      console.error('Error fetching games:', error);
+      toast({
+        title: "Error Loading Data",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
+  };
+
+  useEffect(() => {
     fetchGames();
+    
+    // Set up realtime subscription for ticket_sales
+    const ticketSalesChannel = supabase
+      .channel('public:ticket_sales')
+      .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'ticket_sales' }, 
+          () => {
+            console.log('Ticket sales changed, refreshing data');
+            fetchGames();
+          })
+      .subscribe();
+      
+    // Set up realtime subscription for weeks
+    const weeksChannel = supabase
+      .channel('public:weeks')
+      .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'weeks' }, 
+          () => {
+            console.log('Weeks changed, refreshing data');
+            fetchGames();
+          })
+      .subscribe();
+      
+    // Set up realtime subscription for games
+    const gamesChannel = supabase
+      .channel('public:games')
+      .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'games' }, 
+          () => {
+            console.log('Games changed, refreshing data');
+            fetchGames();
+          })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(ticketSalesChannel);
+      supabase.removeChannel(weeksChannel);
+      supabase.removeChannel(gamesChannel);
+    };
   }, [user, toast]);
 
   const handleCreateGame = async () => {
@@ -176,10 +226,7 @@ export default function Dashboard() {
       if (error) throw error;
       
       if (newGameData) {
-        setGames(prevGames => [{
-          ...newGameData,
-          weeks: []
-        }, ...prevGames]);
+        fetchGames();
       }
       
       setCreateGameOpen(false);
@@ -226,22 +273,7 @@ export default function Dashboard() {
       
       if (error) throw error;
       
-      if (newWeekData) {
-        const updatedGames = games.map(game => {
-          if (game.id === gameId) {
-            return {
-              ...game,
-              weeks: [...game.weeks, {
-                ...newWeekData,
-                dailyEntries: []
-              }]
-            };
-          }
-          return game;
-        });
-        
-        setGames(updatedGames);
-      }
+      fetchGames();
       
       toast({
         title: "Week Added",
@@ -328,16 +360,13 @@ export default function Dashboard() {
       
       if (gameUpdateError) throw gameUpdateError;
       
-      const updatedGames = [...games];
-      updatedGames[gameIndex].weeks[weekIndex].weekly_sales += amountCollected;
-      updatedGames[gameIndex].weeks[weekIndex].weekly_tickets_sold += newDailyEntry.ticketsSold;
-      updatedGames[gameIndex].total_sales += amountCollected;
-      updatedGames[gameIndex].lodge_net_profit += lodgeTotal;
+      // Fetch fresh data after update
+      fetchGames();
       
-      setGames(updatedGames);
       setAddDailyEntryOpen(false);
       
-      if (updatedGames[gameIndex].weeks[weekIndex].dailyEntries.length === 7) {
+      // Check if this is the 7th entry to prompt for winner details
+      if (previousEntries.length === 6) {
         setWinnerDetails({ ...winnerDetails, weekId: newDailyEntry.weekId });
         setAddWinnerOpen(true);
       }
@@ -439,22 +468,9 @@ export default function Dashboard() {
         if (endGameError) throw endGameError;
       }
       
-      const updatedGames = [...games];
-      updatedGames[gameIndex].weeks[weekIndex].winner_name = winnerDetails.winnerName;
-      updatedGames[gameIndex].weeks[weekIndex].slot_chosen = winnerDetails.slotChosen;
-      updatedGames[gameIndex].weeks[weekIndex].card_selected = winnerDetails.cardSelected;
-      updatedGames[gameIndex].weeks[weekIndex].weekly_payout = payoutAmount;
-      updatedGames[gameIndex].weeks[weekIndex].winner_present = winnerDetails.isPresent;
+      // Fetch fresh data after update
+      fetchGames();
       
-      updatedGames[gameIndex].total_payouts += payoutAmount;
-      updatedGames[gameIndex].weeks[weekIndex].dailyEntries[dailyEntries.length - 1].weekly_payout_amount = payoutAmount;
-      updatedGames[gameIndex].weeks[weekIndex].dailyEntries[dailyEntries.length - 1].ending_jackpot_total -= payoutAmount;
-      
-      if (winnerDetails.cardSelected === "Queen of Hearts") {
-        updatedGames[gameIndex].end_date = new Date().toISOString().split('T')[0];
-      }
-      
-      setGames(updatedGames);
       setAddWinnerOpen(false);
       
       if (winnerDetails.cardSelected === "Queen of Hearts") {
@@ -488,6 +504,139 @@ export default function Dashboard() {
 
   const handleViewFinanceReport = (gameId: string) => {
     navigate(`/income-expense?game=${gameId}`);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      if (deleteType === 'game') {
+        // First delete related entries in ticket_sales
+        const { data: weeks } = await supabase
+          .from('weeks')
+          .select('id')
+          .eq('game_id', deleteItemId);
+        
+        if (weeks && weeks.length > 0) {
+          const weekIds = weeks.map(week => week.id);
+          
+          // Delete ticket sales for these weeks
+          await supabase
+            .from('ticket_sales')
+            .delete()
+            .in('week_id', weekIds);
+            
+          // Delete expenses for this game
+          await supabase
+            .from('expenses')
+            .delete()
+            .eq('game_id', deleteItemId);
+            
+          // Delete the weeks
+          await supabase
+            .from('weeks')
+            .delete()
+            .in('id', weekIds);
+        }
+        
+        // Finally delete the game
+        await supabase
+          .from('games')
+          .delete()
+          .eq('id', deleteItemId);
+        
+        toast({
+          title: "Game Deleted",
+          description: "Game and all associated data have been deleted.",
+        });
+        
+      } else if (deleteType === 'week') {
+        // First delete related entries in ticket_sales
+        await supabase
+          .from('ticket_sales')
+          .delete()
+          .eq('week_id', deleteItemId);
+          
+        // Then delete the week
+        await supabase
+          .from('weeks')
+          .delete()
+          .eq('id', deleteItemId);
+          
+        toast({
+          title: "Week Deleted",
+          description: "Week and all associated entries have been deleted.",
+        });
+        
+      } else if (deleteType === 'entry') {
+        // Get the entry details before deletion
+        const { data: entry } = await supabase
+          .from('ticket_sales')
+          .select('*')
+          .eq('id', deleteItemId)
+          .single();
+          
+        if (entry) {
+          const { game_id, week_id, amount_collected, tickets_sold } = entry;
+          
+          // Get the week and game
+          const { data: week } = await supabase
+            .from('weeks')
+            .select('*')
+            .eq('id', week_id)
+            .single();
+            
+          const { data: game } = await supabase
+            .from('games')
+            .select('*')
+            .eq('id', game_id)
+            .single();
+            
+          // Delete the entry
+          await supabase
+            .from('ticket_sales')
+            .delete()
+            .eq('id', deleteItemId);
+            
+          if (week && game) {
+            // Update the week
+            await supabase
+              .from('weeks')
+              .update({
+                weekly_sales: week.weekly_sales - amount_collected,
+                weekly_tickets_sold: week.weekly_tickets_sold - tickets_sold,
+              })
+              .eq('id', week_id);
+              
+            // Update the game
+            const lodgeTotal = amount_collected * (game.lodge_percentage / 100);
+            await supabase
+              .from('games')
+              .update({
+                total_sales: game.total_sales - amount_collected,
+                lodge_net_profit: game.lodge_net_profit - lodgeTotal,
+              })
+              .eq('id', game_id);
+          }
+          
+          toast({
+            title: "Entry Deleted",
+            description: "Daily entry has been deleted and totals updated.",
+          });
+        }
+      }
+      
+      // Refresh data
+      fetchGames();
+      
+    } catch (error: any) {
+      console.error('Error deleting:', error);
+      toast({
+        title: "Error",
+        description: `Failed to delete: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -527,7 +676,7 @@ export default function Dashboard() {
                   id="ticketPrice"
                   type="number"
                   value={newGame.ticketPrice}
-                  onChange={(e) => setNewGame({ ...newGame, ticketPrice: parseFloat(e.target.value) })}
+                  onChange={(e) => setNewGame({ ...newGame, ticketPrice: parseFloat(e.target.value) || 0 })}
                   className="col-span-3"
                 />
               </div>
@@ -539,7 +688,7 @@ export default function Dashboard() {
                   type="number"
                   value={newGame.lodgePercentage}
                   onChange={(e) => {
-                    const lodge = parseFloat(e.target.value);
+                    const lodge = parseFloat(e.target.value) || 0;
                     setNewGame({
                       ...newGame,
                       lodgePercentage: lodge,
@@ -557,7 +706,7 @@ export default function Dashboard() {
                   type="number"
                   value={newGame.jackpotPercentage}
                   onChange={(e) => {
-                    const jackpot = parseFloat(e.target.value);
+                    const jackpot = parseFloat(e.target.value) || 0;
                     setNewGame({
                       ...newGame,
                       jackpotPercentage: jackpot,
@@ -625,6 +774,17 @@ export default function Dashboard() {
                       >
                         <DollarSign className="h-4 w-4 mr-2" /> Finance Report
                       </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setDeleteType('game');
+                          setDeleteItemId(game.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white ml-auto"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Game
+                      </Button>
                     </div>
                     
                     {game.weeks.length === 0 ? (
@@ -650,6 +810,20 @@ export default function Dashboard() {
                               </CardHeader>
                               <AccordionContent>
                                 <CardContent className="pt-4 pb-0">
+                                  <div className="flex justify-end mb-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setDeleteType('week');
+                                        setDeleteItemId(week.id);
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-1" /> Delete Week
+                                    </Button>
+                                  </div>
                                   <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                       <thead>
@@ -663,12 +837,13 @@ export default function Dashboard() {
                                           <th className="px-2 py-2 text-right">Jackpot</th>
                                           <th className="px-2 py-2 text-right">Payout</th>
                                           <th className="px-2 py-2 text-right">Ending Jackpot</th>
+                                          <th className="px-2 py-2 text-center">Actions</th>
                                         </tr>
                                       </thead>
                                       <tbody>
                                         {week.dailyEntries.length === 0 ? (
                                           <tr>
-                                            <td colSpan={9} className="text-center py-4">
+                                            <td colSpan={10} className="text-center py-4">
                                               No entries yet
                                             </td>
                                           </tr>
@@ -687,6 +862,20 @@ export default function Dashboard() {
                                                   `$${entry.weekly_payout_amount.toFixed(2)}` : '-'}
                                               </td>
                                               <td className="px-2 py-2 text-right">${entry.ending_jackpot_total.toFixed(2)}</td>
+                                              <td className="px-2 py-2 text-center">
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="icon"
+                                                  onClick={() => {
+                                                    setDeleteType('entry');
+                                                    setDeleteItemId(entry.id);
+                                                    setDeleteDialogOpen(true);
+                                                  }}
+                                                  className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                >
+                                                  <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                              </td>
                                             </tr>
                                           ))
                                         )}
@@ -708,6 +897,24 @@ export default function Dashboard() {
                                       }}
                                     >
                                       <Plus className="h-3 w-3 mr-1" /> Add Daily Entry
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Show winner button if we have exactly 7 entries and no winner yet */}
+                                  {week.dailyEntries.length === 7 && !week.winner_name && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-4 border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
+                                      onClick={() => {
+                                        setWinnerDetails({
+                                          ...winnerDetails,
+                                          weekId: week.id,
+                                        });
+                                        setAddWinnerOpen(true);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" /> Add Winner
                                     </Button>
                                   )}
                                 </CardContent>
@@ -766,7 +973,7 @@ export default function Dashboard() {
                 value={newDailyEntry.ticketsSold}
                 onChange={(e) => setNewDailyEntry({
                   ...newDailyEntry,
-                  ticketsSold: parseInt(e.target.value),
+                  ticketsSold: parseInt(e.target.value) || 0,
                 })}
                 className="col-span-3"
               />
@@ -812,7 +1019,7 @@ export default function Dashboard() {
                 value={winnerDetails.slotChosen}
                 onChange={(e) => setWinnerDetails({
                   ...winnerDetails,
-                  slotChosen: parseInt(e.target.value),
+                  slotChosen: parseInt(e.target.value) || 0,
                 })}
                 className="col-span-3"
               />
@@ -858,6 +1065,28 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteType === 'game' && "This will permanently delete the game and all associated weeks, entries, expenses, and donations."}
+              {deleteType === 'week' && "This will permanently delete this week and all associated daily entries."}
+              {deleteType === 'entry' && "This will delete this daily entry and update the totals accordingly."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
