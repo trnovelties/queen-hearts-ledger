@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { CalendarIcon, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { ExpenseModal } from "@/components/ExpenseModal";
+
 export function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
@@ -636,7 +637,7 @@ export function Dashboard() {
         </Button>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-4" style={{ backgroundColor: '#C3FFFA' }}>
         {games.length === 0 ? <Card>
             <CardContent className="p-6 flex justify-center items-center">
               <p className="text-muted-foreground">No games created yet. Click "Create Game" to get started.</p>
@@ -1085,7 +1086,14 @@ export function Dashboard() {
       </Dialog>
       
       {/* ExpenseModal */}
-      <ExpenseModal open={expenseModalOpen} onOpenChange={setExpenseModalOpen} gameId={currentGameId || ""} gameName={currentGameName} onExpenseAdded={fetchGames} />
+      <ExpenseModal 
+        open={expenseModalOpen} 
+        onOpenChange={setExpenseModalOpen} 
+        gameId={currentGameId || ""} 
+        gameName={currentGameName} 
+        onExpenseAdded={fetchGames} 
+      />
     </div>;
 }
+
 export default Dashboard;
