@@ -732,8 +732,12 @@ export function Dashboard() {
                                 <div className="p-3 border-t">
                                   <div className="flex justify-between items-center mb-3">
                                     <h4 className="font-semibold">Daily Entries</h4>
-                                    {week.ticket_sales.length < 7 && <Button onClick={() => openRowForm(game.id, week.id)} size="sm" variant="outline" className="text-sm">
-                                        <Plus className="h-3 w-3 mr-1" /> Add Entry
+                                    {week.ticket_sales.length < 7 && <Button 
+                                        onClick={() => openRowForm(game.id, week.id)} 
+                                        size="sm" 
+                                        className="text-sm bg-[#1F4E4A] text-[#EDFFDF] hover:bg-[#1F4E4A]/90 hover:text-[#EDFFDF]"
+                                    >
+                                        <Plus className="h-3 w-3 mr-1 text-[#EDFFDF]" /> Add Entry
                                       </Button>}
                                   </div>
                                   
