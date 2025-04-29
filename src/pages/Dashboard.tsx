@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -730,63 +729,6 @@ export function Dashboard() {
     setCurrentGameId(gameId);
     setCurrentGameName(gameName);
     setExpenseModalOpen(true);
-  };
-
-  const toggleGame = (gameId: string) => {
-    setExpandedGame(expandedGame === gameId ? null : gameId);
-    setExpandedWeek(null);
-  };
-
-  const toggleWeek = (weekId: string) => {
-    setExpandedWeek(expandedWeek === weekId ? null : weekId);
-  };
-
-  const openGameForm = () => {
-    // Set default values for new game
-    setGameForm({
-      name: `Game ${games.length > 0 ? games[games.length - 1].game_number + 1 : 1}`,
-      gameNumber: games.length > 0 ? games[games.length - 1].game_number + 1 : 1,
-      startDate: new Date().toISOString().split('T')[0],
-      ticketPrice: 2,
-      lodgePercentage: 40,
-      jackpotPercentage: 60,
-      carryoverJackpot: 0,
-    });
-    setGameFormOpen(true);
-  };
-
-  const openWeekForm = (gameId: string) => {
-    const game = games.find(g => g.id === gameId);
-    if (!game) return;
-    
-    // Find the last week number for this game
-    const lastWeekNumber = game.weeks.length > 0 
-      ? Math.max(...game.weeks.map((w: any) => w.week_number))
-      : 0;
-    
-    setWeekForm({
-      weekNumber: lastWeekNumber + 1,
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString().split('T')[0],
-    });
-    setCurrentGameId(gameId);
-    setWeekFormOpen(true);
-  };
-
-  const openRowForm = (gameId: string, weekId: string) => {
-    setRowForm({
-      date: new Date().toISOString().split('T')[0],
-      ticketsSold: 0,
-    });
-    setCurrentGameId(gameId);
-    setCurrentWeekId(weekId);
-    setRowFormOpen(true);
-  };
-
-  const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
-    setDeleteItemId(id);
-    setDeleteType(type);
-    setDeleteDialogOpen(true);
   };
 
   const formatCurrency = (amount: number) => {
