@@ -53,7 +53,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName, onExpenseAd
       // Update game totals
       const { data: game } = await supabase
         .from('games')
-        .select('total_expenses, total_donations, lodge_net_profit')
+        .select('total_expenses, total_donations, organization_net_profit')
         .eq('id', gameId)
         .single();
       
@@ -64,7 +64,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName, onExpenseAd
         const updatedTotals = {
           total_expenses: isDonation ? game.total_expenses : game.total_expenses + amount,
           total_donations: isDonation ? game.total_donations + amount : game.total_donations,
-          lodge_net_profit: game.lodge_net_profit - amount,
+          organization_net_profit: game.organization_net_profit - amount,
         };
         
         await supabase

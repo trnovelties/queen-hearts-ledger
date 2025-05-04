@@ -84,7 +84,15 @@ export function WinnerForm({
       if (error) throw error;
       
       if (data) {
-        setCardPayouts(data.card_payouts);
+        // Fix: Make sure we properly parse the card_payouts JSON
+        if (data.card_payouts) {
+          const payoutsObj = typeof data.card_payouts === 'string' 
+            ? JSON.parse(data.card_payouts) 
+            : data.card_payouts;
+          
+          setCardPayouts(payoutsObj);
+        }
+        
         setPenaltyConfig({
           penaltyPercentage: data.penalty_percentage,
           penaltyToOrganization: data.penalty_to_organization

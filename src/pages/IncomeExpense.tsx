@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
 import { Download, PlusCircle } from "lucide-react";
@@ -23,11 +22,11 @@ type TicketSale = Tables<"ticket_sales">;
 type Expense = Tables<"expenses">;
 
 // Define aggregate data types
-type GameSummary = Game & {
+interface GameSummary extends Game {
   weeks: Week[];
   ticket_sales: TicketSale[];
   expenses: Expense[];
-};
+}
 
 type ChartData = {
   name: string;
@@ -189,14 +188,14 @@ export default function IncomeExpense() {
         game.total_expenses + newExpense.amount : 
         game.total_expenses;
       
-      const updatedLodgeNetProfit = game.lodge_net_profit - newExpense.amount;
+      const updatedOrganizationNetProfit = game.organization_net_profit - newExpense.amount;
       
       const { error: gameUpdateError } = await supabase
         .from('games')
         .update({
           total_donations: updatedDonations,
           total_expenses: updatedExpenses,
-          lodge_net_profit: updatedLodgeNetProfit,
+          organization_net_profit: updatedOrganizationNetProfit,
         })
         .eq('id', newExpense.gameId);
       
@@ -210,7 +209,7 @@ export default function IncomeExpense() {
         updatedGames[gameIndex].total_expenses = updatedExpenses;
       }
       
-      updatedGames[gameIndex].lodge_net_profit = updatedLodgeNetProfit;
+      updatedGames[gameIndex].organization_net_profit = updatedOrganizationNetProfit;
       updatedGames[gameIndex].expenses = [...updatedGames[gameIndex].expenses, newExpenseData];
       
       setGames(updatedGames);
@@ -291,7 +290,7 @@ export default function IncomeExpense() {
     let totalPayouts = 0;
     let totalExpenses = 0;
     let totalDonations = 0;
-    let lodgeTotalPortion = 0;
+    let organizationTotalPortion = 0;
     
     filteredGames.forEach(game => {
       // If using date filters, calculate from filtered data
@@ -305,9 +304,9 @@ export default function IncomeExpense() {
         totalExpenses += expenses.reduce((sum, expense) => sum + expense.amount, 0);
         totalDonations += donations.reduce((sum, expense) => sum + expense.amount, 0);
         
-        // Calculate lodge portion
-        const lodgePortion = game.ticket_sales.reduce((sum, sale) => sum + sale.lodge_total, 0);
-        lodgeTotalPortion += lodgePortion;
+        // Calculate organization portion
+        const orgPortion = game.ticket_sales.reduce((sum, sale) => sum + sale.organization_total, 0);
+        organizationTotalPortion += orgPortion;
       } else {
         // Use pre-calculated totals
         totalSales += game.total_sales;
@@ -315,27 +314,27 @@ export default function IncomeExpense() {
         totalExpenses += game.total_expenses;
         totalDonations += game.total_donations;
         
-        // Calculate lodge portion (total_sales * lodge_percentage / 100)
-        const lodgePortion = game.total_sales * (game.lodge_percentage / 100);
-        lodgeTotalPortion += lodgePortion;
+        // Calculate organization portion (total_sales * organization_percentage / 100)
+        const orgPortion = game.total_sales * (game.organization_percentage / 100);
+        organizationTotalPortion += orgPortion;
       }
     });
     
     // Calculate net profit
-    const lodgeNetProfit = lodgeTotalPortion - totalExpenses - totalDonations;
+    const organizationNetProfit = organizationTotalPortion - totalExpenses - totalDonations;
     
     // Calculate percentages
-    const donationsPercentage = lodgeTotalPortion > 0 ? (totalDonations / lodgeTotalPortion) * 100 : 0;
-    const expensesPercentage = lodgeTotalPortion > 0 ? (totalExpenses / lodgeTotalPortion) * 100 : 0;
-    const netProfitPercentage = lodgeTotalPortion > 0 ? (lodgeNetProfit / lodgeTotalPortion) * 100 : 0;
+    const donationsPercentage = organizationTotalPortion > 0 ? (totalDonations / organizationTotalPortion) * 100 : 0;
+    const expensesPercentage = organizationTotalPortion > 0 ? (totalExpenses / organizationTotalPortion) * 100 : 0;
+    const netProfitPercentage = organizationTotalPortion > 0 ? (organizationNetProfit / organizationTotalPortion) * 100 : 0;
     
     return {
       totalSales,
       totalPayouts,
       totalExpenses,
       totalDonations,
-      lodgeTotalPortion,
-      lodgeNetProfit,
+      organizationTotalPortion,
+      organizationNetProfit,
       donationsPercentage,
       expensesPercentage,
       netProfitPercentage,
@@ -569,15 +568,15 @@ export default function IncomeExpense() {
                           <TableCell className="text-right">{formatCurrency(summary.totalDonations)}</TableCell>
                         </TableRow>
                         <TableRow className="bg-muted/50">
-                          <TableCell className="font-medium">Lodge Net Profit</TableCell>
-                          <TableCell className="text-right font-bold">{formatCurrency(summary.lodgeNetProfit)}</TableCell>
+                          <TableCell className="font-medium">Organization Net Profit</TableCell>
+                          <TableCell className="text-right font-bold">{formatCurrency(summary.organizationNetProfit)}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
                   </div>
                   
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Lodge Portion Allocation</h3>
+                    <h3 className="text-lg font-medium mb-4">Organization Portion Allocation</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -588,8 +587,8 @@ export default function IncomeExpense() {
                       </TableHeader>
                       <TableBody>
                         <TableRow>
-                          <TableCell className="font-medium">Lodge Portion Total</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.lodgeTotalPortion)}</TableCell>
+                          <TableCell className="font-medium">Organization Portion Total</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.organizationTotalPortion)}</TableCell>
                           <TableCell className="text-right">100%</TableCell>
                         </TableRow>
                         <TableRow>
@@ -603,8 +602,8 @@ export default function IncomeExpense() {
                           <TableCell className="text-right">{summary.expensesPercentage.toFixed(2)}%</TableCell>
                         </TableRow>
                         <TableRow className="bg-muted/50">
-                          <TableCell className="font-medium">Lodge Net Profit</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.lodgeNetProfit)}</TableCell>
+                          <TableCell className="font-medium">Organization Net Profit</TableCell>
+                          <TableCell className="text-right">{formatCurrency(summary.organizationNetProfit)}</TableCell>
                           <TableCell className="text-right">{summary.netProfitPercentage.toFixed(2)}%</TableCell>
                         </TableRow>
                       </TableBody>
@@ -640,7 +639,7 @@ export default function IncomeExpense() {
                                 <TableHead>Total Payouts</TableHead>
                                 <TableHead>Total Expenses</TableHead>
                                 <TableHead>Total Donations</TableHead>
-                                <TableHead>Lodge Net Profit</TableHead>
+                                <TableHead>Organization Net Profit</TableHead>
                                 <TableHead>Carryover Jackpot</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -650,7 +649,7 @@ export default function IncomeExpense() {
                                 <TableCell>{formatCurrency(game.total_payouts)}</TableCell>
                                 <TableCell>{formatCurrency(game.total_expenses)}</TableCell>
                                 <TableCell>{formatCurrency(game.total_donations)}</TableCell>
-                                <TableCell>{formatCurrency(game.lodge_net_profit)}</TableCell>
+                                <TableCell>{formatCurrency(game.organization_net_profit)}</TableCell>
                                 <TableCell>{formatCurrency(game.carryover_jackpot)}</TableCell>
                               </TableRow>
                             </TableBody>
@@ -670,7 +669,7 @@ export default function IncomeExpense() {
                                     <TableHead>End Date</TableHead>
                                     <TableHead>Tickets Sold</TableHead>
                                     <TableHead>Weekly Sales</TableHead>
-                                    <TableHead>Lodge Portion</TableHead>
+                                    <TableHead>Organization Portion</TableHead>
                                     <TableHead>Jackpot Portion</TableHead>
                                     <TableHead>Weekly Payout</TableHead>
                                     <TableHead>Winner</TableHead>
@@ -679,7 +678,7 @@ export default function IncomeExpense() {
                                 </TableHeader>
                                 <TableBody>
                                   {game.weeks.map(week => {
-                                    const lodgePortion = week.weekly_sales * (game.lodge_percentage / 100);
+                                    const organizationPortion = week.weekly_sales * (game.organization_percentage / 100);
                                     const jackpotPortion = week.weekly_sales * (game.jackpot_percentage / 100);
                                     
                                     return (
@@ -689,7 +688,7 @@ export default function IncomeExpense() {
                                         <TableCell>{format(new Date(week.end_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell>{week.weekly_tickets_sold}</TableCell>
                                         <TableCell>{formatCurrency(week.weekly_sales)}</TableCell>
-                                        <TableCell>{formatCurrency(lodgePortion)}</TableCell>
+                                        <TableCell>{formatCurrency(organizationPortion)}</TableCell>
                                         <TableCell>{formatCurrency(jackpotPortion)}</TableCell>
                                         <TableCell>{formatCurrency(week.weekly_payout)}</TableCell>
                                         <TableCell>{week.winner_name || '-'}</TableCell>
