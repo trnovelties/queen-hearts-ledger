@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("login");
@@ -17,16 +17,14 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login, signup } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { error } = await login(email, password);
 
       if (error) {
         throw error;
@@ -65,36 +63,19 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            email: email
-          }
-        }
-      });
+      const { error } = await signup(email, password);
 
       if (error) {
         throw error;
       }
 
-      if (data.user) {
-        toast({
-          title: "Account created!",
-          description: "Welcome to Queen of Hearts Manager.",
-        });
-        
-        // Auto-login after signup
-        const { error: loginError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (!loginError) {
-          navigate("/dashboard");
-        }
-      }
+      toast({
+        title: "Account created!",
+        description: "Welcome to Queen of Hearts Manager.",
+      });
+      
+      // Auto-login after signup is handled by the AuthContext
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Signup error:", error);
       toast({
@@ -134,7 +115,7 @@ export default function Login() {
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="example@lodge.org"
+                    placeholder="example@organization.org"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -164,7 +145,7 @@ export default function Login() {
                   <Input 
                     id="signup-email" 
                     type="email" 
-                    placeholder="example@lodge.org"
+                    placeholder="example@organization.org"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
