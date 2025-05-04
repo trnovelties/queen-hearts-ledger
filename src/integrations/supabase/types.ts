@@ -14,9 +14,10 @@ export type Database = {
           card_payouts: Json
           id: string
           jackpot_percentage: number
-          lodge_percentage: number
+          minimum_starting_jackpot: number | null
+          organization_percentage: number
           penalty_percentage: number
-          penalty_to_lodge: boolean
+          penalty_to_organization: boolean
           ticket_price: number
           updated_at: string
         }
@@ -24,9 +25,10 @@ export type Database = {
           card_payouts?: Json
           id?: string
           jackpot_percentage?: number
-          lodge_percentage?: number
+          minimum_starting_jackpot?: number | null
+          organization_percentage?: number
           penalty_percentage?: number
-          penalty_to_lodge?: boolean
+          penalty_to_organization?: boolean
           ticket_price?: number
           updated_at?: string
         }
@@ -34,9 +36,10 @@ export type Database = {
           card_payouts?: Json
           id?: string
           jackpot_percentage?: number
-          lodge_percentage?: number
+          minimum_starting_jackpot?: number | null
+          organization_percentage?: number
           penalty_percentage?: number
-          penalty_to_lodge?: boolean
+          penalty_to_organization?: boolean
           ticket_price?: number
           updated_at?: string
         }
@@ -88,9 +91,9 @@ export type Database = {
           game_number: number
           id: string
           jackpot_percentage: number
-          lodge_net_profit: number
-          lodge_percentage: number
           name: string
+          organization_net_profit: number
+          organization_percentage: number
           start_date: string
           ticket_price: number
           total_donations: number
@@ -105,9 +108,9 @@ export type Database = {
           game_number: number
           id?: string
           jackpot_percentage?: number
-          lodge_net_profit?: number
-          lodge_percentage?: number
           name: string
+          organization_net_profit?: number
+          organization_percentage?: number
           start_date: string
           ticket_price?: number
           total_donations?: number
@@ -122,9 +125,9 @@ export type Database = {
           game_number?: number
           id?: string
           jackpot_percentage?: number
-          lodge_net_profit?: number
-          lodge_percentage?: number
           name?: string
+          organization_net_profit?: number
+          organization_percentage?: number
           start_date?: string
           ticket_price?: number
           total_donations?: number
@@ -144,7 +147,7 @@ export type Database = {
           game_id: string
           id: string
           jackpot_total: number
-          lodge_total: number
+          organization_total: number
           ticket_price: number
           tickets_sold: number
           week_id: string
@@ -159,7 +162,7 @@ export type Database = {
           game_id: string
           id?: string
           jackpot_total: number
-          lodge_total: number
+          organization_total: number
           ticket_price: number
           tickets_sold: number
           week_id: string
@@ -174,7 +177,7 @@ export type Database = {
           game_id?: string
           id?: string
           jackpot_total?: number
-          lodge_total?: number
+          organization_total?: number
           ticket_price?: number
           tickets_sold?: number
           week_id?: string
@@ -199,21 +202,30 @@ export type Database = {
       }
       users: {
         Row: {
+          about: string | null
           created_at: string
           email: string
           id: string
+          logo_url: string | null
+          organization_name: string | null
           role: string
         }
         Insert: {
+          about?: string | null
           created_at?: string
           email: string
           id: string
+          logo_url?: string | null
+          organization_name?: string | null
           role: string
         }
         Update: {
+          about?: string | null
           created_at?: string
           email?: string
           id?: string
+          logo_url?: string | null
+          organization_name?: string | null
           role?: string
         }
         Relationships: []
