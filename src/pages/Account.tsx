@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,29 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Upload } from "lucide-react";
 
 export default function Account() {
-  const { profile, updateProfile, uploadLogo } = useAuth();
+  const { user, profile, updateProfile, uploadLogo } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    organization_name: profile?.organization_name || '',
-    about: profile?.about || ''
+    organization_name: '',
+    about: ''
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(profile?.logo_url || null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  
+  // Initialize form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        organization_name: profile.organization_name || '',
+        about: profile.about || ''
+      });
+      if (profile.logo_url) {
+        setLogoPreview(profile.logo_url);
+      }
+    }
+  }, [profile]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -45,10 +58,13 @@ export default function Account() {
     setIsLoading(true);
     
     try {
-      let logoUrl = profile?.logo_url;
+      let logoUrl = profile?.logo_url || null;
       
       if (logoFile) {
-        logoUrl = await uploadLogo(logoFile);
+        const uploadedUrl = await uploadLogo(logoFile);
+        if (uploadedUrl) {
+          logoUrl = uploadedUrl;
+        }
       }
       
       await updateProfile({
@@ -73,6 +89,16 @@ export default function Account() {
     }
   };
   
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-xl font-medium">Please log in to view your account</h2>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -92,7 +118,7 @@ export default function Account() {
                     <AvatarImage src={logoPreview} alt="Organization Logo" />
                   ) : (
                     <AvatarFallback className="text-2xl bg-primary/10">
-                      {formData.organization_name?.charAt(0) || profile?.email?.charAt(0) || '?'}
+                      {formData.organization_name?.charAt(0) || user?.email?.charAt(0) || '?'}
                     </AvatarFallback>
                   )}
                 </Avatar>
@@ -126,7 +152,7 @@ export default function Account() {
                   <Input 
                     id="email" 
                     type="email" 
-                    value={profile?.email || ''} 
+                    value={user?.email || ''} 
                     disabled 
                   />
                 </div>
@@ -147,7 +173,7 @@ export default function Account() {
                   <Textarea 
                     id="about" 
                     name="about"
-                    value={formData.about || ''} 
+                    value={formData.about} 
                     onChange={handleInputChange} 
                     placeholder="Tell us about your organization" 
                     rows={4} 

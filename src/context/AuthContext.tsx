@@ -34,7 +34,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get initial session
+    // First set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // Use setTimeout to avoid potential deadlocks with Supabase auth
+        setTimeout(() => {
+          fetchProfile(currentUser.id);
+        }, 0);
+      } else {
+        setProfile(null);
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        navigate('/login');
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        const currentPath = window.location.pathname;
+        if (currentPath === '/login') {
+          navigate('/dashboard');
+        }
+      }
+    });
+
+    // Then check for existing session
     const getInitialSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -52,20 +76,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getInitialSession();
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      
-      if (currentUser) {
-        await fetchProfile(currentUser.id);
-      } else {
-        setProfile(null);
-      }
-      
-      setLoading(false);
-    });
-
     return () => {
       subscription.unsubscribe();
     };
@@ -77,10 +87,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
         
       if (error) throw error;
-      setProfile(data as OrganizationProfile);
+      
+      if (data) {
+        setProfile(data as OrganizationProfile);
+      } else {
+        console.log('No profile found for user, it may be created by the database trigger');
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -102,7 +117,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    navigate('/login');
   };
 
   const updateProfile = async (data: Partial<OrganizationProfile>) => {
