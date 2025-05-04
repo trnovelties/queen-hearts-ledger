@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,8 @@ import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
 import { Download, PlusCircle } from "lucide-react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 // Define types for data structure
 type Game = Tables<"games">;
@@ -291,11 +294,13 @@ export default function IncomeExpense() {
     let totalExpenses = 0;
     let totalDonations = 0;
     let organizationTotalPortion = 0;
+    let totalTicketsSold = 0;
     
     filteredGames.forEach(game => {
       // If using date filters, calculate from filtered data
       if (startDate && endDate) {
-        totalSales += game.ticket_sales.reduce((sum, sale) => sum + sale.amount_collected, 0);
+        const sales = game.ticket_sales.reduce((sum, sale) => sum + sale.amount_collected, 0);
+        totalSales += sales;
         totalPayouts += game.ticket_sales.reduce((sum, sale) => sum + sale.weekly_payout_amount, 0);
         
         const expenses = game.expenses.filter(e => !e.is_donation);
@@ -307,6 +312,9 @@ export default function IncomeExpense() {
         // Calculate organization portion
         const orgPortion = game.ticket_sales.reduce((sum, sale) => sum + sale.organization_total, 0);
         organizationTotalPortion += orgPortion;
+        
+        // Calculate tickets sold
+        totalTicketsSold += game.ticket_sales.reduce((sum, sale) => sum + sale.tickets_sold, 0);
       } else {
         // Use pre-calculated totals
         totalSales += game.total_sales;
@@ -317,27 +325,29 @@ export default function IncomeExpense() {
         // Calculate organization portion (total_sales * organization_percentage / 100)
         const orgPortion = game.total_sales * (game.organization_percentage / 100);
         organizationTotalPortion += orgPortion;
+        
+        // Calculate tickets sold (approximate based on ticket price)
+        if (game.ticket_price > 0) {
+          totalTicketsSold += Math.round(game.total_sales / game.ticket_price);
+        }
       }
     });
     
     // Calculate net profit
     const organizationNetProfit = organizationTotalPortion - totalExpenses - totalDonations;
     
-    // Calculate percentages
-    const donationsPercentage = organizationTotalPortion > 0 ? (totalDonations / organizationTotalPortion) * 100 : 0;
-    const expensesPercentage = organizationTotalPortion > 0 ? (totalExpenses / organizationTotalPortion) * 100 : 0;
-    const netProfitPercentage = organizationTotalPortion > 0 ? (organizationNetProfit / organizationTotalPortion) * 100 : 0;
+    // Calculate jackpot portion (total_sales - organizationTotalPortion)
+    const jackpotTotalPortion = totalSales - organizationTotalPortion;
     
     return {
+      totalTicketsSold,
       totalSales,
       totalPayouts,
       totalExpenses,
       totalDonations,
       organizationTotalPortion,
+      jackpotTotalPortion,
       organizationNetProfit,
-      donationsPercentage,
-      expensesPercentage,
-      netProfitPercentage,
       filteredGames,
     };
   };
@@ -353,16 +363,81 @@ export default function IncomeExpense() {
     }).format(amount);
   };
   
-  // Generate PDF report (mock functionality for now)
-  const generatePdfReport = () => {
-    toast({
-      title: "PDF Export",
-      description: "Exporting to PDF is not implemented yet.",
-    });
+  // Generate PDF report
+  const generatePdfReport = async () => {
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we prepare your report...",
+      });
+      
+      const reportElement = document.getElementById('report-container');
+      if (!reportElement) return;
+      
+      const canvas = await html2canvas(reportElement, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate required height for the PDF
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      
+      const doc = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+      
+      // Add title
+      doc.setFontSize(18);
+      doc.text('Queen of Hearts Financial Report', 105, 15, { align: 'center' });
+      
+      // Add report type and date range
+      doc.setFontSize(12);
+      doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 14, 30);
+      
+      if (startDate && endDate) {
+        doc.text(`Date Range: ${startDate} to ${endDate}`, 14, 38);
+      }
+      
+      // Add summary data
+      doc.setFontSize(14);
+      doc.text('Summary', 14, 48);
+      
+      doc.setFontSize(10);
+      let y = 58;
+      doc.text(`Total Tickets Sold: ${summary.totalTicketsSold}`, 14, y); y += 8;
+      doc.text(`Total Sales: ${formatCurrency(summary.totalSales)}`, 14, y); y += 8;
+      doc.text(`Total Payouts: ${formatCurrency(summary.totalPayouts)}`, 14, y); y += 8;
+      doc.text(`Total Expenses: ${formatCurrency(summary.totalExpenses)}`, 14, y); y += 8;
+      doc.text(`Total Donations: ${formatCurrency(summary.totalDonations)}`, 14, y); y += 8;
+      doc.text(`Organization Net Profit: ${formatCurrency(summary.organizationNetProfit)}`, 14, y); y += 16;
+      
+      // Add image of the report
+      doc.addImage(imgData, 'PNG', 0, y, imgWidth, imgHeight);
+      
+      // Download the PDF
+      doc.save(`queen-of-hearts-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({
+        title: "PDF Generated",
+        description: "Your report has been downloaded.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF report.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" id="report-container">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-[#1F4E4A]">Income vs. Expense</h2>
         <div className="flex gap-2">
@@ -530,248 +605,314 @@ export default function IncomeExpense() {
           <p className="text-muted-foreground">Loading financial data...</p>
         </div>
       ) : (
-        <Tabs defaultValue="summary">
-          <TabsList className="grid grid-cols-3 w-[400px]">
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="chart">Chart</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="summary">
+        <>
+          {/* Three-Column Summary Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Overall Totals Column */}
             <Card>
               <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
-                <CardDescription>
-                  Overview of financial performance across {selectedGame === "all" ? "all games" : "selected game"}.
-                </CardDescription>
+                <CardTitle className="text-lg">Overall Totals</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Overall Totals</h3>
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Total Sales</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.totalSales)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Total Payouts</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.totalPayouts)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Total Expenses</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Total Donations</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.totalDonations)}</TableCell>
-                        </TableRow>
-                        <TableRow className="bg-muted/50">
-                          <TableCell className="font-medium">Organization Net Profit</TableCell>
-                          <TableCell className="text-right font-bold">{formatCurrency(summary.organizationNetProfit)}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Tickets Sold</span>
+                    <span className="font-medium">{summary.totalTicketsSold.toLocaleString()}</span>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Organization Portion Allocation</h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Category</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="text-right">Percentage</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">Organization Portion Total</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.organizationTotalPortion)}</TableCell>
-                          <TableCell className="text-right">100%</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Donations</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.totalDonations)}</TableCell>
-                          <TableCell className="text-right">{summary.donationsPercentage.toFixed(2)}%</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Expenses</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.totalExpenses)}</TableCell>
-                          <TableCell className="text-right">{summary.expensesPercentage.toFixed(2)}%</TableCell>
-                        </TableRow>
-                        <TableRow className="bg-muted/50">
-                          <TableCell className="font-medium">Organization Net Profit</TableCell>
-                          <TableCell className="text-right">{formatCurrency(summary.organizationNetProfit)}</TableCell>
-                          <TableCell className="text-right">{summary.netProfitPercentage.toFixed(2)}%</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Ticket Sales</span>
+                    <span className="font-medium">{formatCurrency(summary.totalSales)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Total Payouts</span>
+                    <span className="font-medium">{formatCurrency(summary.totalPayouts)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Total Expenses</span>
+                    <span className="font-medium">{formatCurrency(summary.totalExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Total Donated</span>
+                    <span className="font-medium">{formatCurrency(summary.totalDonations)}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="details">
+
+            {/* Payout Portion Column */}
             <Card>
               <CardHeader>
-                <CardTitle>Detailed Financial Reports</CardTitle>
-                <CardDescription>
-                  Detailed breakdown by game and week.
-                </CardDescription>
+                <CardTitle className="text-lg">Payout Portion</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {summary.filteredGames.map(game => (
-                    <div key={game.id} className="space-y-4">
-                      <h3 className="text-lg font-medium">{game.name}</h3>
-                      
-                      <div className="space-y-6">
-                        {/* Game Summary */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Game Summary</h4>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Total Sales</TableHead>
-                                <TableHead>Total Payouts</TableHead>
-                                <TableHead>Total Expenses</TableHead>
-                                <TableHead>Total Donations</TableHead>
-                                <TableHead>Organization Net Profit</TableHead>
-                                <TableHead>Carryover Jackpot</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              <TableRow>
-                                <TableCell>{formatCurrency(game.total_sales)}</TableCell>
-                                <TableCell>{formatCurrency(game.total_payouts)}</TableCell>
-                                <TableCell>{formatCurrency(game.total_expenses)}</TableCell>
-                                <TableCell>{formatCurrency(game.total_donations)}</TableCell>
-                                <TableCell>{formatCurrency(game.organization_net_profit)}</TableCell>
-                                <TableCell>{formatCurrency(game.carryover_jackpot)}</TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
-                        </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Total Sales (Jackpot Portion)</span>
+                    <span className="font-medium">{formatCurrency(summary.jackpotTotalPortion)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Total Payouts</span>
+                    <span className="font-medium">{formatCurrency(summary.totalPayouts)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Organization Portion Column */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Organization Portion</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Total Sales (Organization Portion)</span>
+                    <span className="font-medium">{formatCurrency(summary.organizationTotalPortion)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Total Expenses</span>
+                    <span className="font-medium">{formatCurrency(summary.totalExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span>Total Donations</span>
+                    <span className="font-medium">{formatCurrency(summary.totalDonations)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Organization Net Profit</span>
+                    <span className="font-medium">{formatCurrency(summary.organizationNetProfit)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Tabs defaultValue="summary">
+            <TabsList className="grid grid-cols-3 w-[400px]">
+              <TabsTrigger value="summary">Details</TabsTrigger>
+              <TabsTrigger value="chart">Chart</TabsTrigger>
+              <TabsTrigger value="data">Raw Data</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="summary">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Game Details</CardTitle>
+                  <CardDescription>
+                    Breakdown by game with detailed financial information.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {summary.filteredGames.map(game => (
+                      <div key={game.id} className="space-y-4">
+                        <h3 className="text-lg font-medium">{game.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {game.start_date && `Start: ${format(new Date(game.start_date), 'MMM d, yyyy')}`}
+                          {game.end_date && ` | End: ${format(new Date(game.end_date), 'MMM d, yyyy')}`}
+                        </p>
                         
-                        {/* Weeks Table */}
-                        {game.weeks.length > 0 && (
+                        <div className="space-y-6">
+                          {/* Game Summary */}
                           <div>
-                            <h4 className="text-sm font-medium mb-2">Weeks</h4>
+                            <h4 className="text-sm font-medium mb-2">Game Summary</h4>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Total Sales</TableHead>
+                                  <TableHead>Total Payouts</TableHead>
+                                  <TableHead>Total Expenses</TableHead>
+                                  <TableHead>Total Donations</TableHead>
+                                  <TableHead>Organization Net Profit</TableHead>
+                                  <TableHead>Carryover Jackpot</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow>
+                                  <TableCell>{formatCurrency(game.total_sales)}</TableCell>
+                                  <TableCell>{formatCurrency(game.total_payouts)}</TableCell>
+                                  <TableCell>{formatCurrency(game.total_expenses)}</TableCell>
+                                  <TableCell>{formatCurrency(game.total_donations)}</TableCell>
+                                  <TableCell>{formatCurrency(game.organization_net_profit)}</TableCell>
+                                  <TableCell>{formatCurrency(game.carryover_jackpot)}</TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                          
+                          {/* Weeks Table */}
+                          {game.weeks.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Weeks</h4>
+                              <div className="overflow-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Week #</TableHead>
+                                      <TableHead>Start Date</TableHead>
+                                      <TableHead>End Date</TableHead>
+                                      <TableHead>Tickets Sold</TableHead>
+                                      <TableHead>Weekly Sales</TableHead>
+                                      <TableHead>Organization Portion</TableHead>
+                                      <TableHead>Jackpot Portion</TableHead>
+                                      <TableHead>Weekly Payout</TableHead>
+                                      <TableHead>Winner</TableHead>
+                                      <TableHead>Card Selected</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {game.weeks.map(week => {
+                                      const organizationPortion = week.weekly_sales * (game.organization_percentage / 100);
+                                      const jackpotPortion = week.weekly_sales * (game.jackpot_percentage / 100);
+                                      
+                                      return (
+                                        <TableRow key={week.id}>
+                                          <TableCell>Week {week.week_number}</TableCell>
+                                          <TableCell>{format(new Date(week.start_date), 'MMM d, yyyy')}</TableCell>
+                                          <TableCell>{format(new Date(week.end_date), 'MMM d, yyyy')}</TableCell>
+                                          <TableCell>{week.weekly_tickets_sold}</TableCell>
+                                          <TableCell>{formatCurrency(week.weekly_sales)}</TableCell>
+                                          <TableCell>{formatCurrency(organizationPortion)}</TableCell>
+                                          <TableCell>{formatCurrency(jackpotPortion)}</TableCell>
+                                          <TableCell>{formatCurrency(week.weekly_payout)}</TableCell>
+                                          <TableCell>{week.winner_name || '-'}</TableCell>
+                                          <TableCell>{week.card_selected || '-'}</TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Expenses Table */}
+                          {game.expenses.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Expenses & Donations</h4>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Memo</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {game.expenses.map(expense => (
+                                    <TableRow key={expense.id}>
+                                      <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                      <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
+                                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                      <TableCell>{expense.memo || '-'}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="chart">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Chart</CardTitle>
+                  <CardDescription>
+                    Visual representation of financial data.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 20,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                        <Legend />
+                        <Bar dataKey="Sales" fill="#A1E96C" />
+                        <Bar dataKey="Payouts" fill="#1F4E4A" />
+                        <Bar dataKey="Expenses" fill="#132E2C" />
+                        <Bar dataKey="Donations" fill="#7B8C8A" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="data">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Raw Financial Data</CardTitle>
+                  <CardDescription>
+                    Detailed financial records.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {summary.filteredGames.map(game => (
+                      <div key={game.id} className="space-y-4">
+                        <h3 className="text-lg font-medium">{game.name}</h3>
+                        
+                        {/* Ticket Sales Table */}
+                        {game.ticket_sales.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Daily Ticket Sales</h4>
                             <div className="overflow-auto">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Week #</TableHead>
-                                    <TableHead>Start Date</TableHead>
-                                    <TableHead>End Date</TableHead>
+                                    <TableHead>Date</TableHead>
                                     <TableHead>Tickets Sold</TableHead>
-                                    <TableHead>Weekly Sales</TableHead>
-                                    <TableHead>Organization Portion</TableHead>
-                                    <TableHead>Jackpot Portion</TableHead>
+                                    <TableHead>Ticket Price</TableHead>
+                                    <TableHead>Amount Collected</TableHead>
+                                    <TableHead>Organization Total</TableHead>
+                                    <TableHead>Jackpot Total</TableHead>
                                     <TableHead>Weekly Payout</TableHead>
-                                    <TableHead>Winner</TableHead>
-                                    <TableHead>Card Selected</TableHead>
+                                    <TableHead>Ending Jackpot</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {game.weeks.map(week => {
-                                    const organizationPortion = week.weekly_sales * (game.organization_percentage / 100);
-                                    const jackpotPortion = week.weekly_sales * (game.jackpot_percentage / 100);
-                                    
-                                    return (
-                                      <TableRow key={week.id}>
-                                        <TableCell>Week {week.week_number}</TableCell>
-                                        <TableCell>{format(new Date(week.start_date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell>{format(new Date(week.end_date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell>{week.weekly_tickets_sold}</TableCell>
-                                        <TableCell>{formatCurrency(week.weekly_sales)}</TableCell>
-                                        <TableCell>{formatCurrency(organizationPortion)}</TableCell>
-                                        <TableCell>{formatCurrency(jackpotPortion)}</TableCell>
-                                        <TableCell>{formatCurrency(week.weekly_payout)}</TableCell>
-                                        <TableCell>{week.winner_name || '-'}</TableCell>
-                                        <TableCell>{week.card_selected || '-'}</TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
+                                  {game.ticket_sales.map(sale => (
+                                    <TableRow key={sale.id}>
+                                      <TableCell>{format(new Date(sale.date), 'MMM d, yyyy')}</TableCell>
+                                      <TableCell>{sale.tickets_sold}</TableCell>
+                                      <TableCell>{formatCurrency(sale.ticket_price)}</TableCell>
+                                      <TableCell>{formatCurrency(sale.amount_collected)}</TableCell>
+                                      <TableCell>{formatCurrency(sale.organization_total)}</TableCell>
+                                      <TableCell>{formatCurrency(sale.jackpot_total)}</TableCell>
+                                      <TableCell>{formatCurrency(sale.weekly_payout_amount)}</TableCell>
+                                      <TableCell>{formatCurrency(sale.ending_jackpot_total)}</TableCell>
+                                    </TableRow>
+                                  ))}
                                 </TableBody>
                               </Table>
                             </div>
                           </div>
                         )}
-                        
-                        {/* Expenses Table */}
-                        {game.expenses.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Expenses & Donations</h4>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>Amount</TableHead>
-                                  <TableHead>Memo</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {game.expenses.map(expense => (
-                                  <TableRow key={expense.id}>
-                                    <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                                    <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
-                                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                    <TableCell>{expense.memo || '-'}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="chart">
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Chart</CardTitle>
-                <CardDescription>
-                  Visual representation of financial data.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 20,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                      <Legend />
-                      <Bar dataKey="Sales" fill="#A1E96C" />
-                      <Bar dataKey="Payouts" fill="#1F4E4A" />
-                      <Bar dataKey="Expenses" fill="#132E2C" />
-                      <Bar dataKey="Donations" fill="#7B8C8A" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
       )}
     </div>
   );
