@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +16,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { Download, PlusCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { ExpenseModal } from "@/components/ExpenseModal";
 
 // Define types for data structure
 type Game = Tables<"games">;
@@ -58,6 +58,8 @@ export default function IncomeExpense() {
     memo: "",
     isDonation: false,
   });
+  
+  const reportContainerRef = useRef<HTMLDivElement>(null);
   
   // Set selected game from URL parameter
   useEffect(() => {
@@ -371,79 +373,400 @@ export default function IncomeExpense() {
         description: "Please wait while we prepare your report...",
       });
       
-      const reportElement = document.getElementById('report-container');
-      if (!reportElement) return;
-      
-      const canvas = await html2canvas(reportElement, {
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      
-      // Calculate required height for the PDF
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
+      // Create a new PDF document
       const doc = new jsPDF('p', 'mm', 'a4');
-      let position = 0;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
       
-      // Add title
+      // Add title and report information - centered with proper spacing
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
-      doc.text('Queen of Hearts Financial Report', 105, 15, { align: 'center' });
+      doc.text('Queen of Hearts Financial Report', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
       
-      // Add report type and date range
+      // Add report type and date
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
-      doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 14, 30);
+      doc.text(`Report Date: ${format(new Date(), 'MMM d, yyyy')}`, 20, yPosition);
+      yPosition += 8;
+      
+      // Add filter information
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Report Filters', 20, yPosition);
+      yPosition += 8;
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      
+      doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 20, yPosition);
+      yPosition += 7;
+      
+      const selectedGameName = selectedGame === "all" 
+        ? "All Games" 
+        : games.find(g => g.id === selectedGame)?.name || "Unknown";
+        
+      doc.text(`Game Selection: ${selectedGameName}`, 20, yPosition);
+      yPosition += 7;
       
       if (startDate && endDate) {
-        doc.text(`Date Range: ${startDate} to ${endDate}`, 14, 38);
+        doc.text(`Date Range: ${format(new Date(startDate), 'MMM d, yyyy')} to ${format(new Date(endDate), 'MMM d, yyyy')}`, 20, yPosition);
+        yPosition += 10;
+      } else {
+        doc.text("Date Range: All dates", 20, yPosition);
+        yPosition += 10;
       }
       
-      // Add summary data
+      // Add summary section
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
-      doc.text('Summary', 14, 48);
+      doc.text('Financial Summary', 20, yPosition);
+      yPosition += 10;
       
+      // Summary table setup
+      const summaryData = [
+        { label: 'Total Tickets Sold', value: summary.totalTicketsSold.toLocaleString() },
+        { label: 'Total Sales', value: formatCurrency(summary.totalSales) },
+        { label: 'Total Payouts', value: formatCurrency(summary.totalPayouts) },
+        { label: 'Total Expenses', value: formatCurrency(summary.totalExpenses) },
+        { label: 'Total Donations', value: formatCurrency(summary.totalDonations) },
+        { label: 'Organization Portion', value: formatCurrency(summary.organizationTotalPortion) },
+        { label: 'Jackpot Portion', value: formatCurrency(summary.jackpotTotalPortion) },
+        { label: 'Organization Net Profit', value: formatCurrency(summary.organizationNetProfit) },
+      ];
+      
+      // Draw summary table
+      const colWidth1 = 80;
+      const colWidth2 = 60;
+      const rowHeight = 8;
+      
+      // Create table headers
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text('Metric', 20, yPosition);
+      doc.text('Value', 20 + colWidth1, yPosition);
+      yPosition += 5;
+      
+      // Draw a line under headers
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, yPosition, 20 + colWidth1 + colWidth2, yPosition);
+      yPosition += 5;
+      
+      // Draw summary table data
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      let y = 58;
-      doc.text(`Total Tickets Sold: ${summary.totalTicketsSold}`, 14, y); y += 8;
-      doc.text(`Total Sales: ${formatCurrency(summary.totalSales)}`, 14, y); y += 8;
-      doc.text(`Total Payouts: ${formatCurrency(summary.totalPayouts)}`, 14, y); y += 8;
-      doc.text(`Total Expenses: ${formatCurrency(summary.totalExpenses)}`, 14, y); y += 8;
-      doc.text(`Total Donations: ${formatCurrency(summary.totalDonations)}`, 14, y); y += 8;
-      doc.text(`Organization Net Profit: ${formatCurrency(summary.organizationNetProfit)}`, 14, y); y += 16;
       
-      // Add image of the report
-      doc.addImage(imgData, 'PNG', 0, y, imgWidth, imgHeight);
+      summaryData.forEach(row => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.text(row.label, 20, yPosition);
+        doc.text(row.value, 20 + colWidth1, yPosition);
+        yPosition += rowHeight;
+      });
+      yPosition += 10;
       
-      // Download the PDF
-      doc.save(`queen-of-hearts-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      // Add game details section (if filtering for a specific game)
+      if (selectedGame !== "all" && summary.filteredGames.length === 1) {
+        const game = summary.filteredGames[0];
+        
+        // Check if we need a new page
+        if (yPosition > pageHeight - 60) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text(`Game Details: ${game.name}`, 20, yPosition);
+        yPosition += 10;
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        
+        if (game.start_date) {
+          doc.text(`Start Date: ${format(new Date(game.start_date), 'MMM d, yyyy')}`, 20, yPosition);
+          yPosition += 7;
+        }
+        
+        if (game.end_date) {
+          doc.text(`End Date: ${format(new Date(game.end_date), 'MMM d, yyyy')}`, 20, yPosition);
+          yPosition += 7;
+        }
+        
+        // Add game summary
+        doc.text(`Total Sales: ${formatCurrency(game.total_sales)}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Total Payouts: ${formatCurrency(game.total_payouts)}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Total Expenses: ${formatCurrency(game.total_expenses)}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Total Donations: ${formatCurrency(game.total_donations)}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Organization Net Profit: ${formatCurrency(game.organization_net_profit)}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Carryover Jackpot: ${formatCurrency(game.carryover_jackpot)}`, 20, yPosition);
+        yPosition += 15;
+        
+        // Add weeks table if there are weeks data
+        if (game.weeks && game.weeks.length > 0) {
+          // Check if we need a new page
+          if (yPosition > pageHeight - 40) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text('Weekly Summary', 20, yPosition);
+          yPosition += 10;
+          
+          // Draw week table headers
+          const weekHeaders = [
+            { text: 'Week #', width: 15 },
+            { text: 'Tickets', width: 20 },
+            { text: 'Sales', width: 30 },
+            { text: 'Winner', width: 40 },
+            { text: 'Card', width: 40 },
+            { text: 'Payout', width: 30 }
+          ];
+          
+          doc.setFontSize(10);
+          let xPos = 20;
+          weekHeaders.forEach(header => {
+            doc.text(header.text, xPos, yPosition);
+            xPos += header.width;
+          });
+          yPosition += 5;
+          
+          // Draw a line under headers
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, yPosition, xPos, yPosition);
+          yPosition += 5;
+          
+          // Draw week rows
+          doc.setFont("helvetica", "normal");
+          game.weeks.forEach(week => {
+            // Check if we need a new page
+            if (yPosition > pageHeight - 15) {
+              doc.addPage();
+              yPosition = 20;
+              
+              // Redraw headers on new page
+              doc.setFont("helvetica", "bold");
+              let xPos = 20;
+              weekHeaders.forEach(header => {
+                doc.text(header.text, xPos, yPosition);
+                xPos += header.width;
+              });
+              yPosition += 5;
+              doc.line(20, yPosition, xPos, yPosition);
+              yPosition += 5;
+              doc.setFont("helvetica", "normal");
+            }
+            
+            xPos = 20;
+            doc.text(`Week ${week.week_number}`, xPos, yPosition);
+            xPos += weekHeaders[0].width;
+            
+            doc.text(`${week.weekly_tickets_sold}`, xPos, yPosition);
+            xPos += weekHeaders[1].width;
+            
+            doc.text(`${formatCurrency(week.weekly_sales)}`, xPos, yPosition);
+            xPos += weekHeaders[2].width;
+            
+            doc.text(`${week.winner_name || '-'}`, xPos, yPosition);
+            xPos += weekHeaders[3].width;
+            
+            doc.text(`${week.card_selected || '-'}`, xPos, yPosition);
+            xPos += weekHeaders[4].width;
+            
+            doc.text(`${formatCurrency(week.weekly_payout)}`, xPos, yPosition);
+            
+            yPosition += rowHeight;
+          });
+        }
+        
+        // Add expenses if there are any
+        if (game.expenses && game.expenses.length > 0) {
+          // Check if we need a new page
+          if (yPosition > pageHeight - 40) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          yPosition += 10;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text('Expenses & Donations', 20, yPosition);
+          yPosition += 10;
+          
+          // Draw expense table headers
+          const expenseHeaders = [
+            { text: 'Date', width: 30 },
+            { text: 'Type', width: 30 },
+            { text: 'Amount', width: 30 },
+            { text: 'Memo', width: 80 }
+          ];
+          
+          doc.setFontSize(10);
+          let xPos = 20;
+          expenseHeaders.forEach(header => {
+            doc.text(header.text, xPos, yPosition);
+            xPos += header.width;
+          });
+          yPosition += 5;
+          
+          // Draw a line under headers
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, yPosition, xPos, yPosition);
+          yPosition += 5;
+          
+          // Draw expense rows
+          doc.setFont("helvetica", "normal");
+          game.expenses.forEach(expense => {
+            // Check if we need a new page
+            if (yPosition > pageHeight - 15) {
+              doc.addPage();
+              yPosition = 20;
+              
+              // Redraw headers on new page
+              doc.setFont("helvetica", "bold");
+              let xPos = 20;
+              expenseHeaders.forEach(header => {
+                doc.text(header.text, xPos, yPosition);
+                xPos += header.width;
+              });
+              yPosition += 5;
+              doc.line(20, yPosition, xPos, yPosition);
+              yPosition += 5;
+              doc.setFont("helvetica", "normal");
+            }
+            
+            xPos = 20;
+            doc.text(format(new Date(expense.date), 'MM/dd/yyyy'), xPos, yPosition);
+            xPos += expenseHeaders[0].width;
+            
+            doc.text(expense.is_donation ? 'Donation' : 'Expense', xPos, yPosition);
+            xPos += expenseHeaders[1].width;
+            
+            doc.text(formatCurrency(expense.amount), xPos, yPosition);
+            xPos += expenseHeaders[2].width;
+            
+            // Limit memo text to fit in the column
+            const memo = expense.memo || '-';
+            const truncatedMemo = memo.length > 40 ? memo.substring(0, 37) + '...' : memo;
+            doc.text(truncatedMemo, xPos, yPosition);
+            
+            yPosition += rowHeight;
+          });
+        }
+      } else if (summary.filteredGames.length > 0) {
+        // If showing multiple games, add a games summary table
+        // Check if we need a new page
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text('Games Summary', 20, yPosition);
+        yPosition += 10;
+        
+        // Draw game table headers
+        const gameHeaders = [
+          { text: 'Game', width: 25 },
+          { text: 'Sales', width: 30 },
+          { text: 'Payouts', width: 30 },
+          { text: 'Net Profit', width: 30 }
+        ];
+        
+        doc.setFontSize(10);
+        let xPos = 20;
+        gameHeaders.forEach(header => {
+          doc.text(header.text, xPos, yPosition);
+          xPos += header.width;
+        });
+        yPosition += 5;
+        
+        // Draw a line under headers
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, yPosition, xPos, yPosition);
+        yPosition += 5;
+        
+        // Draw game rows
+        doc.setFont("helvetica", "normal");
+        summary.filteredGames.forEach(game => {
+          // Check if we need a new page
+          if (yPosition > pageHeight - 15) {
+            doc.addPage();
+            yPosition = 20;
+            
+            // Redraw headers on new page
+            doc.setFont("helvetica", "bold");
+            let xPos = 20;
+            gameHeaders.forEach(header => {
+              doc.text(header.text, xPos, yPosition);
+              xPos += header.width;
+            });
+            yPosition += 5;
+            doc.line(20, yPosition, xPos, yPosition);
+            yPosition += 5;
+            doc.setFont("helvetica", "normal");
+          }
+          
+          xPos = 20;
+          doc.text(game.name, xPos, yPosition);
+          xPos += gameHeaders[0].width;
+          
+          doc.text(formatCurrency(game.total_sales), xPos, yPosition);
+          xPos += gameHeaders[1].width;
+          
+          doc.text(formatCurrency(game.total_payouts), xPos, yPosition);
+          xPos += gameHeaders[2].width;
+          
+          doc.text(formatCurrency(game.organization_net_profit), xPos, yPosition);
+          
+          yPosition += rowHeight;
+        });
+      }
+      
+      // Add footer with timestamp
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      const timestamp = `Generated on ${format(new Date(), 'MMM d, yyyy h:mm a')}`;
+      doc.text(timestamp, pageWidth - 20, pageHeight - 10, { align: 'right' });
+      
+      // Save the PDF
+      const fileName = `queen-of-hearts-report-${selectedGameName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
       
       toast({
         title: "PDF Generated",
-        description: "Your report has been downloaded.",
+        description: `Your report has been downloaded as ${fileName}`,
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
         title: "Error",
-        description: "Failed to generate PDF report.",
+        description: "Failed to generate PDF report. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   return (
-    <div className="space-y-6" id="report-container">
+    <div className="space-y-6" id="report-container" ref={reportContainerRef}>
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-[#1F4E4A]">Income vs. Expense</h2>
         <div className="flex gap-2">
           <Button 
-            variant="outline" 
-            className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
+            variant="export" 
             onClick={generatePdfReport}
           >
             <Download className="h-4 w-4 mr-2" /> Export PDF
@@ -455,84 +778,12 @@ export default function IncomeExpense() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Expense or Donation</DialogTitle>
-                <DialogDescription>
-                  Record a new expense or donation for a game.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="gameSelect" className="col-span-1">Game</Label>
-                  <select
-                    id="gameSelect"
-                    value={newExpense.gameId}
-                    onChange={(e) => setNewExpense({ ...newExpense, gameId: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 col-span-3"
-                  >
-                    <option value="">Select a game</option>
-                    {games.map(game => (
-                      <option key={game.id} value={game.id}>{game.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
-                  <Input
-                    id="expenseDate"
-                    type="date"
-                    value={newExpense.date}
-                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-                    className="col-span-3"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="expenseAmount" className="col-span-1">Amount</Label>
-                  <Input
-                    id="expenseAmount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={newExpense.amount}
-                    onChange={(e) => setNewExpense({ ...newExpense, amount: parseFloat(e.target.value) })}
-                    className="col-span-3"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="expenseMemo" className="col-span-1">Memo</Label>
-                  <Input
-                    id="expenseMemo"
-                    value={newExpense.memo}
-                    onChange={(e) => setNewExpense({ ...newExpense, memo: e.target.value })}
-                    placeholder="e.g., Ticket rolls, Toys for Tots donation"
-                    className="col-span-3"
-                  />
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="isDonation"
-                    checked={newExpense.isDonation}
-                    onChange={(e) => setNewExpense({
-                      ...newExpense,
-                      isDonation: e.target.checked,
-                    })}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="isDonation">This is a donation</Label>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button type="submit" onClick={handleAddExpense} className="bg-[#1F4E4A]">
-                  Add {newExpense.isDonation ? "Donation" : "Expense"}
-                </Button>
-              </DialogFooter>
+              <ExpenseModal 
+                open={addExpenseOpen} 
+                onOpenChange={setAddExpenseOpen}
+                gameId={newExpense.gameId}
+                gameName={games.find(g => g.id === newExpense.gameId)?.name || "Selected Game"}
+              />
             </DialogContent>
           </Dialog>
         </div>
