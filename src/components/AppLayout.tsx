@@ -92,15 +92,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Sidebar className="border-r border-border/40">
           <SidebarHeader className="flex items-center justify-center pt-6 pb-4">
             <div className="flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
-                {profile?.logo_url ? (
-                  <AvatarImage src={profile.logo_url} alt={profile?.organization_name || "Organization"} />
-                ) : (
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {profile?.organization_name?.charAt(0) || "♥"}
-                  </AvatarFallback>
-                )}
-              </Avatar>
               <h2 className="text-xl font-semibold text-white">
                 {profile?.organization_name || "Queen of Hearts"}
               </h2>
@@ -177,6 +168,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 {location.pathname === "/admin" && "Admin Panel"}
                 {location.pathname === "/account" && "Account"}
               </h1>
+            </div>
+            
+            <div className="flex items-center">
+              {profile?.logo_url ? (
+                <Avatar className="h-10 w-10 border-2 border-primary">
+                  <AvatarImage 
+                    src={profile.logo_url} 
+                    alt={profile?.organization_name || "Organization logo"} 
+                    className="object-cover" 
+                  />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {profile?.organization_name?.charAt(0) || "♥"}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <Avatar className="h-10 w-10 border-2 border-primary">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {profile?.organization_name?.charAt(0) || "♥"}
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </div>
           </header>
 
