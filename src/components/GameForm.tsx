@@ -15,7 +15,6 @@ interface GameFormProps {
 
 export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
   const [gameForm, setGameForm] = useState({
-    name: `Game ${games.length > 0 ? games[games.length - 1].game_number + 1 : 1}`,
     gameNumber: games.length > 0 ? games[games.length - 1].game_number + 1 : 1,
     startDate: new Date().toISOString().split('T')[0],
     ticketPrice: 2,
@@ -28,6 +27,9 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
   const createGame = async () => {
     try {
+      // Generate game name automatically from game number
+      const gameName = `Game ${gameForm.gameNumber}`;
+      
       // Get the previous game to check for carryover jackpot
       let carryoverJackpot = 0;
       if (games.length > 0) {
@@ -53,7 +55,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       }
 
       const { data, error } = await supabase.from('games').insert([{
-        name: gameForm.name,
+        name: gameName, // Use the generated name
         game_number: gameForm.gameNumber,
         start_date: gameForm.startDate,
         ticket_price: gameForm.ticketPrice,
@@ -66,14 +68,13 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       
       toast({
         title: "Game Created",
-        description: `${gameForm.name} has been created successfully.`
+        description: `${gameName} has been created successfully.`
       });
       
       onOpenChange(false);
       onComplete();
       
       setGameForm({
-        name: `Game ${gameForm.gameNumber + 1}`,
         gameNumber: gameForm.gameNumber + 1,
         startDate: new Date().toISOString().split('T')[0],
         ticketPrice: 2,
@@ -102,17 +103,6 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label htmlFor="name" className="text-sm font-medium">Game Name</label>
-            <input 
-              id="name" 
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
-              value={gameForm.name} 
-              onChange={e => setGameForm({...gameForm, name: e.target.value})} 
-              placeholder="Game 1" 
-            />
-          </div>
-          
           <div className="grid gap-2">
             <label htmlFor="gameNumber" className="text-sm font-medium">Game Number</label>
             <input 
