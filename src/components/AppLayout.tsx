@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, Users } from "lucide-react";
+import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -127,11 +127,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton 
-                      onClick={() => navigate("/users")}
-                      className={location.pathname === "/users" ? "bg-sidebar-primary" : ""}
+                      onClick={() => navigate("/account")}
+                      className={location.pathname === "/account" ? "bg-sidebar-primary" : ""}
                     >
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Users</span>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Account</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -162,7 +162,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 {location.pathname === "/dashboard" && "Dashboard"}
                 {location.pathname === "/income-expense" && "Income vs Expense"}
                 {location.pathname === "/admin" && "Admin Panel"}
-                {location.pathname === "/users" && "User Management"}
+                {location.pathname === "/account" && "Account"}
               </h1>
             </div>
           </header>

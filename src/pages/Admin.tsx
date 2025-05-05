@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,8 +52,6 @@ export default function Admin() {
   // Fetch configuration on component mount
   useEffect(() => {
     async function fetchConfig() {
-      if (!isAdmin) return;
-      
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -95,7 +92,7 @@ export default function Admin() {
     }
     
     fetchConfig();
-  }, [isAdmin, toast]);
+  }, [toast]);
   
   // Handle saving game settings
   const handleSaveGameSettings = async () => {
@@ -207,17 +204,6 @@ export default function Admin() {
       setLoading(false);
     }
   };
-  
-  if (!isAdmin) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-xl font-medium mb-2">Access Denied</h2>
-          <p className="text-muted-foreground">You need administrator privileges to view this page.</p>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div>
