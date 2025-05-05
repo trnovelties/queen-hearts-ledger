@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -525,40 +524,42 @@ export function Dashboard() {
           games.map(game => (
             <Card key={game.id} className="overflow-hidden">
               <CardHeader 
-                className={`flex flex-row items-center justify-between cursor-pointer ${expandedGame === game.id ? 'bg-accent/50' : ''}`} 
+                className={`flex flex-col items-start justify-between cursor-pointer ${expandedGame === game.id ? 'bg-accent/50' : ''}`} 
                 onClick={() => toggleGame(game.id)}
               >
-                <CardTitle className="text-xl">
-                  {game.name}
-                  {game.end_date && <span className="ml-2 text-sm text-green-600 font-normal">(Completed)</span>}
-                </CardTitle>
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm hidden md:flex space-x-4">
-                    <div>
-                      <span className="text-muted-foreground">Start:</span> {format(new Date(game.start_date), 'MMM d, yyyy')}
-                      {game.end_date && <span className="ml-2 text-muted-foreground">End:</span>} {game.end_date && format(new Date(game.end_date), 'MMM d, yyyy')}
+                <div className="w-full flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl">
+                    {game.name}
+                    {game.end_date && <span className="ml-2 text-sm text-green-600 font-normal">(Completed)</span>}
+                  </CardTitle>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm hidden md:flex space-x-4">
+                      <div>
+                        <span className="text-muted-foreground">Start:</span> {format(new Date(game.start_date), 'MMM d, yyyy')}
+                        {game.end_date && <span className="ml-2 text-muted-foreground">End:</span>} {game.end_date && format(new Date(game.end_date), 'MMM d, yyyy')}
+                      </div>
+                      <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
+                      <div><span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}</div>
                     </div>
-                    <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
-                    <div><span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}</div>
-                  </div>
-                  
-                  <Button 
-                    onClick={e => {
-                      e.stopPropagation();
-                      openDeleteConfirm(game.id, 'game');
-                    }} 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                  
-                  <div className="flex items-center">
-                    {expandedGame === game.id ? 
-                      <ChevronUp className="h-6 w-6 text-muted-foreground" /> : 
-                      <ChevronDown className="h-6 w-6 text-muted-foreground" />
-                    }
+                    
+                    <Button 
+                      onClick={e => {
+                        e.stopPropagation();
+                        openDeleteConfirm(game.id, 'game');
+                      }} 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                    
+                    <div className="flex items-center">
+                      {expandedGame === game.id ? 
+                        <ChevronUp className="h-6 w-6 text-muted-foreground" /> : 
+                        <ChevronDown className="h-6 w-6 text-muted-foreground" />
+                      }
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -614,38 +615,43 @@ export function Dashboard() {
                                 </div>
                               </div>
 
-                              {/* First row of information */}
+                              {/* First row of information - using exact terms requested */}
                               <div className="text-sm flex flex-wrap mt-2 space-x-4">
-                                <div><span className="text-muted-foreground">Tickets:</span> {week.weekly_tickets_sold}</div>
-                                <div><span className="text-muted-foreground">Sales:</span> {formatCurrency(week.weekly_sales)}</div>
-                                <div><span className="text-muted-foreground">Org Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
-                                <div><span className="text-muted-foreground">Jackpot:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
+                                <div><span className="text-muted-foreground">Tickets Sold:</span> {week.weekly_tickets_sold}</div>
+                                <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}</div>
+                                <div><span className="text-muted-foreground">Organization Net Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
+                                <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
                               </div>
 
-                              {/* Second row with winner information if available */}
-                              {week.winner_name && (
-                                <div className="text-sm flex flex-wrap mt-2 space-x-4">
-                                  <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
-                                  <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
-                                  <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
-                                  <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
-                                  <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
-                                </div>
-                              )}
+                              {/* Second row with winner information if available - using exact terms requested */}
+                              <div className="text-sm flex flex-wrap mt-2 space-x-4">
+                                {week.winner_name && (
+                                  <>
+                                    <div><span className="text-muted-foreground">Winner Name:</span> {week.winner_name}</div>
+                                    <div><span className="text-muted-foreground">Slot Selected:</span> {week.slot_chosen}</div>
+                                    <div><span className="text-muted-foreground">Card Selected:</span> {week.card_selected}</div>
+                                    <div><span className="text-muted-foreground">Payout Amount:</span> {formatCurrency(week.weekly_payout)}</div>
+                                    <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
+                                  </>
+                                )}
+                                {!week.winner_name && (
+                                  <div className="text-muted-foreground">No winner information yet</div>
+                                )}
+                              </div>
                             </CardHeader>
                             
                             {expandedWeek === week.id && (
                               <CardContent className="p-0 border-t">
                                 <div className="p-3 bg-muted/20 flex flex-wrap gap-2 text-sm">
-                                  {/* Rearranged fields according to requirements in the detailed view */}
+                                  {/* Rearranged fields according to requirements in the detailed view - using exact terms requested */}
                                   <div className="mr-4">
                                     <span className="font-semibold">Tickets Sold:</span> {week.weekly_tickets_sold}
                                   </div>
                                   <div className="mr-4">
-                                    <span className="font-semibold">Weekly Sales:</span> {formatCurrency(week.weekly_sales)}
+                                    <span className="font-semibold">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}
                                   </div>
                                   <div className="mr-4">
-                                    <span className="font-semibold">Org Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}
+                                    <span className="font-semibold">Organization Net Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}
                                   </div>
                                   <div className="mr-4">
                                     <span className="font-semibold">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}
@@ -653,16 +659,16 @@ export function Dashboard() {
                                   {week.winner_name && (
                                     <>
                                       <div className="mr-4">
-                                        <span className="font-semibold">Winner:</span> {week.winner_name}
+                                        <span className="font-semibold">Winner Name:</span> {week.winner_name}
                                       </div>
                                       <div className="mr-4">
-                                        <span className="font-semibold">Slot:</span> {week.slot_chosen}
+                                        <span className="font-semibold">Slot Selected:</span> {week.slot_chosen}
                                       </div>
                                       <div className="mr-4">
-                                        <span className="font-semibold">Card:</span> {week.card_selected}
+                                        <span className="font-semibold">Card Selected:</span> {week.card_selected}
                                       </div>
                                       <div className="mr-4">
-                                        <span className="font-semibold">Payout:</span> {formatCurrency(week.weekly_payout)}
+                                        <span className="font-semibold">Payout Amount:</span> {formatCurrency(week.weekly_payout)}
                                       </div>
                                       <div>
                                         <span className="font-semibold">Present:</span> {week.winner_present ? 'Yes' : 'No'}
