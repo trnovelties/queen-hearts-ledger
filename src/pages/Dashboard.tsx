@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -584,52 +585,53 @@ export function Dashboard() {
                         {game.weeks.map((week: any) => (
                           <Card key={week.id} className="overflow-hidden" style={{ backgroundColor: '#EDFFDF' }}>
                             <CardHeader 
-                              className={`py-3 flex flex-row items-center justify-between cursor-pointer ${expandedWeek === week.id ? 'bg-accent/30' : ''}`} 
+                              className={`py-3 flex flex-col cursor-pointer ${expandedWeek === week.id ? 'bg-accent/30' : ''}`} 
                               onClick={() => toggleWeek(week.id)}
                             >
-                              <div className="font-semibold">
-                                Week {week.week_number} ({format(new Date(week.start_date), 'MMM d, yyyy')} - {format(new Date(week.end_date), 'MMM d, yyyy')})
-                              </div>
-                              <div className="flex items-center space-x-4">
-                                <div className="text-sm hidden md:flex space-x-4">
-                                  <div><span className="text-muted-foreground">Tickets:</span> {week.weekly_tickets_sold}</div>
-                                  <div><span className="text-muted-foreground">Sales:</span> {formatCurrency(week.weekly_sales)}</div>
+                              {/* Week title and dates */}
+                              <div className="flex flex-row items-center justify-between">
+                                <div className="font-semibold">
+                                  Week {week.week_number} ({format(new Date(week.start_date), 'MMM d, yyyy')} - {format(new Date(week.end_date), 'MMM d, yyyy')})
+                                </div>
+                                <div className="flex items-center">
+                                  <Button 
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      openDeleteConfirm(week.id, 'week');
+                                    }} 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                   
-                                  {/* Calculate organization portion based on weekly sales */}
-                                  <div><span className="text-muted-foreground">Org Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
-                                  
-                                  {/* Calculate jackpot portion based on weekly sales, excluding Monday sales */}
-                                  <div><span className="text-muted-foreground">Jackpot:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
-                                  
-                                  {week.winner_name && (
-                                    <>
-                                      <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
-                                      <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
-                                      <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
-                                      <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
-                                      <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
-                                    </>
+                                  {expandedWeek === week.id ? (
+                                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
                                   )}
                                 </div>
-                                
-                                <Button 
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    openDeleteConfirm(week.id, 'week');
-                                  }} 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                                
-                                {expandedWeek === week.id ? (
-                                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                )}
                               </div>
+
+                              {/* First row of information */}
+                              <div className="text-sm flex flex-wrap mt-2 space-x-4">
+                                <div><span className="text-muted-foreground">Tickets:</span> {week.weekly_tickets_sold}</div>
+                                <div><span className="text-muted-foreground">Sales:</span> {formatCurrency(week.weekly_sales)}</div>
+                                <div><span className="text-muted-foreground">Org Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
+                                <div><span className="text-muted-foreground">Jackpot:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
+                              </div>
+
+                              {/* Second row with winner information if available */}
+                              {week.winner_name && (
+                                <div className="text-sm flex flex-wrap mt-2 space-x-4">
+                                  <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
+                                  <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
+                                  <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
+                                  <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
+                                  <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
+                                </div>
+                              )}
                             </CardHeader>
                             
                             {expandedWeek === week.id && (
