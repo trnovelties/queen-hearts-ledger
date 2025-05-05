@@ -7,11 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Printer } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useForm } from 'react-hook-form';
 import { supabase } from "@/integrations/supabase/client";
 
 interface PayoutSlipModalProps {
@@ -26,14 +24,10 @@ interface PayoutSlipModalProps {
     gameNumber: number;
     gameName: string;
     weekNumber: number;
-    weekId: string; // Added weekId to store the authorized signature name
+    weekId: string;
     weekStartDate: string;
     weekEndDate: string;
   };
-}
-
-interface FormValues {
-  authorizedSignatureName: string;
 }
 
 export function PayoutSlipModal({
@@ -46,12 +40,6 @@ export function PayoutSlipModal({
   const { profile } = useAuth();
   const [authorizedName, setAuthorizedName] = useState<string>('');
   
-  const form = useForm<FormValues>({
-    defaultValues: {
-      authorizedSignatureName: '',
-    }
-  });
-  
   const handleGeneratePDF = async () => {
     if (slipRef.current) {
       try {
@@ -59,7 +47,9 @@ export function PayoutSlipModal({
         if (authorizedName) {
           const { error } = await supabase
             .from('weeks')
-            .update({ authorized_signature_name: authorizedName })
+            .update({
+              authorized_signature_name: authorizedName
+            })
             .eq('id', winnerData.weekId);
             
           if (error) {

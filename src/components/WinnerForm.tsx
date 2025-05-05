@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -233,6 +232,7 @@ export function WinnerForm({
         gameNumber: gameDetails?.game_number,
         gameName: gameDetails?.name,
         weekNumber: weekDetails?.week_number,
+        weekId: weekId, // Adding weekId to the payout slip data
         weekStartDate: weekDetails?.start_date,
         weekEndDate: weekDetails?.end_date
       };

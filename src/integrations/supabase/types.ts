@@ -232,6 +232,7 @@ export type Database = {
       }
       weeks: {
         Row: {
+          authorized_signature_name: string | null
           card_selected: string | null
           created_at: string
           end_date: string
@@ -247,6 +248,7 @@ export type Database = {
           winner_present: boolean | null
         }
         Insert: {
+          authorized_signature_name?: string | null
           card_selected?: string | null
           created_at?: string
           end_date: string
@@ -262,6 +264,7 @@ export type Database = {
           winner_present?: boolean | null
         }
         Update: {
+          authorized_signature_name?: string | null
           card_selected?: string | null
           created_at?: string
           end_date?: string
