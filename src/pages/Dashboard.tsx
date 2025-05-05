@@ -626,7 +626,7 @@ export default function Dashboard() {
                               </div>
 
                               {/* First row of information - text-left to ensure left alignment */}
-                              <div className="text-sm flex flex-wrap mt-2 space-x-4 text-left">
+                              <div className="text-sm flex flex-wrap mt-2 gap-4 text-left">
                                 <div><span className="text-muted-foreground">Tickets Sold:</span> {week.weekly_tickets_sold}</div>
                                 <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}</div>
                                 <div><span className="text-muted-foreground">Organization Net Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
@@ -634,7 +634,7 @@ export default function Dashboard() {
                               </div>
 
                               {/* Second row with winner information if available - also text-left for alignment */}
-                              <div className="text-sm flex flex-wrap mt-2 space-x-4 text-left">
+                              <div className="text-sm flex flex-wrap mt-2 gap-4 text-left">
                                 {week.winner_name && (
                                   <>
                                     <div><span className="text-muted-foreground">Winner Name:</span> {week.winner_name}</div>
