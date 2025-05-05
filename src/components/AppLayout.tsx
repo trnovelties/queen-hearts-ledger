@@ -7,6 +7,8 @@ import { Card, CardContent } from "./ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -18,6 +20,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   useEffect(() => {
     async function checkSession() {
@@ -88,10 +91,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="min-h-screen flex w-full">
         <Sidebar className="border-r border-border/40">
           <SidebarHeader className="flex items-center justify-center pt-6 pb-4">
-            <h2 className="text-xl font-semibold text-white flex items-center">
-              <span className="mr-2 text-secondary">♥</span>
-              Queen of Hearts
-            </h2>
+            <div className="flex items-center space-x-2">
+              <Avatar className="h-8 w-8">
+                {profile?.logo_url ? (
+                  <AvatarImage src={profile.logo_url} alt={profile?.organization_name || "Organization"} />
+                ) : (
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {profile?.organization_name?.charAt(0) || "♥"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <h2 className="text-xl font-semibold text-white">
+                {profile?.organization_name || "Queen of Hearts"}
+              </h2>
+            </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
