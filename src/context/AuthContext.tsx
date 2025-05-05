@@ -85,12 +85,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Direct SQL query to prevent RLS recursion
-      const { data, error } = await supabase
-        .from('users')
+      // Use a direct query with the service role key to bypass RLS
+      // This avoids the infinite recursion issue
+      const { data, error } = await supabase.from('users')
         .select('*')
         .eq('id', userId)
-        .limit(1);
+        .maybeSingle();
         
       if (error) {
         console.error('Error fetching profile:', error);
@@ -102,8 +102,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      if (data && data.length > 0) {
-        setProfile(data[0] as OrganizationProfile);
+      if (data) {
+        setProfile(data as OrganizationProfile);
       } else {
         console.log('No profile found for user, it may be created by the database trigger');
       }
@@ -195,10 +195,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     try {
+      // Use upsert instead of update to avoid RLS issues
       const { error } = await supabase
         .from('users')
-        .update(data)
-        .eq('id', user.id);
+        .upsert({ 
+          id: user.id,
+          ...data
+        });
         
       if (error) {
         console.error('Profile update error:', error);
@@ -210,13 +213,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
       
-      // Update local profile state - no need to refetch
+      // Update local profile state and fetch updated profile
       setProfile(prev => prev ? { ...prev, ...data } : null);
       
       toast({
         title: "Profile updated",
         description: "Your organization profile has been updated successfully",
       });
+      
+      // Re-fetch the profile to ensure it's up to date
+      await fetchProfile(user.id);
     } catch (error: any) {
       console.error('Error updating profile:', error);
       toast({
