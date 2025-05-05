@@ -1,1 +1,9 @@
+
 project_id = "isjbdwxngfrgftfannzi"
+
+[storage]
+enabled = true
+[auth]
+enabled = true
+[postgres]
+enabled = true

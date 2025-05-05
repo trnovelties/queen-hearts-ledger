@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 type OrganizationProfile = {
   id: string;
@@ -32,10 +33,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<OrganizationProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // First set up the auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
       
@@ -83,44 +85,114 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Direct SQL query to prevent RLS recursion
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .limit(1);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: "Error fetching profile",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
       
-      if (data) {
-        setProfile(data as OrganizationProfile);
+      if (data && data.length > 0) {
+        setProfile(data[0] as OrganizationProfile);
       } else {
         console.log('No profile found for user, it may be created by the database trigger');
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in fetchProfile:', error);
+      toast({
+        title: "Profile fetch error",
+        description: "Unable to load your profile. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const login = async (email: string, password: string) => {
-    return await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const response = await supabase.auth.signInWithPassword({ email, password });
+      if (response.error) {
+        toast({
+          title: "Login failed",
+          description: response.error.message,
+          variant: "destructive",
+        });
+      }
+      return response;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login error",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const signup = async (email: string, password: string) => {
-    return await supabase.auth.signUp({ 
-      email, 
-      password,
-      options: {
-        data: { email }
+    try {
+      const response = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: { email }
+        }
+      });
+      
+      if (response.error) {
+        toast({
+          title: "Signup failed",
+          description: response.error.message,
+          variant: "destructive",
+        });
       }
-    });
+      return response;
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      toast({
+        title: "Signup error",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout error",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const updateProfile = async (data: Partial<OrganizationProfile>) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      toast({
+        title: "Update failed",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       const { error } = await supabase
@@ -128,17 +200,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .update(data)
         .eq('id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Profile update error:', error);
+        toast({
+          title: "Update failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
       
+      // Update local profile state - no need to refetch
       setProfile(prev => prev ? { ...prev, ...data } : null);
-    } catch (error) {
+      
+      toast({
+        title: "Profile updated",
+        description: "Your organization profile has been updated successfully",
+      });
+    } catch (error: any) {
       console.error('Error updating profile:', error);
+      toast({
+        title: "Update failed",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
       throw error;
     }
   };
 
   const uploadLogo = async (file: File): Promise<string | null> => {
-    if (!user?.id) return null;
+    if (!user?.id) {
+      toast({
+        title: "Upload failed",
+        description: "You must be logged in to upload a logo",
+        variant: "destructive",
+      });
+      return null;
+    }
     
     try {
       const fileExt = file.name.split('.').pop();
@@ -149,15 +247,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('brand_images')
         .upload(filePath, file);
         
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Logo upload error:', uploadError);
+        toast({
+          title: "Upload failed",
+          description: uploadError.message,
+          variant: "destructive",
+        });
+        throw uploadError;
+      }
       
       const { data } = supabase.storage
         .from('brand_images')
         .getPublicUrl(filePath);
         
       return data.publicUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading logo:', error);
+      toast({
+        title: "Upload failed",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
       return null;
     }
   };
