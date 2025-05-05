@@ -582,10 +582,10 @@ export default function Dashboard() {
                       <Button 
                         onClick={() => openWeekForm(game.id)} 
                         size="sm" 
-                        variant="outline" 
-                        className="text-sm"
+                        variant="export"
+                        className="flex items-center gap-2"
                       >
-                        <Plus className="h-4 w-4 mr-2" /> Add Week
+                        <Plus className="h-4 w-4" /> Add Week
                       </Button>
                     </div>
                     
