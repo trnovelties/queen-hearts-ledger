@@ -178,18 +178,9 @@ export function PayoutSlipModal({
               <div className="text-2xl font-bold">{formatCurrency(winnerData.payoutAmount)}</div>
             </div>
             
-            <div className="grid grid-cols-2 gap-8 mt-16">
-              <div>
-                <div className="border-t border-gray-400 pt-2">
-                  <div className="font-semibold text-gray-600">Winner Signature</div>
-                </div>
-              </div>
-              <div>
-                <div className="border-t border-gray-400 pt-2">
-                  <div className="font-semibold text-gray-600">
-                    {authorizedName ? authorizedName : 'Authorized Signature'}
-                  </div>
-                </div>
+            <div className="mt-16 pt-2 border-t border-gray-400">
+              <div className="font-semibold text-gray-600 text-center">
+                {authorizedName ? authorizedName : 'Authorized Signature'}
               </div>
             </div>
           </div>
