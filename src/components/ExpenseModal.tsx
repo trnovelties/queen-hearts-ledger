@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { DatePickerWithInput } from "@/components/ui/datepicker";
 
 interface ExpenseModalProps {
   open: boolean;
@@ -22,6 +24,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
     memo: "",
     type: "expense", // "expense" or "donation"
   });
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddExpense = async () => {
@@ -40,7 +43,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: expenseData.date,
+          date: selectedDate.toISOString().split('T')[0],
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,
           is_donation: expenseData.type === "donation",
@@ -82,6 +85,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         memo: "",
         type: "expense",
       });
+      setSelectedDate(new Date());
       
       onOpenChange(false);
     } catch (error: any) {
@@ -109,16 +113,14 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
-            <Input
-              id="expenseDate"
-              type="date"
-              value={expenseData.date}
-              onChange={(e) => setExpenseData({
-                ...expenseData,
-                date: e.target.value,
-              })}
-              className="col-span-3"
-            />
+            <div className="col-span-3">
+              <DatePickerWithInput
+                date={selectedDate}
+                setDate={(date) => date && setSelectedDate(date)}
+                placeholder="Select date"
+                className=""
+              />
+            </div>
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
