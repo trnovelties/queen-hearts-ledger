@@ -294,7 +294,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_profile: {
+        Args: { user_id: string }
+        Returns: {
+          about: string | null
+          created_at: string
+          email: string
+          id: string
+          logo_url: string | null
+          organization_name: string | null
+          role: string
+        }[]
+      }
+      update_user_profile: {
+        Args: {
+          p_user_id: string
+          p_organization_name: string
+          p_about: string
+          p_logo_url: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

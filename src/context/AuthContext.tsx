@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Use a raw SQL query through Supabase to bypass RLS completely
+      // Use RPC function to bypass RLS completely
       const { data, error } = await supabase.rpc('get_user_profile', { 
         user_id: userId 
       });
