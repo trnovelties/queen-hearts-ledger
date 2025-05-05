@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User } from "lucide-react";
@@ -90,12 +89,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <Sidebar className="border-r border-border/40">
-          <SidebarHeader className="flex items-center pt-6 pb-4 px-4">
-            <div className="flex items-center">
-              <h2 className="text-xl font-semibold text-white">
-                {profile?.organization_name || "Queen of Hearts"}
-              </h2>
-            </div>
+          <SidebarHeader className="pt-6 pb-4 px-4">
+            <h2 className="text-xl font-semibold text-white pl-2">
+              {profile?.organization_name || "Queen of Hearts"}
+            </h2>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
