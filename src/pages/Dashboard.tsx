@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -940,29 +939,29 @@ export default function Dashboard() {
       
       {/* Expense Modal */}
       <ExpenseModal 
-        isOpen={expenseModalOpen} 
-        setIsOpen={setExpenseModalOpen} 
+        open={expenseModalOpen} 
+        onOpenChange={setExpenseModalOpen} 
         gameId={currentGameId || ''} 
         gameName={currentGameName} 
       />
       
       {/* Payout Slip Modal */}
       <PayoutSlipModal 
-        isOpen={payoutSlipOpen} 
-        setIsOpen={setPayoutSlipOpen} 
+        open={payoutSlipOpen} 
+        onOpenChange={setPayoutSlipOpen} 
         winnerData={payoutSlipData} 
       />
       
       {/* Winner Form */}
       <WinnerForm 
-        isOpen={winnerFormOpen} 
-        setIsOpen={setWinnerFormOpen} 
+        open={winnerFormOpen} 
+        onOpenChange={setWinnerFormOpen} 
       />
       
       {/* Game Form */}
       <GameForm 
-        isOpen={gameFormOpen} 
-        setIsOpen={setGameFormOpen} 
+        open={gameFormOpen} 
+        onOpenChange={setGameFormOpen} 
       />
     </div>
   );
