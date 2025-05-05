@@ -893,17 +893,16 @@ export default function Dashboard() {
                       <div className="flex space-x-2">
                         <Button 
                           onClick={() => generateGamePdfReport(game)} 
-                          variant="outline" 
+                          variant="export" 
                           size="sm"
-                          className="flex items-center gap-2 bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]"
+                          className="flex items-center gap-2"
                         >
                           <Download className="h-4 w-4" /> Export Game PDF
                         </Button>
                         <Button 
                           onClick={() => openWeekForm(game.id)} 
                           size="sm" 
-                          variant="export"
-                          className="flex items-center gap-2"
+                          className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] flex items-center gap-2"
                         >
                           <Plus className="h-4 w-4" /> Add Week
                         </Button>
