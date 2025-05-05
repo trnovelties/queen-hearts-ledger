@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { CalendarIcon, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { ExpenseModal } from "@/components/ExpenseModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
@@ -25,11 +27,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [weekForm, setWeekForm] = useState({
     weekNumber: 1,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString().split('T')[0]
+    startDate: new Date(),
+    endDate: new Date(new Date().setDate(new Date().getDate() + 6))
   });
   const [rowForm, setRowForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: new Date(),
     ticketsSold: 0
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -172,8 +174,8 @@ export default function Dashboard() {
       } = await supabase.from('weeks').insert([{
         game_id: currentGameId,
         week_number: weekForm.weekNumber,
-        start_date: weekForm.startDate,
-        end_date: weekForm.endDate
+        start_date: format(weekForm.startDate, 'yyyy-MM-dd'),
+        end_date: format(weekForm.endDate, 'yyyy-MM-dd')
       }]).select();
       
       if (error) throw error;
@@ -186,8 +188,8 @@ export default function Dashboard() {
       setWeekFormOpen(false);
       setWeekForm({
         weekNumber: 1,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString().split('T')[0]
+        startDate: new Date(),
+        endDate: new Date(new Date().setDate(new Date().getDate() + 6))
       });
     } catch (error: any) {
       console.error('Error creating week:', error);
@@ -232,7 +234,7 @@ export default function Dashboard() {
       const previousJackpotTotal = latestSale && latestSale.length > 0 ? latestSale[0].ending_jackpot_total : game.carryover_jackpot;
       
       // Check if this is a Monday (day of drawing)
-      const entryDate = new Date(rowForm.date);
+      const entryDate = rowForm.date;
       const isMonday = entryDate.getDay() === 1; // 0 = Sunday, 1 = Monday
       
       // Monday's ticket sales go to next week's jackpot
@@ -247,7 +249,7 @@ export default function Dashboard() {
       } = await supabase.from('ticket_sales').insert([{
         game_id: currentGameId,
         week_id: currentWeekId,
-        date: rowForm.date,
+        date: format(rowForm.date, 'yyyy-MM-dd'),
         tickets_sold: rowForm.ticketsSold,
         ticket_price: ticketPrice,
         amount_collected: amountCollected,
@@ -278,7 +280,7 @@ export default function Dashboard() {
       
       setRowFormOpen(false);
       setRowForm({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date(),
         ticketsSold: 0
       });
 
@@ -316,8 +318,8 @@ export default function Dashboard() {
     
     setWeekForm({
       weekNumber: lastWeekNumber + 1,
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString().split('T')[0]
+      startDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 6))
     });
     
     setCurrentGameId(gameId);
@@ -326,7 +328,7 @@ export default function Dashboard() {
 
   const openRowForm = (gameId: string, weekId: string) => {
     setRowForm({
-      date: new Date().toISOString().split('T')[0],
+      date: new Date(),
       ticketsSold: 0
     });
     
@@ -814,10 +816,9 @@ export default function Dashboard() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <label htmlFor="weekNumber" className="text-sm font-medium">Week Number</label>
-              <input 
+              <Input 
                 id="weekNumber" 
                 type="number" 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                 value={weekForm.weekNumber} 
                 onChange={e => setWeekForm({
                   ...weekForm,
@@ -828,35 +829,27 @@ export default function Dashboard() {
             </div>
             
             <div className="grid gap-2">
-              <label htmlFor="weekStartDate" className="text-sm font-medium">Start Date</label>
-              <div className="flex h-10 w-full rounded-md border border-input">
-                <input 
-                  id="weekStartDate" 
-                  type="date" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
-                  value={weekForm.startDate} 
-                  onChange={e => setWeekForm({
-                    ...weekForm,
-                    startDate: e.target.value
-                  })} 
-                />
-              </div>
+              <DatePickerWithInput
+                label="Start Date"
+                date={weekForm.startDate}
+                setDate={(date) => setDate ? setWeekForm({
+                  ...weekForm,
+                  startDate: date || new Date()
+                }) : null}
+                placeholder="Select start date"
+              />
             </div>
             
             <div className="grid gap-2">
-              <label htmlFor="weekEndDate" className="text-sm font-medium">End Date</label>
-              <div className="flex h-10 w-full rounded-md border border-input">
-                <input 
-                  id="weekEndDate" 
-                  type="date" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
-                  value={weekForm.endDate} 
-                  onChange={e => setWeekForm({
-                    ...weekForm,
-                    endDate: e.target.value
-                  })} 
-                />
-              </div>
+              <DatePickerWithInput
+                label="End Date"
+                date={weekForm.endDate}
+                setDate={(date) => date ? setWeekForm({
+                  ...weekForm,
+                  endDate: date
+                }) : null}
+                placeholder="Select end date"
+              />
             </div>
           </div>
           
@@ -883,31 +876,26 @@ export default function Dashboard() {
           
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <label htmlFor="date" className="text-sm font-medium">Date</label>
-              <div className="flex h-10 w-full rounded-md border border-input">
-                <input 
-                  id="date" 
-                  type="date" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
-                  value={rowForm.date} 
-                  onChange={e => setRowForm({
-                    ...rowForm,
-                    date: e.target.value
-                  })} 
-                />
-              </div>
+              <DatePickerWithInput
+                label="Date"
+                date={rowForm.date}
+                setDate={(date) => date ? setRowForm({
+                  ...rowForm,
+                  date: date
+                }) : null}
+                placeholder="Select date"
+              />
             </div>
             
             <div className="grid gap-2">
               <label htmlFor="ticketsSold" className="text-sm font-medium">Tickets Sold</label>
-              <input 
+              <Input 
                 id="ticketsSold" 
                 type="number" 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                 value={rowForm.ticketsSold} 
                 onChange={e => setRowForm({
                   ...rowForm,
-                  ticketsSold: parseInt(e.target.value)
+                  ticketsSold: parseInt(e.target.value) || 0
                 })} 
               />
             </div>
