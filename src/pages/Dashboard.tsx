@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
   const { toast } = useToast();
   const [currentGameName, setCurrentGameName] = useState<string>("");
-  
+
   useEffect(() => {
     fetchGames();
 
@@ -488,6 +488,14 @@ export default function Dashboard() {
   const handleOpenPayoutSlip = (winnerData: any) => {
     setPayoutSlipData(winnerData);
     setPayoutSlipOpen(true);
+  };
+
+  const handleWinnerComplete = () => {
+    fetchGames();
+  };
+
+  const handleGameComplete = () => {
+    fetchGames();
   };
 
   const formatCurrency = (amount: number) => {
@@ -955,13 +963,19 @@ export default function Dashboard() {
       {/* Winner Form */}
       <WinnerForm 
         open={winnerFormOpen} 
-        onOpenChange={setWinnerFormOpen} 
+        onOpenChange={setWinnerFormOpen}
+        gameId={currentGameId}
+        weekId={currentWeekId}
+        onComplete={handleWinnerComplete}
+        onOpenPayoutSlip={handleOpenPayoutSlip}
       />
       
       {/* Game Form */}
       <GameForm 
         open={gameFormOpen} 
-        onOpenChange={setGameFormOpen} 
+        onOpenChange={setGameFormOpen}
+        games={games}
+        onComplete={handleGameComplete}
       />
     </div>
   );

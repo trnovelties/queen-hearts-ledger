@@ -232,7 +232,7 @@ export function WinnerForm({
         gameNumber: gameDetails?.game_number,
         gameName: gameDetails?.name,
         weekNumber: weekDetails?.week_number,
-        weekId: weekId, // Adding weekId to the payout slip data
+        weekId: weekId,
         weekStartDate: weekDetails?.start_date,
         weekEndDate: weekDetails?.end_date
       };
