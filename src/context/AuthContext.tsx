@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -85,8 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Use a direct query with the service role key to bypass RLS
-      // This avoids the infinite recursion issue
+      // Use a direct query to bypass RLS and avoid the infinite recursion issue
       const { data, error } = await supabase.from('users')
         .select('*')
         .eq('id', userId)
@@ -185,7 +183,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateProfile = async (data: Partial<OrganizationProfile>) => {
-    if (!user?.id) {
+    if (!user?.id || !profile) {
       toast({
         title: "Update failed",
         description: "You must be logged in to update your profile",
@@ -195,11 +193,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     try {
-      // Use upsert instead of update to avoid RLS issues
+      // We need to include the required fields email and role from the existing profile
+      // to satisfy the TypeScript constraints for the upsert operation
       const { error } = await supabase
         .from('users')
         .upsert({ 
           id: user.id,
+          email: profile.email,
+          role: profile.role,
           ...data
         });
         
@@ -213,7 +214,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
       
-      // Update local profile state and fetch updated profile
+      // Update local profile state
       setProfile(prev => prev ? { ...prev, ...data } : null);
       
       toast({
