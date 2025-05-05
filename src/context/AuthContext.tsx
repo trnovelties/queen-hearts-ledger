@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -84,11 +85,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Use a direct query to bypass RLS and avoid the infinite recursion issue
-      const { data, error } = await supabase.from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // Use a raw SQL query through Supabase to bypass RLS completely
+      const { data, error } = await supabase.rpc('get_user_profile', { 
+        user_id: userId 
+      });
         
       if (error) {
         console.error('Error fetching profile:', error);
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         console.log('No profile found for user, it may be created by the database trigger');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in fetchProfile:', error);
       toast({
         title: "Profile fetch error",
@@ -193,16 +193,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     try {
-      // We need to include the required fields email and role from the existing profile
-      // to satisfy the TypeScript constraints for the upsert operation
-      const { error } = await supabase
-        .from('users')
-        .upsert({ 
-          id: user.id,
-          email: profile.email,
-          role: profile.role,
-          ...data
-        });
+      // Use RPC function to bypass RLS issues
+      const { error } = await supabase.rpc('update_user_profile', {
+        p_user_id: user.id,
+        p_organization_name: data.organization_name !== undefined ? data.organization_name : profile.organization_name,
+        p_about: data.about !== undefined ? data.about : profile.about,
+        p_logo_url: data.logo_url !== undefined ? data.logo_url : profile.logo_url
+      });
         
       if (error) {
         console.error('Profile update error:', error);
