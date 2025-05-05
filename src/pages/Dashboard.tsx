@@ -7,12 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { CalendarIcon, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { ExpenseModal } from "@/components/ExpenseModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
+import jsPDF from "jspdf";
 
 export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
@@ -508,6 +509,316 @@ export default function Dashboard() {
     }).format(amount);
   };
   
+  const generateGamePdfReport = async (game: any) => {
+    try {
+      toast({
+        title: "Generating PDF",
+        description: `Creating report for ${game.name}...`,
+      });
+      
+      // Create a new PDF document
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+      
+      // Add title and report information
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text(`${game.name} - Detailed Report`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(`Report Date: ${format(new Date(), 'MMM d, yyyy')}`, 20, yPosition);
+      yPosition += 10;
+      
+      // Game details section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Game Information', 20, yPosition);
+      yPosition += 8;
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      
+      doc.text(`Start Date: ${format(new Date(game.start_date), 'MMM d, yyyy')}`, 20, yPosition);
+      yPosition += 7;
+      
+      if (game.end_date) {
+        doc.text(`End Date: ${format(new Date(game.end_date), 'MMM d, yyyy')}`, 20, yPosition);
+        yPosition += 7;
+      }
+      
+      doc.text(`Ticket Price: ${formatCurrency(game.ticket_price)}`, 20, yPosition);
+      yPosition += 7;
+      
+      doc.text(`Organization Percentage: ${game.organization_percentage}%`, 20, yPosition);
+      yPosition += 7;
+      
+      doc.text(`Jackpot Percentage: ${game.jackpot_percentage}%`, 20, yPosition);
+      yPosition += 7;
+      
+      doc.text(`Carryover Jackpot: ${formatCurrency(game.carryover_jackpot)}`, 20, yPosition);
+      yPosition += 15;
+      
+      // Summary section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Financial Summary', 20, yPosition);
+      yPosition += 10;
+      
+      // Summary table
+      const summaryData = [
+        { label: 'Total Sales', value: formatCurrency(game.total_sales) },
+        { label: 'Total Payouts', value: formatCurrency(game.total_payouts) },
+        { label: 'Total Expenses', value: formatCurrency(game.total_expenses) },
+        { label: 'Total Donations', value: formatCurrency(game.total_donations) },
+        { label: 'Organization Net Profit', value: formatCurrency(game.organization_net_profit) },
+      ];
+      
+      const colWidth1 = 80;
+      const colWidth2 = 60;
+      const rowHeight = 8;
+      
+      doc.setFontSize(11);
+      doc.text('Metric', 20, yPosition);
+      doc.text('Value', 20 + colWidth1, yPosition);
+      yPosition += 5;
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, yPosition, 20 + colWidth1 + colWidth2, yPosition);
+      yPosition += 5;
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      
+      summaryData.forEach(row => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.text(row.label, 20, yPosition);
+        doc.text(row.value, 20 + colWidth1, yPosition);
+        yPosition += rowHeight;
+      });
+      yPosition += 15;
+      
+      // Weeks section
+      if (game.weeks && game.weeks.length > 0) {
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text('Weekly Details', 20, yPosition);
+        yPosition += 10;
+        
+        // Loop through each week
+        for (let i = 0; i < game.weeks.length; i++) {
+          const week = game.weeks[i];
+          
+          if (yPosition > pageHeight - 40) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text(`Week ${week.week_number} (${format(new Date(week.start_date), 'MMM d')} - ${format(new Date(week.end_date), 'MMM d, yyyy')})`, 20, yPosition);
+          yPosition += 8;
+          
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          
+          doc.text(`Tickets Sold: ${week.weekly_tickets_sold}`, 25, yPosition);
+          yPosition += 6;
+          
+          doc.text(`Weekly Sales: ${formatCurrency(week.weekly_sales)}`, 25, yPosition);
+          yPosition += 6;
+          
+          if (week.winner_name) {
+            doc.text(`Winner: ${week.winner_name}`, 25, yPosition);
+            yPosition += 6;
+            
+            doc.text(`Card Selected: ${week.card_selected || 'N/A'}`, 25, yPosition);
+            yPosition += 6;
+            
+            doc.text(`Payout Amount: ${formatCurrency(week.weekly_payout)}`, 25, yPosition);
+            yPosition += 6;
+            
+            doc.text(`Winner Present: ${week.winner_present ? 'Yes' : 'No'}`, 25, yPosition);
+            yPosition += 6;
+          }
+          
+          // If week has ticket sales entries, add a small table
+          if (week.ticket_sales && week.ticket_sales.length > 0) {
+            if (yPosition > pageHeight - 40) {
+              doc.addPage();
+              yPosition = 20;
+            }
+            
+            doc.setFont("helvetica", "italic");
+            doc.text("Daily Entries:", 25, yPosition);
+            yPosition += 8;
+            
+            // Table headers
+            doc.setFont("helvetica", "bold");
+            let xPos = 25;
+            const headers = ['Date', 'Tickets', 'Amount', 'Organization', 'Jackpot'];
+            const colWidths = [25, 15, 25, 25, 25];
+            
+            headers.forEach((header, index) => {
+              doc.text(header, xPos, yPosition);
+              xPos += colWidths[index];
+            });
+            yPosition += 6;
+            
+            // Table rows
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            
+            week.ticket_sales.forEach(entry => {
+              if (yPosition > pageHeight - 15) {
+                doc.addPage();
+                yPosition = 20;
+                
+                // Redraw headers on new page
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                let xPos = 25;
+                headers.forEach((header, index) => {
+                  doc.text(header, xPos, yPosition);
+                  xPos += colWidths[index];
+                });
+                yPosition += 6;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+              }
+              
+              xPos = 25;
+              doc.text(format(new Date(entry.date), 'MM/dd/yyyy'), xPos, yPosition);
+              xPos += colWidths[0];
+              
+              doc.text(entry.tickets_sold.toString(), xPos, yPosition);
+              xPos += colWidths[1];
+              
+              doc.text(formatCurrency(entry.amount_collected), xPos, yPosition);
+              xPos += colWidths[2];
+              
+              doc.text(formatCurrency(entry.organization_total), xPos, yPosition);
+              xPos += colWidths[3];
+              
+              doc.text(formatCurrency(entry.jackpot_total), xPos, yPosition);
+              
+              yPosition += 6;
+            });
+            
+            yPosition += 6;
+          }
+          
+          yPosition += 10;
+        }
+      }
+      
+      // Expenses section
+      if (game.expenses && game.expenses.length > 0) {
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text('Expenses & Donations', 20, yPosition);
+        yPosition += 10;
+        
+        const expenseHeaders = ['Date', 'Type', 'Amount', 'Memo'];
+        const expenseColWidths = [25, 25, 25, 60];
+        
+        // Table headers
+        doc.setFontSize(10);
+        let xPos = 20;
+        expenseHeaders.forEach((header, index) => {
+          doc.text(header, xPos, yPosition);
+          xPos += expenseColWidths[index];
+        });
+        yPosition += 5;
+        
+        // Draw a line
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, yPosition, xPos - 60, yPosition);
+        yPosition += 5;
+        
+        // Table rows
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        
+        game.expenses.forEach(expense => {
+          if (yPosition > pageHeight - 15) {
+            doc.addPage();
+            yPosition = 20;
+            
+            // Redraw headers on new page
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            let xPos = 20;
+            expenseHeaders.forEach((header, index) => {
+              doc.text(header, xPos, yPosition);
+              xPos += expenseColWidths[index];
+            });
+            yPosition += 5;
+            doc.line(20, yPosition, xPos - 60, yPosition);
+            yPosition += 5;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+          }
+          
+          xPos = 20;
+          doc.text(format(new Date(expense.date), 'MM/dd/yyyy'), xPos, yPosition);
+          xPos += expenseColWidths[0];
+          
+          doc.text(expense.is_donation ? 'Donation' : 'Expense', xPos, yPosition);
+          xPos += expenseColWidths[1];
+          
+          doc.text(formatCurrency(expense.amount), xPos, yPosition);
+          xPos += expenseColWidths[2];
+          
+          // Truncate long memos
+          const memo = expense.memo || '-';
+          const truncatedMemo = memo.length > 30 ? memo.substring(0, 27) + '...' : memo;
+          doc.text(truncatedMemo, xPos, yPosition);
+          
+          yPosition += 6;
+        });
+      }
+      
+      // Add footer
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.text(`Generated on ${format(new Date(), 'MMM d, yyyy h:mm a')}`, pageWidth - 20, pageHeight - 10, { align: 'right' });
+      
+      // Save the PDF
+      const fileName = `${game.name.replace(/\s+/g, '-')}-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: "Report Generated",
+        description: `${game.name} report has been downloaded successfully.`,
+      });
+    } catch (error: any) {
+      console.error('Error generating game PDF:', error);
+      toast({
+        title: "Error",
+        description: `Failed to generate report: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -579,14 +890,24 @@ export default function Dashboard() {
                   <div className="p-4 border-t">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Weeks</h3>
-                      <Button 
-                        onClick={() => openWeekForm(game.id)} 
-                        size="sm" 
-                        variant="export"
-                        className="flex items-center gap-2"
-                      >
-                        <Plus className="h-4 w-4" /> Add Week
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button 
+                          onClick={() => generateGamePdfReport(game)} 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-2 bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]"
+                        >
+                          <Download className="h-4 w-4" /> Export Game PDF
+                        </Button>
+                        <Button 
+                          onClick={() => openWeekForm(game.id)} 
+                          size="sm" 
+                          variant="export"
+                          className="flex items-center gap-2"
+                        >
+                          <Plus className="h-4 w-4" /> Add Week
+                        </Button>
+                      </div>
                     </div>
                     
                     {game.weeks.length === 0 ? (
