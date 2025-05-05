@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { DatePickerWithInput } from "@/components/ui/datepicker";
 
 interface GameFormProps {
   open: boolean;
@@ -16,7 +17,7 @@ interface GameFormProps {
 export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
   const [gameForm, setGameForm] = useState({
     gameNumber: games.length > 0 ? games[games.length - 1].game_number + 1 : 1,
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: new Date(),
     ticketPrice: 2,
     organizationPercentage: 40,
     jackpotPercentage: 60,
@@ -57,7 +58,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       const { data, error } = await supabase.from('games').insert([{
         name: gameName, // Use the generated name
         game_number: gameForm.gameNumber,
-        start_date: gameForm.startDate,
+        start_date: gameForm.startDate.toISOString().split('T')[0],
         ticket_price: gameForm.ticketPrice,
         organization_percentage: gameForm.organizationPercentage,
         jackpot_percentage: gameForm.jackpotPercentage,
@@ -76,7 +77,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       
       setGameForm({
         gameNumber: gameForm.gameNumber + 1,
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: new Date(),
         ticketPrice: 2,
         organizationPercentage: 40,
         jackpotPercentage: 60,
@@ -105,10 +106,9 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <label htmlFor="gameNumber" className="text-sm font-medium">Game Number</label>
-            <input 
+            <Input 
               id="gameNumber" 
               type="number" 
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
               value={gameForm.gameNumber} 
               onChange={e => setGameForm({...gameForm, gameNumber: parseInt(e.target.value)})} 
               min="1" 
@@ -116,28 +116,20 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
           </div>
           
           <div className="grid gap-2">
-            <label htmlFor="startDate" className="text-sm font-medium">Start Date</label>
-            <div className="flex h-10 w-full rounded-md border border-input">
-              <input 
-                id="startDate" 
-                type="date" 
-                className="flex-1 bg-background px-3 py-2 text-sm" 
-                value={gameForm.startDate} 
-                onChange={e => setGameForm({...gameForm, startDate: e.target.value})} 
-              />
-              <div className="flex items-center pr-3">
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
+            <DatePickerWithInput
+              label="Start Date"
+              date={gameForm.startDate}
+              setDate={(date) => date ? setGameForm({...gameForm, startDate: date}) : null}
+              placeholder="Select start date"
+            />
           </div>
           
           <div className="grid gap-2">
             <label htmlFor="ticketPrice" className="text-sm font-medium">Ticket Price ($)</label>
-            <input 
+            <Input 
               id="ticketPrice" 
               type="number" 
               step="0.01" 
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
               value={gameForm.ticketPrice} 
               onChange={e => setGameForm({...gameForm, ticketPrice: parseFloat(e.target.value)})} 
               min="0.01" 
@@ -147,10 +139,9 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <label htmlFor="organizationPercentage" className="text-sm font-medium">Organization % <span className="text-xs text-muted-foreground">(must total 100%)</span></label>
-              <input 
+              <Input 
                 id="organizationPercentage" 
                 type="number" 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                 value={gameForm.organizationPercentage} 
                 onChange={e => {
                   const org = parseInt(e.target.value) || 0;
@@ -167,10 +158,9 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
             
             <div className="grid gap-2">
               <label htmlFor="jackpotPercentage" className="text-sm font-medium">Jackpot %</label>
-              <input 
+              <Input 
                 id="jackpotPercentage" 
                 type="number" 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                 value={gameForm.jackpotPercentage} 
                 onChange={e => {
                   const jackpot = parseInt(e.target.value) || 0;
@@ -189,11 +179,10 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
           
           <div className="grid gap-2">
             <label htmlFor="minimumStartingJackpot" className="text-sm font-medium">Minimum Starting Jackpot ($)</label>
-            <input 
+            <Input 
               id="minimumStartingJackpot" 
               type="number" 
               step="0.01" 
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
               value={gameForm.minimumStartingJackpot} 
               onChange={e => setGameForm({...gameForm, minimumStartingJackpot: parseFloat(e.target.value)})} 
               min="0" 
