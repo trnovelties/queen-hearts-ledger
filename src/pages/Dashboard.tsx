@@ -615,16 +615,16 @@ export function Dashboard() {
                                 </div>
                               </div>
 
-                              {/* First row of information - using exact terms requested */}
-                              <div className="text-sm flex flex-wrap mt-2 space-x-4">
+                              {/* First row of information - text-left to ensure left alignment */}
+                              <div className="text-sm flex flex-wrap mt-2 space-x-4 text-left">
                                 <div><span className="text-muted-foreground">Tickets Sold:</span> {week.weekly_tickets_sold}</div>
                                 <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}</div>
                                 <div><span className="text-muted-foreground">Organization Net Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
                                 <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
                               </div>
 
-                              {/* Second row with winner information if available - using exact terms requested */}
-                              <div className="text-sm flex flex-wrap mt-2 space-x-4">
+                              {/* Second row with winner information if available - also text-left for alignment */}
+                              <div className="text-sm flex flex-wrap mt-2 space-x-4 text-left">
                                 {week.winner_name && (
                                   <>
                                     <div><span className="text-muted-foreground">Winner Name:</span> {week.winner_name}</div>
@@ -643,61 +643,31 @@ export function Dashboard() {
                             {expandedWeek === week.id && (
                               <CardContent className="p-0 border-t">
                                 <div className="p-3 bg-muted/20 flex flex-wrap gap-2 text-sm">
-                                  {/* Rearranged fields according to requirements in the detailed view - using exact terms requested */}
-                                  <div className="mr-4">
-                                    <span className="font-semibold">Tickets Sold:</span> {week.weekly_tickets_sold}
-                                  </div>
-                                  <div className="mr-4">
-                                    <span className="font-semibold">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}
-                                  </div>
-                                  <div className="mr-4">
-                                    <span className="font-semibold">Organization Net Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}
-                                  </div>
-                                  <div className="mr-4">
-                                    <span className="font-semibold">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}
-                                  </div>
                                   {week.winner_name && (
-                                    <>
-                                      <div className="mr-4">
-                                        <span className="font-semibold">Winner Name:</span> {week.winner_name}
-                                      </div>
-                                      <div className="mr-4">
-                                        <span className="font-semibold">Slot Selected:</span> {week.slot_chosen}
-                                      </div>
-                                      <div className="mr-4">
-                                        <span className="font-semibold">Card Selected:</span> {week.card_selected}
-                                      </div>
-                                      <div className="mr-4">
-                                        <span className="font-semibold">Payout Amount:</span> {formatCurrency(week.weekly_payout)}
-                                      </div>
-                                      <div>
-                                        <span className="font-semibold">Present:</span> {week.winner_present ? 'Yes' : 'No'}
-                                      </div>
-                                      <div className="w-full mt-2">
-                                        <Button
-                                          onClick={() => {
-                                            const winnerData = {
-                                              winnerName: week.winner_name,
-                                              slotChosen: week.slot_chosen,
-                                              cardSelected: week.card_selected,
-                                              payoutAmount: week.weekly_payout,
-                                              date: new Date().toISOString().split('T')[0],
-                                              gameNumber: game.game_number,
-                                              gameName: game.name,
-                                              weekNumber: week.week_number,
-                                              weekStartDate: week.start_date,
-                                              weekEndDate: week.end_date
-                                            };
-                                            handleOpenPayoutSlip(winnerData);
-                                          }}
-                                          size="sm"
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          Print Payout Slip
-                                        </Button>
-                                      </div>
-                                    </>
+                                    <div className="w-full mt-2">
+                                      <Button
+                                        onClick={() => {
+                                          const winnerData = {
+                                            winnerName: week.winner_name,
+                                            slotChosen: week.slot_chosen,
+                                            cardSelected: week.card_selected,
+                                            payoutAmount: week.weekly_payout,
+                                            date: new Date().toISOString().split('T')[0],
+                                            gameNumber: game.game_number,
+                                            gameName: game.name,
+                                            weekNumber: week.week_number,
+                                            weekStartDate: week.start_date,
+                                            weekEndDate: week.end_date
+                                          };
+                                          handleOpenPayoutSlip(winnerData);
+                                        }}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        Print Payout Slip
+                                      </Button>
+                                    </div>
                                   )}
                                 </div>
                                 
@@ -855,16 +825,13 @@ export function Dashboard() {
                 <input 
                   id="weekStartDate" 
                   type="date" 
-                  className="flex-1 bg-background px-3 py-2 text-sm" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                   value={weekForm.startDate} 
                   onChange={e => setWeekForm({
                     ...weekForm,
                     startDate: e.target.value
                   })} 
                 />
-                <div className="flex items-center pr-3">
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
               </div>
             </div>
             
@@ -874,25 +841,24 @@ export function Dashboard() {
                 <input 
                   id="weekEndDate" 
                   type="date" 
-                  className="flex-1 bg-background px-3 py-2 text-sm" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                   value={weekForm.endDate} 
                   onChange={e => setWeekForm({
                     ...weekForm,
                     endDate: e.target.value
                   })} 
                 />
-                <div className="flex items-center pr-3">
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
               </div>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setWeekFormOpen(false)}>
+            <Button onClick={() => setWeekFormOpen(false)} variant="secondary">
               Cancel
             </Button>
-            <Button onClick={() => createWeek()}>Add Week</Button>
+            <Button onClick={createWeek} type="submit" variant="primary">
+              Create Week
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -903,27 +869,24 @@ export function Dashboard() {
           <DialogHeader>
             <DialogTitle>Add Daily Entry</DialogTitle>
             <DialogDescription>
-              Enter the details for the daily ticket sales.
+              Enter the details for the daily entry.
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <label htmlFor="entryDate" className="text-sm font-medium">Date</label>
+              <label htmlFor="date" className="text-sm font-medium">Date</label>
               <div className="flex h-10 w-full rounded-md border border-input">
                 <input 
-                  id="entryDate" 
+                  id="date" 
                   type="date" 
-                  className="flex-1 bg-background px-3 py-2 text-sm" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                   value={rowForm.date} 
                   onChange={e => setRowForm({
                     ...rowForm,
                     date: e.target.value
                   })} 
                 />
-                <div className="flex items-center pr-3">
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
               </div>
             </div>
             
@@ -938,81 +901,53 @@ export function Dashboard() {
                   ...rowForm,
                   ticketsSold: parseInt(e.target.value)
                 })} 
-                min="0" 
               />
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRowFormOpen(false)}>
+            <Button onClick={() => setRowFormOpen(false)} variant="secondary">
               Cancel
             </Button>
-            <Button onClick={() => addRow()}>Add Entry</Button>
+            <Button onClick={addRow} type="submit" variant="primary">
+              Add Entry
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirm Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Confirm Deletion</DialogTitle>
+            <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              {deleteType === 'game' && 'Are you sure you want to delete this game? This will also delete all associated weeks, entries, and expenses.'}
-              {deleteType === 'week' && 'Are you sure you want to delete this week? This will also delete all associated daily entries.'}
-              {deleteType === 'entry' && 'Are you sure you want to delete this daily entry? This will update the related week and game totals.'}
-              {deleteType === 'expense' && 'Are you sure you want to delete this expense/donation? This will update the game totals.'}
+              Are you sure you want to delete this {deleteType}?
             </DialogDescription>
           </DialogHeader>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button onClick={() => setDeleteDialogOpen(false)} variant="secondary">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button onClick={confirmDelete} type="submit" variant="destructive">
+              Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* ExpenseModal */}
-      <ExpenseModal 
-        open={expenseModalOpen} 
-        onOpenChange={setExpenseModalOpen} 
-        gameId={currentGameId || ""} 
-        gameName={currentGameName} 
-        onExpenseAdded={fetchGames} 
-      />
+      {/* Expense Modal */}
+      <ExpenseModal open={expenseModalOpen} onClose={() => setExpenseModalOpen(false)} gameId={currentGameId} gameName={currentGameName} />
       
-      {/* PayoutSlipModal */}
-      {payoutSlipData && (
-        <PayoutSlipModal 
-          open={payoutSlipOpen} 
-          onOpenChange={setPayoutSlipOpen} 
-          winnerData={payoutSlipData} 
-        />
-      )}
+      {/* Payout Slip Modal */}
+      <PayoutSlipModal open={payoutSlipOpen} onClose={() => setPayoutSlipOpen(false)} winnerData={payoutSlipData} />
       
-      {/* WinnerForm */}
-      <WinnerForm 
-        open={winnerFormOpen} 
-        onOpenChange={setWinnerFormOpen} 
-        gameId={currentGameId} 
-        weekId={currentWeekId}
-        onComplete={() => fetchGames()}
-        onOpenPayoutSlip={handleOpenPayoutSlip}
-      />
+      {/* Winner Form */}
+      <WinnerForm open={winnerFormOpen} onClose={() => setWinnerFormOpen(false)} />
       
-      {/* GameForm */}
-      <GameForm 
-        open={gameFormOpen} 
-        onOpenChange={setGameFormOpen} 
-        games={games}
-        onComplete={() => fetchGames()}
-      />
+      {/* Game Form */}
+      <GameForm open={gameFormOpen} onClose={() => setGameFormOpen(false)} />
     </div>
   );
 }
-
-export default Dashboard;
