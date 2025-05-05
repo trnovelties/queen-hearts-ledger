@@ -1,12 +1,18 @@
-import { useRef } from 'react';
+
+import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Printer } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useForm } from 'react-hook-form';
+import { supabase } from "@/integrations/supabase/client";
 
 interface PayoutSlipModalProps {
   open: boolean;
@@ -20,9 +26,14 @@ interface PayoutSlipModalProps {
     gameNumber: number;
     gameName: string;
     weekNumber: number;
+    weekId: string; // Added weekId to store the authorized signature name
     weekStartDate: string;
     weekEndDate: string;
   };
+}
+
+interface FormValues {
+  authorizedSignatureName: string;
 }
 
 export function PayoutSlipModal({
@@ -33,10 +44,34 @@ export function PayoutSlipModal({
   const slipRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { profile } = useAuth();
+  const [authorizedName, setAuthorizedName] = useState<string>('');
+  
+  const form = useForm<FormValues>({
+    defaultValues: {
+      authorizedSignatureName: '',
+    }
+  });
   
   const handleGeneratePDF = async () => {
     if (slipRef.current) {
       try {
+        // Save authorized signature name to database
+        if (authorizedName) {
+          const { error } = await supabase
+            .from('weeks')
+            .update({ authorized_signature_name: authorizedName })
+            .eq('id', winnerData.weekId);
+            
+          if (error) {
+            console.error('Error saving authorized signature name:', error);
+            toast({
+              title: "Error",
+              description: "Failed to save authorized signature name.",
+              variant: "destructive"
+            });
+          }
+        }
+        
         const canvas = await html2canvas(slipRef.current, {
           scale: 2, // Improve quality
           backgroundColor: 'white',
@@ -82,6 +117,17 @@ export function PayoutSlipModal({
         </DialogHeader>
         
         <div className="p-2">
+          <div className="mb-6">
+            <Label htmlFor="authorizedSignatureName" className="mb-2 block">Authorized Signature Name</Label>
+            <Input
+              id="authorizedSignatureName"
+              placeholder="Enter name of authorized person signing"
+              value={authorizedName}
+              onChange={(e) => setAuthorizedName(e.target.value)}
+              className="mb-4"
+            />
+          </div>
+          
           <div className="flex justify-end mb-4">
             <Button 
               onClick={handleGeneratePDF} 
@@ -150,7 +196,9 @@ export function PayoutSlipModal({
               </div>
               <div>
                 <div className="border-t border-gray-400 pt-2">
-                  <div className="font-semibold text-gray-600">Authorized Signature</div>
+                  <div className="font-semibold text-gray-600">
+                    {authorizedName ? authorizedName : 'Authorized Signature'}
+                  </div>
                 </div>
               </div>
             </div>
