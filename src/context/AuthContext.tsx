@@ -100,8 +100,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      if (data) {
-        setProfile(data as OrganizationProfile);
+      if (data && data.length > 0) {
+        // Extract the first item from the array returned by the RPC function
+        const profileData = data[0];
+        setProfile({
+          id: profileData.id,
+          email: profileData.email,
+          role: profileData.role,
+          organization_name: profileData.organization_name,
+          logo_url: profileData.logo_url,
+          about: profileData.about
+        });
       } else {
         console.log('No profile found for user, it may be created by the database trigger');
       }
