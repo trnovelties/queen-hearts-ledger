@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -595,13 +594,21 @@ export function Dashboard() {
                                 <div className="text-sm hidden md:flex space-x-4">
                                   <div><span className="text-muted-foreground">Tickets:</span> {week.weekly_tickets_sold}</div>
                                   <div><span className="text-muted-foreground">Sales:</span> {formatCurrency(week.weekly_sales)}</div>
-                                  {week.winner_name ? (
+                                  
+                                  {/* Calculate organization portion based on weekly sales */}
+                                  <div><span className="text-muted-foreground">Org Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
+                                  
+                                  {/* Calculate jackpot portion based on weekly sales, excluding Monday sales */}
+                                  <div><span className="text-muted-foreground">Jackpot:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
+                                  
+                                  {week.winner_name && (
                                     <>
                                       <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
+                                      <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
                                       <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
+                                      <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
+                                      <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
                                     </>
-                                  ) : (
-                                    <div className="text-muted-foreground">Not drawn</div>
                                   )}
                                 </div>
                                 
@@ -628,14 +635,18 @@ export function Dashboard() {
                             {expandedWeek === week.id && (
                               <CardContent className="p-0 border-t">
                                 <div className="p-3 bg-muted/20 flex flex-wrap gap-2 text-sm">
-                                  <div className="mr-4">
-                                    <span className="font-semibold">Weekly Sales:</span> {formatCurrency(week.weekly_sales)}
-                                  </div>
+                                  {/* Rearranged fields according to requirements in the detailed view */}
                                   <div className="mr-4">
                                     <span className="font-semibold">Tickets Sold:</span> {week.weekly_tickets_sold}
                                   </div>
                                   <div className="mr-4">
-                                    <span className="font-semibold">Payout:</span> {formatCurrency(week.weekly_payout)}
+                                    <span className="font-semibold">Weekly Sales:</span> {formatCurrency(week.weekly_sales)}
+                                  </div>
+                                  <div className="mr-4">
+                                    <span className="font-semibold">Org Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}
+                                  </div>
+                                  <div className="mr-4">
+                                    <span className="font-semibold">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}
                                   </div>
                                   {week.winner_name && (
                                     <>
@@ -647,6 +658,9 @@ export function Dashboard() {
                                       </div>
                                       <div className="mr-4">
                                         <span className="font-semibold">Card:</span> {week.card_selected}
+                                      </div>
+                                      <div className="mr-4">
+                                        <span className="font-semibold">Payout:</span> {formatCurrency(week.weekly_payout)}
                                       </div>
                                       <div>
                                         <span className="font-semibold">Present:</span> {week.winner_present ? 'Yes' : 'No'}
