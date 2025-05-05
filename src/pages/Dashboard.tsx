@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +13,7 @@ import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
 
-export function Dashboard() {
+export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
   const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
@@ -856,7 +857,7 @@ export function Dashboard() {
             <Button onClick={() => setWeekFormOpen(false)} variant="secondary">
               Cancel
             </Button>
-            <Button onClick={createWeek} type="submit" variant="primary">
+            <Button onClick={createWeek} type="submit" variant="default">
               Create Week
             </Button>
           </DialogFooter>
@@ -909,7 +910,7 @@ export function Dashboard() {
             <Button onClick={() => setRowFormOpen(false)} variant="secondary">
               Cancel
             </Button>
-            <Button onClick={addRow} type="submit" variant="primary">
+            <Button onClick={addRow} type="submit" variant="default">
               Add Entry
             </Button>
           </DialogFooter>
@@ -938,16 +939,31 @@ export function Dashboard() {
       </Dialog>
       
       {/* Expense Modal */}
-      <ExpenseModal open={expenseModalOpen} onClose={() => setExpenseModalOpen(false)} gameId={currentGameId} gameName={currentGameName} />
+      <ExpenseModal 
+        isOpen={expenseModalOpen} 
+        setIsOpen={setExpenseModalOpen} 
+        gameId={currentGameId || ''} 
+        gameName={currentGameName} 
+      />
       
       {/* Payout Slip Modal */}
-      <PayoutSlipModal open={payoutSlipOpen} onClose={() => setPayoutSlipOpen(false)} winnerData={payoutSlipData} />
+      <PayoutSlipModal 
+        isOpen={payoutSlipOpen} 
+        setIsOpen={setPayoutSlipOpen} 
+        winnerData={payoutSlipData} 
+      />
       
       {/* Winner Form */}
-      <WinnerForm open={winnerFormOpen} onClose={() => setWinnerFormOpen(false)} />
+      <WinnerForm 
+        isOpen={winnerFormOpen} 
+        setIsOpen={setWinnerFormOpen} 
+      />
       
       {/* Game Form */}
-      <GameForm open={gameFormOpen} onClose={() => setGameFormOpen(false)} />
+      <GameForm 
+        isOpen={gameFormOpen} 
+        setIsOpen={setGameFormOpen} 
+      />
     </div>
   );
 }
