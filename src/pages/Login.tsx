@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,13 +92,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-accent p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center text-3xl font-bold mb-2 text-primary">
-            <span className="text-secondary mr-2">♥</span>
-            Queen of Hearts Manager
-          </div>
-          <CardDescription>
-            Streamline your Queen of Hearts fundraiser with real-time tracking and reporting.
-          </CardDescription>
+          {/* Logo title and description removed */}
         </CardHeader>
         
         <CardContent>

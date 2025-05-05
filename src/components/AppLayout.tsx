@@ -90,8 +90,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <Sidebar className="border-r border-border/40">
-          <SidebarHeader className="flex items-center justify-center pt-6 pb-4">
-            <div className="flex items-center space-x-2">
+          <SidebarHeader className="flex items-center pt-6 pb-4 px-4">
+            <div className="flex items-center">
               <h2 className="text-xl font-semibold text-white">
                 {profile?.organization_name || "Queen of Hearts"}
               </h2>
