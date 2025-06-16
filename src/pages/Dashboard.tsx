@@ -209,7 +209,7 @@ export default function Dashboard() {
     }
   };
 
-  const updateDailyEntry = async (weekId: string, dayIndex: number, date: Date, ticketsSold: number) => {
+  const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
     if (!currentGameId) return;
     
     try {
@@ -219,11 +219,15 @@ export default function Dashboard() {
       const week = game.weeks.find((w: any) => w.id === weekId);
       if (!week) throw new Error("Week not found");
 
+      // Calculate the date for this day
+      const weekStartDate = new Date(week.start_date);
+      const entryDate = new Date(weekStartDate);
+      entryDate.setDate(entryDate.getDate() + dayIndex);
+
       // Find existing entry for this day
       const existingEntry = week.ticket_sales.find((entry: any) => {
-        const entryDate = new Date(entry.date);
-        const inputDate = new Date(date);
-        return entryDate.toDateString() === inputDate.toDateString();
+        const existingDate = new Date(entry.date);
+        return existingDate.toDateString() === entryDate.toDateString();
       });
 
       // Calculate the values
@@ -249,7 +253,6 @@ export default function Dashboard() {
       const previousJackpotTotal = latestSale && latestSale.length > 0 ? latestSale[0].ending_jackpot_total : game.carryover_jackpot;
       
       // Check if this is a Monday (day of drawing)
-      const entryDate = new Date(date);
       const isMonday = entryDate.getDay() === 1; // 0 = Sunday, 1 = Monday
       
       // Monday's ticket sales go to next week's jackpot
@@ -260,7 +263,7 @@ export default function Dashboard() {
       if (existingEntry) {
         // Update existing entry
         const { error } = await supabase.from('ticket_sales').update({
-          date: format(date, 'yyyy-MM-dd'),
+          date: format(entryDate, 'yyyy-MM-dd'),
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -276,7 +279,7 @@ export default function Dashboard() {
         const { error } = await supabase.from('ticket_sales').insert([{
           game_id: currentGameId,
           week_id: weekId,
-          date: format(date, 'yyyy-MM-dd'),
+          date: format(entryDate, 'yyyy-MM-dd'),
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -301,8 +304,7 @@ export default function Dashboard() {
         weekly_tickets_sold: week.weekly_tickets_sold + ticketsSold
       }).eq('id', weekId);
 
-      // Refresh data
-      fetchGames();
+      // Don't refresh entire data, let real-time updates handle it
       
     } catch (error: any) {
       console.error('Error updating daily entry:', error);
@@ -1046,48 +1048,31 @@ export default function Dashboard() {
                                   <div>
                                     <h5 className="font-medium mb-3">Daily Entries (7 Days)</h5>
                                     
-                                    <div className="space-y-3">
+                                    <div className="space-y-3 max-h-none">
                                       {Array.from({ length: 7 }, (_, dayIndex) => {
                                         const existingEntry = week.ticket_sales.find((entry: any, index: number) => index === dayIndex);
-                                        const entryDate = existingEntry ? new Date(existingEntry.date) : new Date(week.start_date);
-                                        if (!existingEntry) {
-                                          entryDate.setDate(entryDate.getDate() + dayIndex);
-                                        }
+                                        const weekStartDate = new Date(week.start_date);
+                                        const entryDate = new Date(weekStartDate);
+                                        entryDate.setDate(entryDate.getDate() + dayIndex);
                                         
                                         return (
                                           <div key={dayIndex} className="flex items-center gap-4 p-3 bg-gray-50 rounded border">
                                             <div className="min-w-0 flex-1">
                                               <div className="text-sm font-medium text-gray-900">
-                                                Day {dayIndex + 1}
+                                                Day {dayIndex + 1} - {format(entryDate, 'MMM d, yyyy')}
                                               </div>
                                             </div>
                                             
                                             <div className="flex items-center gap-2">
                                               <div className="flex flex-col gap-1">
-                                                <label className="text-xs text-gray-500">Date</label>
-                                                <Input
-                                                  type="date"
-                                                  value={format(entryDate, 'yyyy-MM-dd')}
-                                                  onChange={(e) => {
-                                                    const newDate = new Date(e.target.value);
-                                                    const ticketsSold = existingEntry?.tickets_sold || 0;
-                                                    if (ticketsSold > 0) {
-                                                      updateDailyEntry(week.id, dayIndex, newDate, ticketsSold);
-                                                    }
-                                                  }}
-                                                  className="w-32 h-8 text-xs"
-                                                />
-                                              </div>
-                                              
-                                              <div className="flex flex-col gap-1">
                                                 <label className="text-xs text-gray-500">Tickets Sold</label>
                                                 <Input
                                                   type="number"
                                                   min="0"
-                                                  value={existingEntry?.tickets_sold || 0}
+                                                  value={existingEntry?.tickets_sold || ''}
                                                   onChange={(e) => {
                                                     const ticketsSold = parseInt(e.target.value) || 0;
-                                                    updateDailyEntry(week.id, dayIndex, entryDate, ticketsSold);
+                                                    updateDailyEntry(week.id, dayIndex, ticketsSold);
                                                   }}
                                                   className="w-24 h-8 text-xs"
                                                   placeholder="0"
