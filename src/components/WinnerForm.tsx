@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -58,13 +59,10 @@ export function WinnerForm({
     return cards;
   };
 
-  // Force fetch the absolute latest configuration data
-  const fetchLatestConfiguration = async () => {
+  // Force fetch the absolute latest configuration data and update state immediately
+  const fetchAndApplyLatestConfiguration = async () => {
     try {
-      console.log('🔄 Fetching ABSOLUTE LATEST configuration data...');
-      
-      // Clear any potential caching by using a random parameter
-      const randomParam = Math.random();
+      console.log('🔄 Fetching and applying ABSOLUTE LATEST configuration...');
       
       const { data, error } = await supabase
         .from('configurations')
@@ -87,31 +85,33 @@ export function WinnerForm({
             ? JSON.parse(data.card_payouts) 
             : data.card_payouts;
           
-          console.log('💰 Setting ABSOLUTE LATEST card payouts:', payoutsObj);
-          console.log('🎯 Specific card values:');
-          console.log('  - 8 of Hearts:', payoutsObj['8 of Hearts']);
-          console.log('  - 8 of Clubs:', payoutsObj['8 of Clubs']);
-          console.log('  - 8 of Diamonds:', payoutsObj['8 of Diamonds']);
-          console.log('  - 8 of Spades:', payoutsObj['8 of Spades']);
+          console.log('💰 IMMEDIATELY updating card payouts state with:', payoutsObj);
           
+          // Key debugging for 8 of Hearts specifically
+          console.log('🔍 CHECKING 8 of Hearts specifically:', payoutsObj['8 of Hearts']);
+          console.log('🔍 CHECKING 8 of Clubs specifically:', payoutsObj['8 of Clubs']);
+          
+          // IMMEDIATELY update the state
           setCardPayouts(payoutsObj);
+          
+          // Update penalty config
+          setPenaltyConfig({
+            penaltyPercentage: data.penalty_percentage || 10,
+            penaltyToOrganization: data.penalty_to_organization || false
+          });
+          
           return payoutsObj;
         }
-        
-        setPenaltyConfig({
-          penaltyPercentage: data.penalty_percentage || 10,
-          penaltyToOrganization: data.penalty_to_organization || false
-        });
-        
-        return data;
       }
+      return null;
     } catch (error) {
-      console.error('💥 Error fetching latest configuration:', error);
+      console.error('💥 Error fetching and applying latest configuration:', error);
       toast({
         title: "Error",
         description: "Failed to load latest configuration. Please try again.",
         variant: "destructive",
       });
+      return null;
     }
   };
 
@@ -122,7 +122,8 @@ export function WinnerForm({
     console.log('🧮 === CALCULATING PAYOUT WITH LATEST DATA ===');
     console.log('🎴 Selected card:', selectedCard);
     console.log('💎 Current jackpot:', jackpot);
-    console.log('📋 All available payouts:', Object.keys(payouts));
+    console.log('📋 Payouts object being used:', payouts);
+    console.log('🔍 Specific payout for selected card:', payouts[selectedCard]);
     console.log('✅ Winner present:', isPresent);
     
     if (selectedCard === 'Queen of Hearts') {
@@ -149,7 +150,6 @@ export function WinnerForm({
     } else {
       console.log('❌ No payout found for card:', selectedCard);
       console.log('📋 Available cards in payouts:', Object.keys(payouts));
-      console.log('🔍 Exact match check:', payouts[selectedCard]);
     }
     
     console.log('🏆 === FINAL CALCULATED AMOUNT ===:', amount);
@@ -175,8 +175,9 @@ export function WinnerForm({
         // Get the latest entry's ending_jackpot_total
         const latestSale = weekSales[weekSales.length - 1];
         console.log('Latest ticket sale ending jackpot:', latestSale.ending_jackpot_total);
-        setCurrentJackpot(Number(latestSale.ending_jackpot_total) || 0);
-        return Number(latestSale.ending_jackpot_total) || 0;
+        const jackpot = Number(latestSale.ending_jackpot_total) || 0;
+        setCurrentJackpot(jackpot);
+        return jackpot;
       } else {
         // If no ticket sales for this week, get the previous week's ending jackpot or game's carryover
         const { data: prevWeekSales, error: prevError } = await supabase
@@ -251,12 +252,16 @@ export function WinnerForm({
       const initializeData = async () => {
         setLoading(true);
         try {
-          // Always fetch the absolute latest configuration
-          await fetchLatestConfiguration();
-          await fetchJackpotAmount();
+          console.log('🚀 INITIALIZING WINNER FORM DATA...');
+          
+          // Always fetch the absolute latest configuration first
+          const latestPayouts = await fetchAndApplyLatestConfiguration();
+          const latestJackpot = await fetchJackpotAmount();
           await fetchGameAndWeekDetails();
           
-          console.log('✅ All data initialized with latest configuration');
+          console.log('✅ All data initialized with ABSOLUTE LATEST configuration');
+          console.log('💰 Current payouts in state:', latestPayouts);
+          console.log('💎 Current jackpot:', latestJackpot);
         } catch (error) {
           console.error('💥 Error initializing data:', error);
         } finally {
@@ -268,19 +273,24 @@ export function WinnerForm({
     }
   }, [open, gameId, weekId]);
 
-  // Recalculate payout when card selection or presence changes
+  // Recalculate payout when card selection, presence, or payouts change
   useEffect(() => {
     if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0 && currentJackpot >= 0) {
-      console.log('🔄 Recalculating payout due to selection change...');
+      console.log('🔄 Recalculating payout due to state change...');
+      console.log('🎴 Current card selected:', winnerForm.cardSelected);
+      console.log('💰 Current cardPayouts state:', cardPayouts);
+      console.log('🔍 Specific value for selected card:', cardPayouts[winnerForm.cardSelected]);
+      
       const amount = calculatePayoutWithLatestData(
         winnerForm.cardSelected, 
         winnerForm.winnerPresent, 
         currentJackpot, 
         cardPayouts
       );
+      console.log('💵 Setting payout amount to:', amount);
       setPayoutAmount(amount);
     }
-  }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts]);
+  }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts, penaltyConfig]);
 
   // Handle card selection change - always fetch latest config
   const handleCardSelection = async (selectedCard: string) => {
@@ -289,24 +299,20 @@ export function WinnerForm({
     
     if (selectedCard) {
       // Always fetch the absolute latest configuration for this specific card selection
-      const latestPayouts = await fetchLatestConfiguration();
-      const latestJackpot = await fetchJackpotAmount();
+      const latestPayouts = await fetchAndApplyLatestConfiguration();
       
-      if (latestPayouts?.card_payouts) {
-        const payoutsToUse = typeof latestPayouts.card_payouts === 'string' 
-          ? JSON.parse(latestPayouts.card_payouts) 
-          : latestPayouts.card_payouts;
-          
-        console.log('🎯 Using ABSOLUTE LATEST payouts for calculation:', payoutsToUse);
+      if (latestPayouts) {
+        console.log('🎯 Using ABSOLUTE LATEST payouts for calculation:', latestPayouts);
         console.log('🔍 Looking for card:', selectedCard);
-        console.log('💰 Found value:', payoutsToUse[selectedCard]);
+        console.log('💰 Found value:', latestPayouts[selectedCard]);
         
         const amount = calculatePayoutWithLatestData(
           selectedCard, 
           winnerForm.winnerPresent, 
-          latestJackpot, 
-          payoutsToUse
+          currentJackpot, 
+          latestPayouts
         );
+        console.log('💵 Setting payout amount to:', amount);
         setPayoutAmount(amount);
       }
     }
