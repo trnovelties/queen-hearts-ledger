@@ -108,7 +108,7 @@ export function PayoutSlipModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="w-[80vw] max-w-none">
         <DialogHeader>
           <DialogTitle>Payout Slip</DialogTitle>
         </DialogHeader>
