@@ -1,3 +1,4 @@
+
 import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -107,12 +108,12 @@ export function PayoutSlipModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[80vw] h-[80vh] max-w-none max-h-none overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[80vw] h-[80vh] max-w-none max-h-none overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Payout Slip</DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
           {!winnerData ? (
             <div className="text-center p-4">
               <p>No winner data available. Please try again.</p>
@@ -153,7 +154,7 @@ export function PayoutSlipModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
                     <div>
                       <div className="font-semibold text-gray-600">Game:</div>
-                      <div>{winnerData.gameName} (#{winnerData.gameNumber})</div>
+                      <div>{winnerData.gameName}</div>
                     </div>
                     <div>
                       <div className="font-semibold text-gray-600">Week:</div>
