@@ -1332,16 +1332,6 @@ export default function Dashboard() {
                                                 />
                                               </div>
                                               
-                                              {existingEntry && (
-                                                <div className="flex flex-col gap-1">
-                                                  <label className="text-xs text-gray-500">Amount</label>
-                                                  <div className="text-xs font-medium px-2 py-1 bg-blue-50 rounded border min-w-[60px] text-center">
-                                                    {formatCurrency(existingEntry.amount_collected)}
-                                                  </div>
-                                                </div>
-                                              )}
-                                              
-                                              {/* NEW: Expense/Donation Dropdown */}
                                               <div className="flex flex-col gap-1">
                                                 <label className="text-xs text-gray-500">Add</label>
                                                 <Select onValueChange={(value) => {
@@ -1363,6 +1353,15 @@ export default function Dashboard() {
                                                   </SelectContent>
                                                 </Select>
                                               </div>
+                                              
+                                              {existingEntry && (
+                                                <div className="flex flex-col gap-1">
+                                                  <label className="text-xs text-gray-500">Amount</label>
+                                                  <div className="text-xs font-medium px-2 py-1 bg-blue-50 rounded border min-w-[60px] text-center">
+                                                    {formatCurrency(existingEntry.amount_collected)}
+                                                  </div>
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
                                         );
