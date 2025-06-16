@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -58,29 +59,16 @@ export function WinnerForm({
     return cards;
   };
 
-  useEffect(() => {
-    if (open && gameId && weekId) {
-      // Always fetch fresh data when modal opens
-      fetchConfiguration();
-      fetchJackpotAmount();
-      fetchGameAndWeekDetails();
-    }
-  }, [open, gameId, weekId]);
-
-  // Calculate payout whenever card selection, presence status, jackpot, or payouts change
-  useEffect(() => {
-    if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0) {
-      calculatePayout();
-    }
-  }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts]);
-
+  // Fetch fresh configuration data
   const fetchConfiguration = async () => {
     try {
-      console.log('Fetching latest configuration...');
+      console.log('Fetching FRESH configuration data...');
       
       const { data, error } = await supabase
         .from('configurations')
         .select('card_payouts, penalty_percentage, penalty_to_organization')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (error) {
@@ -89,14 +77,14 @@ export function WinnerForm({
       }
       
       if (data) {
-        console.log('Fresh configuration data received:', data);
+        console.log('FRESH configuration data received:', data);
         
         if (data.card_payouts) {
           const payoutsObj = typeof data.card_payouts === 'string' 
             ? JSON.parse(data.card_payouts) 
             : data.card_payouts;
           
-          console.log('Updated card payouts from DB:', payoutsObj);
+          console.log('Setting FRESH card payouts:', payoutsObj);
           setCardPayouts(payoutsObj);
         }
         
@@ -105,7 +93,6 @@ export function WinnerForm({
           penaltyToOrganization: data.penalty_to_organization || false
         });
         
-        console.log('Configuration state updated successfully');
         return data;
       }
     } catch (error) {
@@ -118,6 +105,47 @@ export function WinnerForm({
     }
   };
 
+  // Calculate payout with fresh data
+  const calculatePayoutWithData = (selectedCard: string, isPresent: boolean, jackpot: number, payouts: Record<string, any>) => {
+    let amount = 0;
+    
+    console.log('=== CALCULATING PAYOUT WITH FRESH DATA ===');
+    console.log('Selected card:', selectedCard);
+    console.log('Current jackpot:', jackpot);
+    console.log('Payouts being used:', payouts);
+    console.log('Winner present:', isPresent);
+    
+    if (selectedCard === 'Queen of Hearts') {
+      amount = Number(jackpot) || 0;
+      
+      // Apply penalty if winner is not present
+      if (!isPresent) {
+        const penaltyAmount = amount * (penaltyConfig.penaltyPercentage / 100);
+        amount -= penaltyAmount;
+        console.log('Applied penalty:', penaltyAmount, 'New amount:', amount);
+      }
+    } else if (selectedCard && payouts[selectedCard]) {
+      // For other cards, use the fixed payout amount
+      const payout = payouts[selectedCard];
+      console.log('Found payout for', selectedCard, ':', payout);
+      
+      if (typeof payout === 'number') {
+        amount = Number(payout);
+      } else if (payout === 'jackpot') {
+        // Handle case where other cards might also be set to jackpot
+        amount = Number(jackpot) || 0;
+      }
+      console.log('Final payout for', selectedCard, ':', amount);
+    } else {
+      console.log('No payout found for card:', selectedCard);
+      console.log('Available cards in payouts:', Object.keys(payouts));
+    }
+    
+    console.log('=== FINAL CALCULATED AMOUNT ===:', amount);
+    return Number(amount) || 0;
+  };
+
+  // Fetch jackpot amount
   const fetchJackpotAmount = async () => {
     if (!gameId || !weekId) return;
     
@@ -137,6 +165,7 @@ export function WinnerForm({
         const latestSale = weekSales[weekSales.length - 1];
         console.log('Latest ticket sale ending jackpot:', latestSale.ending_jackpot_total);
         setCurrentJackpot(Number(latestSale.ending_jackpot_total) || 0);
+        return Number(latestSale.ending_jackpot_total) || 0;
       } else {
         // If no ticket sales for this week, get the previous week's ending jackpot or game's carryover
         const { data: prevWeekSales, error: prevError } = await supabase
@@ -151,7 +180,9 @@ export function WinnerForm({
         
         if (prevWeekSales && prevWeekSales.length > 0) {
           console.log('Previous week ending jackpot:', prevWeekSales[0].ending_jackpot_total);
-          setCurrentJackpot(Number(prevWeekSales[0].ending_jackpot_total) || 0);
+          const jackpot = Number(prevWeekSales[0].ending_jackpot_total) || 0;
+          setCurrentJackpot(jackpot);
+          return jackpot;
         } else {
           // Fall back to game's carryover jackpot
           const { data: game, error: gameError } = await supabase
@@ -163,13 +194,17 @@ export function WinnerForm({
           if (gameError) throw gameError;
           if (game) {
             console.log('Game carryover jackpot:', game.carryover_jackpot);
-            setCurrentJackpot(Number(game.carryover_jackpot) || 0);
+            const jackpot = Number(game.carryover_jackpot) || 0;
+            setCurrentJackpot(jackpot);
+            return jackpot;
           }
         }
       }
+      return 0;
     } catch (error) {
       console.error('Error fetching jackpot amount:', error);
       setCurrentJackpot(0);
+      return 0;
     }
   };
 
@@ -199,43 +234,70 @@ export function WinnerForm({
     }
   };
 
-  const calculatePayout = () => {
-    let amount = 0;
-    
-    console.log('=== PAYOUT CALCULATION START ===');
-    console.log('Selected card:', winnerForm.cardSelected);
-    console.log('Current jackpot:', currentJackpot);
-    console.log('Current card payouts object:', cardPayouts);
-    console.log('Winner present:', winnerForm.winnerPresent);
-    
-    if (winnerForm.cardSelected === 'Queen of Hearts') {
-      amount = Number(currentJackpot) || 0;
+  // Initialize data when modal opens
+  useEffect(() => {
+    if (open && gameId && weekId) {
+      const initializeData = async () => {
+        setLoading(true);
+        try {
+          // Fetch all data in parallel
+          const [configData] = await Promise.all([
+            fetchConfiguration(),
+            fetchJackpotAmount(),
+            fetchGameAndWeekDetails()
+          ]);
+          
+          console.log('All data initialized');
+        } catch (error) {
+          console.error('Error initializing data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
       
-      // Apply penalty if winner is not present
-      if (!winnerForm.winnerPresent) {
-        const penaltyAmount = amount * (penaltyConfig.penaltyPercentage / 100);
-        amount -= penaltyAmount;
-        console.log('Applied penalty:', penaltyAmount, 'New amount:', amount);
-      }
-    } else if (winnerForm.cardSelected && cardPayouts[winnerForm.cardSelected]) {
-      // For other cards, use the fixed payout amount
-      const payout = cardPayouts[winnerForm.cardSelected];
-      console.log('Found payout for', winnerForm.cardSelected, ':', payout);
-      
-      if (typeof payout === 'number') {
-        amount = Number(payout);
-      } else if (payout === 'jackpot') {
-        // Handle case where other cards might also be set to jackpot
-        amount = Number(currentJackpot) || 0;
-      }
-      console.log('Final payout for', winnerForm.cardSelected, ':', amount);
-    } else {
-      console.log('No payout found for card:', winnerForm.cardSelected);
-      console.log('Available cards in payouts:', Object.keys(cardPayouts));
+      initializeData();
     }
+  }, [open, gameId, weekId]);
+
+  // Recalculate payout when card selection or presence changes
+  useEffect(() => {
+    if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0 && currentJackpot > 0) {
+      console.log('Recalculating payout due to selection change...');
+      const amount = calculatePayoutWithData(
+        winnerForm.cardSelected, 
+        winnerForm.winnerPresent, 
+        currentJackpot, 
+        cardPayouts
+      );
+      setPayoutAmount(amount);
+    }
+  }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts]);
+
+  // Handle card selection change - fetch fresh config
+  const handleCardSelection = async (selectedCard: string) => {
+    setWinnerForm({...winnerForm, cardSelected: selectedCard});
     
-    console.log('=== FINAL CALCULATED AMOUNT ===:', amount);
-    setPayoutAmount(Number(amount) || 0);
+    if (selectedCard) {
+      console.log('Card selected, fetching FRESH configuration...');
+      // Fetch fresh configuration for this specific card selection
+      const freshConfig = await fetchConfiguration();
+      const freshJackpot = await fetchJackpotAmount();
+      
+      if (freshConfig?.card_payouts) {
+        const freshPayouts = typeof freshConfig.card_payouts === 'string' 
+          ? JSON.parse(freshConfig.card_payouts) 
+          : freshConfig.card_payouts;
+          
+        console.log('Using FRESH payouts for calculation:', freshPayouts);
+        const amount = calculatePayoutWithData(
+          selectedCard, 
+          winnerForm.winnerPresent, 
+          freshJackpot, 
+          freshPayouts
+        );
+        setPayoutAmount(amount);
+      }
+    }
   };
 
   const submitWinner = async () => {
@@ -367,7 +429,7 @@ export function WinnerForm({
                   id="cardSelected" 
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                   value={winnerForm.cardSelected} 
-                  onChange={e => setWinnerForm({...winnerForm, cardSelected: e.target.value})}
+                  onChange={e => handleCardSelection(e.target.value)}
                 >
                   <option value="">-- Select a Card --</option>
                   {getCardOptions().map(card => <option key={card} value={card}>{card}</option>)}
