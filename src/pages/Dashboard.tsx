@@ -209,19 +209,26 @@ export default function Dashboard() {
     }
   };
 
-  const addRow = async () => {
-    if (!currentGameId || !currentWeekId) return;
+  const updateDailyEntry = async (weekId: string, dayIndex: number, date: Date, ticketsSold: number) => {
+    if (!currentGameId) return;
     
     try {
       const game = games.find(g => g.id === currentGameId);
       if (!game) throw new Error("Game not found");
       
-      const week = game.weeks.find((w: any) => w.id === currentWeekId);
+      const week = game.weeks.find((w: any) => w.id === weekId);
       if (!week) throw new Error("Week not found");
+
+      // Find existing entry for this day
+      const existingEntry = week.ticket_sales.find((entry: any) => {
+        const entryDate = new Date(entry.date);
+        const inputDate = new Date(date);
+        return entryDate.toDateString() === inputDate.toDateString();
+      });
 
       // Calculate the values
       const ticketPrice = game.ticket_price;
-      const amountCollected = rowForm.ticketsSold * ticketPrice;
+      const amountCollected = ticketsSold * ticketPrice;
       const organizationPercentage = game.organization_percentage;
       const jackpotPercentage = game.jackpot_percentage;
       const organizationTotal = amountCollected * (organizationPercentage / 100);
@@ -242,7 +249,7 @@ export default function Dashboard() {
       const previousJackpotTotal = latestSale && latestSale.length > 0 ? latestSale[0].ending_jackpot_total : game.carryover_jackpot;
       
       // Check if this is a Monday (day of drawing)
-      const entryDate = rowForm.date;
+      const entryDate = new Date(date);
       const isMonday = entryDate.getDay() === 1; // 0 = Sunday, 1 = Monday
       
       // Monday's ticket sales go to next week's jackpot
@@ -250,24 +257,37 @@ export default function Dashboard() {
         previousJackpotTotal : // Monday sales don't add to current jackpot
         previousJackpotTotal + jackpotTotal;
 
-      // Insert the new ticket sale
-      const {
-        data,
-        error
-      } = await supabase.from('ticket_sales').insert([{
-        game_id: currentGameId,
-        week_id: currentWeekId,
-        date: format(rowForm.date, 'yyyy-MM-dd'),
-        tickets_sold: rowForm.ticketsSold,
-        ticket_price: ticketPrice,
-        amount_collected: amountCollected,
-        cumulative_collected: cumulativeCollected,
-        organization_total: organizationTotal,
-        jackpot_total: jackpotTotal,
-        ending_jackpot_total: endingJackpotTotal
-      }]).select();
-      
-      if (error) throw error;
+      if (existingEntry) {
+        // Update existing entry
+        const { error } = await supabase.from('ticket_sales').update({
+          date: format(date, 'yyyy-MM-dd'),
+          tickets_sold: ticketsSold,
+          ticket_price: ticketPrice,
+          amount_collected: amountCollected,
+          cumulative_collected: cumulativeCollected,
+          organization_total: organizationTotal,
+          jackpot_total: jackpotTotal,
+          ending_jackpot_total: endingJackpotTotal
+        }).eq('id', existingEntry.id);
+        
+        if (error) throw error;
+      } else {
+        // Insert new entry
+        const { error } = await supabase.from('ticket_sales').insert([{
+          game_id: currentGameId,
+          week_id: weekId,
+          date: format(date, 'yyyy-MM-dd'),
+          tickets_sold: ticketsSold,
+          ticket_price: ticketPrice,
+          amount_collected: amountCollected,
+          cumulative_collected: cumulativeCollected,
+          organization_total: organizationTotal,
+          jackpot_total: jackpotTotal,
+          ending_jackpot_total: endingJackpotTotal
+        }]);
+        
+        if (error) throw error;
+      }
 
       // Update the game's total sales and organization net profit
       await supabase.from('games').update({
@@ -278,31 +298,17 @@ export default function Dashboard() {
       // Update the week's weekly sales and tickets sold
       await supabase.from('weeks').update({
         weekly_sales: week.weekly_sales + amountCollected,
-        weekly_tickets_sold: week.weekly_tickets_sold + rowForm.ticketsSold
-      }).eq('id', currentWeekId);
-      
-      toast({
-        title: "Entry Added",
-        description: `Daily entry for ${rowForm.date} has been added successfully.`
-      });
-      
-      setRowFormOpen(false);
-      setRowForm({
-        date: new Date(),
-        ticketsSold: 0
-      });
+        weekly_tickets_sold: week.weekly_tickets_sold + ticketsSold
+      }).eq('id', weekId);
 
-      // If this is the 7th day, show the winner form
-      const weekEntries = week.ticket_sales?.length || 0;
-      if (weekEntries >= 6) {
-        // After adding the 7th entry (index 6)
-        setWinnerFormOpen(true);
-      }
+      // Refresh data
+      fetchGames();
+      
     } catch (error: any) {
-      console.error('Error adding row:', error);
+      console.error('Error updating daily entry:', error);
       toast({
         title: "Error",
-        description: `Failed to add row: ${error.message}`,
+        description: `Failed to update daily entry: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -332,17 +338,6 @@ export default function Dashboard() {
     
     setCurrentGameId(gameId);
     setWeekFormOpen(true);
-  };
-
-  const openRowForm = (gameId: string, weekId: string) => {
-    setRowForm({
-      date: new Date(),
-      ticketsSold: 0
-    });
-    
-    setCurrentGameId(gameId);
-    setCurrentWeekId(weekId);
-    setRowFormOpen(true);
   };
 
   const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
@@ -952,7 +947,10 @@ export default function Dashboard() {
                             <div key={week.id} className="space-y-2">
                               {/* Week Button */}
                               <Button
-                                onClick={() => toggleWeek(week.id)}
+                                onClick={() => {
+                                  toggleWeek(week.id);
+                                  setCurrentGameId(game.id);
+                                }}
                                 variant="outline"
                                 className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
                                   expandedWeek === week.id
@@ -1044,43 +1042,85 @@ export default function Dashboard() {
                                     )}
                                   </div>
                                   
-                                  {/* Daily Entries */}
+                                  {/* 7 Daily Entries */}
                                   <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                      <h5 className="font-medium">Daily Entries</h5>
-                                      {week.ticket_sales.length < 7 && (
-                                        <Button 
-                                          onClick={() => openRowForm(game.id, week.id)} 
-                                          size="sm" 
-                                          className="text-xs bg-[#1F4E4A] text-white hover:bg-[#1F4E4A]/90"
-                                        >
-                                          <Plus className="h-3 w-3 mr-1" /> Add Entry
-                                        </Button>
-                                      )}
-                                    </div>
+                                    <h5 className="font-medium mb-3">Daily Entries (7 Days)</h5>
                                     
-                                    {week.ticket_sales.length === 0 ? (
-                                      <p className="text-muted-foreground text-sm">No daily entries yet.</p>
-                                    ) : (
-                                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                                        {week.ticket_sales.map((entry: any) => (
-                                          <div key={entry.id} className="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
-                                            <div className="space-y-1">
-                                              <div className="font-medium">{format(new Date(entry.date), 'MMM d, yyyy')}</div>
-                                              <div className="text-muted-foreground">
-                                                {entry.tickets_sold} tickets • {formatCurrency(entry.amount_collected)}
+                                    <div className="space-y-3">
+                                      {Array.from({ length: 7 }, (_, dayIndex) => {
+                                        const existingEntry = week.ticket_sales.find((entry: any, index: number) => index === dayIndex);
+                                        const entryDate = existingEntry ? new Date(existingEntry.date) : new Date(week.start_date);
+                                        if (!existingEntry) {
+                                          entryDate.setDate(entryDate.getDate() + dayIndex);
+                                        }
+                                        
+                                        return (
+                                          <div key={dayIndex} className="flex items-center gap-4 p-3 bg-gray-50 rounded border">
+                                            <div className="min-w-0 flex-1">
+                                              <div className="text-sm font-medium text-gray-900">
+                                                Day {dayIndex + 1}
                                               </div>
                                             </div>
-                                            <Button 
-                                              onClick={() => openDeleteConfirm(entry.id, 'entry')} 
-                                              variant="ghost" 
-                                              size="icon" 
-                                              className="h-6 w-6 text-destructive hover:text-destructive/90"
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
+                                            
+                                            <div className="flex items-center gap-2">
+                                              <div className="flex flex-col gap-1">
+                                                <label className="text-xs text-gray-500">Date</label>
+                                                <Input
+                                                  type="date"
+                                                  value={format(entryDate, 'yyyy-MM-dd')}
+                                                  onChange={(e) => {
+                                                    const newDate = new Date(e.target.value);
+                                                    const ticketsSold = existingEntry?.tickets_sold || 0;
+                                                    if (ticketsSold > 0) {
+                                                      updateDailyEntry(week.id, dayIndex, newDate, ticketsSold);
+                                                    }
+                                                  }}
+                                                  className="w-32 h-8 text-xs"
+                                                />
+                                              </div>
+                                              
+                                              <div className="flex flex-col gap-1">
+                                                <label className="text-xs text-gray-500">Tickets Sold</label>
+                                                <Input
+                                                  type="number"
+                                                  min="0"
+                                                  value={existingEntry?.tickets_sold || 0}
+                                                  onChange={(e) => {
+                                                    const ticketsSold = parseInt(e.target.value) || 0;
+                                                    updateDailyEntry(week.id, dayIndex, entryDate, ticketsSold);
+                                                  }}
+                                                  className="w-24 h-8 text-xs"
+                                                  placeholder="0"
+                                                />
+                                              </div>
+                                              
+                                              {existingEntry && (
+                                                <div className="flex flex-col gap-1">
+                                                  <label className="text-xs text-gray-500">Amount</label>
+                                                  <div className="text-xs font-medium px-2 py-1 bg-blue-50 rounded border min-w-[60px] text-center">
+                                                    {formatCurrency(existingEntry.amount_collected)}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                        ))}
+                                        );
+                                      })}
+                                    </div>
+                                    
+                                    {week.ticket_sales.length >= 7 && !week.winner_name && (
+                                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                                        <p className="text-sm text-yellow-800 mb-2">Week is complete! Please enter winner details.</p>
+                                        <Button
+                                          onClick={() => {
+                                            setCurrentWeekId(week.id);
+                                            setWinnerFormOpen(true);
+                                          }}
+                                          size="sm"
+                                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                                        >
+                                          Enter Winner Details
+                                        </Button>
                                       </div>
                                     )}
                                   </div>
@@ -1208,54 +1248,6 @@ export default function Dashboard() {
             </Button>
             <Button onClick={createWeek} type="submit" variant="default">
               Create Week
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Row Form Dialog */}
-      <Dialog open={rowFormOpen} onOpenChange={setRowFormOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Daily Entry</DialogTitle>
-            <DialogDescription>
-              Enter the details for the daily entry.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <DatePickerWithInput
-                label="Date"
-                date={rowForm.date}
-                setDate={(date) => date ? setRowForm({
-                  ...rowForm,
-                  date: date
-                }) : null}
-                placeholder="Select date"
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <label htmlFor="ticketsSold" className="text-sm font-medium">Tickets Sold</label>
-              <Input 
-                id="ticketsSold" 
-                type="number" 
-                value={rowForm.ticketsSold} 
-                onChange={e => setRowForm({
-                  ...rowForm,
-                  ticketsSold: parseInt(e.target.value) || 0
-                })} 
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button onClick={() => setRowFormOpen(false)} variant="secondary">
-              Cancel
-            </Button>
-            <Button onClick={addRow} type="submit" variant="default">
-              Add Entry
             </Button>
           </DialogFooter>
         </DialogContent>
