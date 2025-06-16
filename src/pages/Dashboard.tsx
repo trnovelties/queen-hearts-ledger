@@ -1338,7 +1338,18 @@ export default function Dashboard() {
                                     )}
                                     
                                     {week.winner_name && (
-                                      <div className="pt-2">
+                                      <div className="pt-2 flex gap-2">
+                                        <Button
+                                          onClick={() => {
+                                            setCurrentWeekId(week.id);
+                                            setWinnerFormOpen(true);
+                                          }}
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          Edit Winner Details
+                                        </Button>
                                         <Button
                                           onClick={() => {
                                             const winnerData = {
