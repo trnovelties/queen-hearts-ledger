@@ -1191,7 +1191,11 @@ export default function Dashboard() {
                     <div className="text-sm hidden md:flex space-x-4">
                       <div>
                         <span className="text-muted-foreground">Start:</span> {format(new Date(game.start_date), 'MMM d, yyyy')}
-                        {game.end_date && <span className="ml-2 text-muted-foreground">End:</span>} {game.end_date && format(new Date(game.end_date), 'MMM d, yyyy')}
+                        {game.end_date && (
+                          <>
+                            <span className="ml-4 text-muted-foreground">End:</span> {format(new Date(game.end_date), 'MMM d, yyyy')}
+                          </>
+                        )}
                       </div>
                       <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
                       <div><span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}</div>
