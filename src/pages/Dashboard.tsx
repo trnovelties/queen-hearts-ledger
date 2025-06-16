@@ -245,7 +245,7 @@ export default function Dashboard() {
         return existingDate.toDateString() === entryDate.toDateString();
       });
 
-      // Calculate the values
+      // Calculate the basic values
       const ticketPrice = game.ticket_price;
       const amountCollected = ticketsSold * ticketPrice;
       const organizationPercentage = game.organization_percentage;
@@ -253,27 +253,50 @@ export default function Dashboard() {
       const organizationTotal = amountCollected * (organizationPercentage / 100);
       const jackpotTotal = amountCollected * (jackpotPercentage / 100);
 
-      // Get latest cumulative collected for this game
-      const {
-        data: latestSale,
-        error: latestSaleError
-      } = await supabase.from('ticket_sales').select('cumulative_collected, ending_jackpot_total').eq('game_id', currentGameId).order('created_at', {
-        ascending: false
-      }).limit(1);
+      // Get all ticket sales for this game to calculate cumulative correctly
+      const { data: allGameSales, error: salesError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('game_id', currentGameId)
+        .order('date', { ascending: true });
       
-      if (latestSaleError) throw latestSaleError;
-      
-      const previousCumulativeCollected = latestSale && latestSale.length > 0 ? latestSale[0].cumulative_collected : 0;
-      const cumulativeCollected = previousCumulativeCollected + amountCollected;
-      const previousJackpotTotal = latestSale && latestSale.length > 0 ? latestSale[0].ending_jackpot_total : game.carryover_jackpot;
-      
-      // Check if this is a Monday (day of drawing)
-      const isMonday = entryDate.getDay() === 1; // 0 = Sunday, 1 = Monday
-      
-      // Monday's ticket sales go to next week's jackpot
-      const endingJackpotTotal = isMonday ? 
-        previousJackpotTotal : // Monday sales don't add to current jackpot
-        previousJackpotTotal + jackpotTotal;
+      if (salesError) throw salesError;
+
+      // Calculate cumulative collected up to this date (excluding current entry if updating)
+      let cumulativeCollected = game.carryover_jackpot || 0;
+      if (allGameSales) {
+        for (const sale of allGameSales) {
+          const saleDate = new Date(sale.date);
+          const currentEntryDate = new Date(entryDate);
+          
+          // Include all sales before this date, and this date if it's not the current entry being updated
+          if (saleDate < currentEntryDate || 
+              (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id)) {
+            cumulativeCollected += sale.amount_collected;
+          }
+        }
+      }
+      cumulativeCollected += amountCollected;
+
+      // Calculate ending jackpot total
+      // Get the previous ending jackpot total (from the most recent entry before this one)
+      let previousJackpotTotal = game.carryover_jackpot || 0;
+      if (allGameSales && allGameSales.length > 0) {
+        // Find the most recent entry before this date
+        const previousEntries = allGameSales.filter(sale => {
+          const saleDate = new Date(sale.date);
+          const currentEntryDate = new Date(entryDate);
+          return saleDate < currentEntryDate || 
+                 (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id);
+        });
+        
+        if (previousEntries.length > 0) {
+          const lastEntry = previousEntries[previousEntries.length - 1];
+          previousJackpotTotal = lastEntry.ending_jackpot_total;
+        }
+      }
+
+      const endingJackpotTotal = previousJackpotTotal + jackpotTotal;
 
       // Optimistically update local state first
       setGames(prevGames => prevGames.map(g => {
@@ -304,7 +327,7 @@ export default function Dashboard() {
                   return entry;
                 })
               : [...w.ticket_sales, {
-                  id: `temp-${Date.now()}`, // temporary ID
+                  id: `temp-${Date.now()}`,
                   game_id: currentGameId,
                   week_id: weekId,
                   date: format(entryDate, 'yyyy-MM-dd'),
@@ -317,9 +340,15 @@ export default function Dashboard() {
                   ending_jackpot_total: endingJackpotTotal
                 }];
             
+            // Recalculate week totals
+            const weekTotalTickets = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
+            const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
+            
             return {
               ...w,
-              ticket_sales: updatedTicketSales
+              ticket_sales: updatedTicketSales,
+              weekly_tickets_sold: weekTotalTickets,
+              weekly_sales: weekTotalSales
             };
           })
         };
@@ -357,20 +386,50 @@ export default function Dashboard() {
         if (error) throw error;
       }
 
-      // Update the game's total sales and organization net profit
-      await supabase.from('games').update({
-        total_sales: cumulativeCollected,
-        organization_net_profit: game.organization_net_profit + organizationTotal
-      }).eq('id', currentGameId);
+      // Recalculate and update week totals
+      const { data: weekSales } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('week_id', weekId);
 
-      // Update the week's weekly sales and tickets sold
-      await supabase.from('weeks').update({
-        weekly_sales: week.weekly_sales + amountCollected,
-        weekly_tickets_sold: week.weekly_tickets_sold + ticketsSold
-      }).eq('id', weekId);
+      if (weekSales) {
+        const weekTotalTickets = weekSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
+        const weekTotalSales = weekSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
 
-      // Don't refresh entire data, let real-time updates handle it
-      
+        await supabase.from('weeks').update({
+          weekly_sales: weekTotalSales,
+          weekly_tickets_sold: weekTotalTickets
+        }).eq('id', weekId);
+      }
+
+      // Recalculate and update game totals
+      const { data: gameSales } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('game_id', currentGameId);
+
+      if (gameSales) {
+        const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+        const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
+
+        // Get total expenses and donations
+        const { data: expenses } = await supabase
+          .from('expenses')
+          .select('*')
+          .eq('game_id', currentGameId);
+
+        const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
+        const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
+        const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
+
+        await supabase.from('games').update({
+          total_sales: gameTotalSales,
+          total_expenses: totalExpenses,
+          total_donations: totalDonations,
+          organization_net_profit: organizationNetProfit
+        }).eq('id', currentGameId);
+      }
+
     } catch (error: any) {
       console.error('Error updating daily entry:', error);
       // Revert optimistic update on error
@@ -1201,7 +1260,7 @@ export default function Dashboard() {
                                 variant="outline"
                                 className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
                                   expandedWeek === week.id
-                                    ? 'bg-[#6CB33A] border-[#6CB33A] text-white shadow-md'
+                                    ? 'bg-[#4A7C59] border-[#4A7C59] text-white shadow-md'
                                     : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
                                 }`}
                               >
@@ -1226,6 +1285,13 @@ export default function Dashboard() {
                           <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
                             {(() => {
                               const week = game.weeks.find((w: any) => w.id === expandedWeek);
+                              
+                              // Calculate week totals from daily entries
+                              const weekTotalTickets = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
+                              const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
+                              const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
+                              const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
+                              
                               return (
                                 <div>
                                   {/* Week Details Header */}
@@ -1255,10 +1321,10 @@ export default function Dashboard() {
                                     </div>
                                     
                                     <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div><span className="text-muted-foreground">Tickets Sold:</span> {week.weekly_tickets_sold}</div>
-                                      <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}</div>
-                                      <div><span className="text-muted-foreground">Organization Net:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
-                                      <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
+                                      <div><span className="text-muted-foreground">Tickets Sold:</span> {weekTotalTickets}</div>
+                                      <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(weekTotalSales)}</div>
+                                      <div><span className="text-muted-foreground">Organization Net:</span> {formatCurrency(weekOrganizationTotal)}</div>
+                                      <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(weekJackpotTotal)}</div>
                                     </div>
                                     
                                     {week.winner_name && (
@@ -1309,7 +1375,7 @@ export default function Dashboard() {
                                         const entryDate = new Date(weekStartDate);
                                         entryDate.setDate(entryDate.getDate() + dayIndex);
                                         
-                                        // Find existing entry for this specific date (not by array index)
+                                        // Find existing entry for this specific date
                                         const existingEntry = week.ticket_sales.find((entry: any) => {
                                           const existingDate = new Date(entry.date);
                                           return existingDate.toDateString() === entryDate.toDateString();
