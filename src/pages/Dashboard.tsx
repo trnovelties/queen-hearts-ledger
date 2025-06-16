@@ -46,6 +46,9 @@ export default function Dashboard() {
 
   const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
 
+  // State to track temporary input values before submission
+  const [tempTicketInputs, setTempTicketInputs] = useState<{[key: string]: string}>({});
+
   useEffect(() => {
     fetchGames();
 
@@ -314,6 +317,29 @@ export default function Dashboard() {
         variant: "destructive"
       });
     }
+  };
+
+  // Handle input change for ticket sold (store temporarily)
+  const handleTicketInputChange = (weekId: string, dayIndex: number, value: string) => {
+    const key = `${weekId}-${dayIndex}`;
+    setTempTicketInputs(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  // Handle Enter key press to submit the ticket input
+  const handleTicketInputSubmit = (weekId: string, dayIndex: number, value: string) => {
+    const ticketsSold = parseInt(value) || 0;
+    updateDailyEntry(weekId, dayIndex, ticketsSold);
+    
+    // Clear the temporary input
+    const key = `${weekId}-${dayIndex}`;
+    setTempTicketInputs(prev => {
+      const newInputs = { ...prev };
+      delete newInputs[key];
+      return newInputs;
+    });
   };
 
   const toggleGame = (gameId: string) => {
@@ -1048,12 +1074,16 @@ export default function Dashboard() {
                                   <div>
                                     <h5 className="font-medium mb-3">Daily Entries (7 Days)</h5>
                                     
-                                    <div className="space-y-3 max-h-none">
+                                    <div className="space-y-3 h-fit">
                                       {Array.from({ length: 7 }, (_, dayIndex) => {
                                         const existingEntry = week.ticket_sales.find((entry: any, index: number) => index === dayIndex);
                                         const weekStartDate = new Date(week.start_date);
                                         const entryDate = new Date(weekStartDate);
                                         entryDate.setDate(entryDate.getDate() + dayIndex);
+                                        
+                                        const inputKey = `${week.id}-${dayIndex}`;
+                                        const tempValue = tempTicketInputs[inputKey];
+                                        const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold || '');
                                         
                                         return (
                                           <div key={dayIndex} className="flex items-center gap-4 p-3 bg-gray-50 rounded border">
@@ -1069,10 +1099,16 @@ export default function Dashboard() {
                                                 <Input
                                                   type="number"
                                                   min="0"
-                                                  value={existingEntry?.tickets_sold || ''}
-                                                  onChange={(e) => {
-                                                    const ticketsSold = parseInt(e.target.value) || 0;
-                                                    updateDailyEntry(week.id, dayIndex, ticketsSold);
+                                                  value={currentValue}
+                                                  onChange={(e) => handleTicketInputChange(week.id, dayIndex, e.target.value)}
+                                                  onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                      handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
+                                                    }
+                                                  }}
+                                                  onBlur={(e) => {
+                                                    // Submit on blur as well
+                                                    handleTicketInputSubmit(week.id, dayIndex, e.target.value);
                                                   }}
                                                   className="w-24 h-8 text-xs"
                                                   placeholder="0"
