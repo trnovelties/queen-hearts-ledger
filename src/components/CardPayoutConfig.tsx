@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface CardPayout {
   card: string;
-  payout: number | "jackpot";
+  payout: number | "jackpot" | "";
 }
 
 export function CardPayoutConfig() {
@@ -241,9 +240,11 @@ export function CardPayoutConfig() {
     } else {
       if (value === 'jackpot') {
         updatedPayouts[index].payout = 'jackpot';
+      } else if (value === '' || value === null || value === undefined) {
+        updatedPayouts[index].payout = '';
       } else {
         const numValue = typeof value === 'string' ? parseFloat(value) : value;
-        updatedPayouts[index].payout = isNaN(numValue) ? 0 : numValue;
+        updatedPayouts[index].payout = isNaN(numValue) ? '' : numValue;
       }
     }
     setCardPayouts(updatedPayouts);
@@ -298,11 +299,16 @@ export function CardPayoutConfig() {
                           />
                         ) : (
                           <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={cardPayout.payout === 'jackpot' ? '' : cardPayout.payout}
-                            onChange={(e) => updateCardPayout(index, 'payout', e.target.value)}
+                            type="text"
+                            inputMode="decimal"
+                            value={cardPayout.payout === '' ? '' : cardPayout.payout.toString()}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Allow empty value or valid decimal numbers
+                              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                updateCardPayout(index, 'payout', value === '' ? '' : value);
+                              }
+                            }}
                             placeholder="25.00"
                           />
                         )}
@@ -329,7 +335,7 @@ export function CardPayoutConfig() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setCardPayouts([...cardPayouts, { card: "", payout: 25 }]);
+                  setCardPayouts([...cardPayouts, { card: "", payout: "" }]);
                 }}
               >
                 Add Card
