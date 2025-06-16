@@ -331,15 +331,17 @@ export default function Dashboard() {
   // Handle Enter key press to submit the ticket input
   const handleTicketInputSubmit = (weekId: string, dayIndex: number, value: string) => {
     const ticketsSold = parseInt(value) || 0;
-    updateDailyEntry(weekId, dayIndex, ticketsSold);
     
-    // Clear the temporary input
+    // Clear the temporary input immediately to show updated value
     const key = `${weekId}-${dayIndex}`;
     setTempTicketInputs(prev => {
       const newInputs = { ...prev };
       delete newInputs[key];
       return newInputs;
     });
+    
+    // Update the database
+    updateDailyEntry(weekId, dayIndex, ticketsSold);
   };
 
   const toggleGame = (gameId: string) => {
