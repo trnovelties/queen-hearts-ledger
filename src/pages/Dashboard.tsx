@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -393,7 +392,62 @@ export default function Dashboard() {
       return newInputs;
     });
     
-    // Update the database
+    // Immediately update the local state to show the new value
+    setGames(prevGames => prevGames.map(g => {
+      if (g.id !== currentGameId) return g;
+      
+      return {
+        ...g,
+        weeks: g.weeks.map((w: any) => {
+          if (w.id !== weekId) return w;
+          
+          const weekStartDate = new Date(w.start_date);
+          const entryDate = new Date(weekStartDate);
+          entryDate.setDate(entryDate.getDate() + dayIndex);
+          
+          const existingEntry = w.ticket_sales.find((entry: any) => {
+            const existingDate = new Date(entry.date);
+            return existingDate.toDateString() === entryDate.toDateString();
+          });
+          
+          if (existingEntry) {
+            return {
+              ...w,
+              ticket_sales: w.ticket_sales.map((entry: any) => {
+                const entryDateCheck = new Date(entry.date);
+                if (entryDateCheck.toDateString() === entryDate.toDateString()) {
+                  return {
+                    ...entry,
+                    tickets_sold: ticketsSold
+                  };
+                }
+                return entry;
+              })
+            };
+          } else {
+            // For new entries, we'll add a placeholder that will be updated by the database call
+            return {
+              ...w,
+              ticket_sales: [...w.ticket_sales, {
+                id: `temp-${Date.now()}`,
+                game_id: currentGameId,
+                week_id: weekId,
+                date: format(entryDate, 'yyyy-MM-dd'),
+                tickets_sold: ticketsSold,
+                ticket_price: 0,
+                amount_collected: 0,
+                cumulative_collected: 0,
+                organization_total: 0,
+                jackpot_total: 0,
+                ending_jackpot_total: 0
+              }]
+            };
+          }
+        })
+      };
+    }));
+    
+    // Then update the database
     updateDailyEntry(weekId, dayIndex, ticketsSold);
   };
 
