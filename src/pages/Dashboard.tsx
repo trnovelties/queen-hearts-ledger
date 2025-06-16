@@ -1176,395 +1176,410 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          displayGames.map(game => (
-            <Card key={game.id} className="overflow-hidden">
-              <CardHeader 
-                className={`flex flex-col items-start justify-between cursor-pointer ${expandedGame === game.id ? 'bg-accent/50' : ''}`} 
-                onClick={() => toggleGame(game.id)}
-              >
-                <div className="w-full flex flex-row items-center justify-between">
-                  <CardTitle className="text-xl">
-                    {game.name}
-                    {game.end_date && <span className="ml-2 text-sm text-green-600 font-normal">(Completed)</span>}
-                  </CardTitle>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-sm hidden md:flex space-x-4">
-                      <div>
-                        <span className="text-muted-foreground">Start:</span> {format(new Date(game.start_date), 'MMM d, yyyy')}
-                        {game.end_date && (
-                          <>
-                            <span className="ml-4 text-muted-foreground">End:</span> {format(new Date(game.end_date), 'MMM d, yyyy')}
-                          </>
-                        )}
+          displayGames.map(game => {
+            // Calculate actual start and end dates from weeks data
+            const gameStartDate = game.weeks.length > 0 
+              ? game.weeks.reduce((earliest: any, week: any) => 
+                  new Date(week.start_date) < new Date(earliest.start_date) ? week : earliest
+                ).start_date
+              : game.start_date;
+
+            const gameEndDate = game.weeks.length > 0
+              ? game.weeks.reduce((latest: any, week: any) => 
+                  new Date(week.end_date) > new Date(latest.end_date) ? week : latest
+                ).end_date
+              : game.end_date;
+
+            return (
+              <Card key={game.id} className="overflow-hidden">
+                <CardHeader 
+                  className={`flex flex-col items-start justify-between cursor-pointer ${expandedGame === game.id ? 'bg-accent/50' : ''}`} 
+                  onClick={() => toggleGame(game.id)}
+                >
+                  <div className="w-full flex flex-row items-center justify-between">
+                    <CardTitle className="text-xl">
+                      {game.name}
+                      {game.end_date && <span className="ml-2 text-sm text-green-600 font-normal">(Completed)</span>}
+                    </CardTitle>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-sm hidden md:flex space-x-4">
+                        <div>
+                          <span className="text-muted-foreground">Start:</span> {format(new Date(gameStartDate), 'MMM d, yyyy')}
+                          {gameEndDate && (
+                            <>
+                              <span className="ml-4 text-muted-foreground">End:</span> {format(new Date(gameEndDate), 'MMM d, yyyy')}
+                            </>
+                          )}
+                        </div>
+                        <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
+                        <div><span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}</div>
                       </div>
-                      <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
-                      <div><span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}</div>
-                    </div>
-                    
-                    <Button 
-                      onClick={e => {
-                        e.stopPropagation();
-                        openDeleteConfirm(game.id, 'game');
-                      }} 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                    
-                    <div className="flex items-center">
-                      {expandedGame === game.id ? 
-                        <ChevronUp className="h-6 w-6 text-muted-foreground" /> : 
-                        <ChevronDown className="h-6 w-6 text-muted-foreground" />
-                      }
+                      
+                      <Button 
+                        onClick={e => {
+                          e.stopPropagation();
+                          openDeleteConfirm(game.id, 'game');
+                        }} 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                      
+                      <div className="flex items-center">
+                        {expandedGame === game.id ? 
+                          <ChevronUp className="h-6 w-6 text-muted-foreground" /> : 
+                          <ChevronDown className="h-6 w-6 text-muted-foreground" />
+                        }
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              
-              {expandedGame === game.id && (
-                <CardContent className="p-0 border-t">
-                  <div className="p-4 border-t">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Weeks</h3>
-                      <div className="flex space-x-2">
+                </CardHeader>
+                
+                {expandedGame === game.id && (
+                  <CardContent className="p-0 border-t">
+                    <div className="p-4 border-t">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Weeks</h3>
+                        <div className="flex space-x-2">
+                          <Button 
+                            onClick={() => generateGamePdfReport(game)} 
+                            variant="export" 
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="h-4 w-4" /> Export Game PDF
+                          </Button>
+                          <Button 
+                            onClick={() => openWeekForm(game.id)} 
+                            size="sm" 
+                            className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] flex items-center gap-2"
+                          >
+                            <Plus className="h-4 w-4" /> Add Week
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {game.weeks.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No weeks added yet.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Week Calendar-style Layout */}
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[5px]">
+                            {game.weeks.map((week: any) => (
+                              <div key={week.id} className="space-y-2">
+                                {/* Week Button */}
+                                <Button
+                                  onClick={() => {
+                                    toggleWeek(week.id);
+                                    setCurrentGameId(game.id);
+                                  }}
+                                  variant="outline"
+                                  className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
+                                    expandedWeek === week.id
+                                      ? 'bg-[#4A7C59] border-[#4A7C59] text-white shadow-md'
+                                      : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
+                                  }`}
+                                >
+                                  Week {week.week_number}
+                                </Button>
+                                
+                                {/* Delete Button */}
+                                <Button 
+                                  onClick={() => openDeleteConfirm(week.id, 'week')} 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="w-full h-8 text-xs text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" /> Delete
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Expanded Week Details */}
+                          {expandedWeek && game.weeks.find((w: any) => w.id === expandedWeek) && (
+                            <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
+                              {(() => {
+                                const week = game.weeks.find((w: any) => w.id === expandedWeek);
+                                
+                                // Calculate week totals from daily entries
+                                const weekTotalTickets = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
+                                const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
+                                const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
+                                const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
+                                
+                                return (
+                                  <div>
+                                    {/* Week Details Header */}
+                                    <div className="space-y-2 mb-4 pb-4 border-b">
+                                      <div className="flex justify-between items-center">
+                                        <h4 className="font-semibold text-[#1F4E4A] text-lg">Week {week.week_number} Details</h4>
+                                        <div className="flex items-center gap-2">
+                                          <Button 
+                                            onClick={() => openDeleteConfirm(week.id, 'week')} 
+                                            variant="ghost" 
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                          <button
+                                            onClick={() => setExpandedWeek(null)}
+                                            className="text-muted-foreground hover:text-foreground text-xl"
+                                          >
+                                            ×
+                                          </button>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="text-sm text-muted-foreground mb-3">
+                                        {format(new Date(week.start_date), 'MMM d')} - {format(new Date(week.end_date), 'MMM d, yyyy')}
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div><span className="text-muted-foreground">Tickets Sold:</span> {weekTotalTickets}</div>
+                                        <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(weekTotalSales)}</div>
+                                        <div><span className="text-muted-foreground">Organization Net:</span> {formatCurrency(weekOrganizationTotal)}</div>
+                                        <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(weekJackpotTotal)}</div>
+                                      </div>
+                                      
+                                      {week.winner_name && (
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                          <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
+                                          <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
+                                          <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
+                                          <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
+                                          <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
+                                        </div>
+                                      )}
+                                      
+                                      {week.winner_name && (
+                                        <div className="pt-2 flex gap-2">
+                                          <Button
+                                            onClick={() => {
+                                              setCurrentWeekId(week.id);
+                                              setWinnerFormOpen(true);
+                                            }}
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            Edit Winner Details
+                                          </Button>
+                                          <Button
+                                            onClick={() => {
+                                              const winnerData = {
+                                                winnerName: week.winner_name,
+                                                slotChosen: week.slot_chosen,
+                                                cardSelected: week.card_selected,
+                                                payoutAmount: week.weekly_payout,
+                                                date: new Date().toISOString().split('T')[0],
+                                                gameNumber: game.game_number,
+                                                gameName: game.name,
+                                                weekNumber: week.week_number,
+                                                weekStartDate: week.start_date,
+                                                weekEndDate: week.end_date
+                                              };
+                                              handleOpenPayoutSlip(winnerData);
+                                            }}
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            Print Payout Slip
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* 7 Daily Entries */}
+                                    <div>
+                                      <h5 className="font-medium mb-3">Daily Entries (7 Days)</h5>
+                                      
+                                      <div className="space-y-3 h-fit">
+                                        {Array.from({ length: 7 }, (_, dayIndex) => {
+                                          const weekStartDate = new Date(week.start_date);
+                                          const entryDate = new Date(weekStartDate);
+                                          entryDate.setDate(entryDate.getDate() + dayIndex);
+                                          
+                                          // Find existing entry for this specific date
+                                          const existingEntry = week.ticket_sales.find((entry: any) => {
+                                            const existingDate = new Date(entry.date);
+                                            return existingDate.toDateString() === entryDate.toDateString();
+                                          });
+                                          
+                                          const inputKey = `${week.id}-${dayIndex}`;
+                                          const tempValue = tempTicketInputs[inputKey];
+                                          const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold || '');
+                                          
+                                          return (
+                                            <div key={dayIndex} className="flex items-center gap-4 p-3 bg-gray-50 rounded border">
+                                              <div className="min-w-0 flex-1">
+                                                <div className="text-sm font-medium text-gray-900">
+                                                  Day {dayIndex + 1} - {format(entryDate, 'MMM d, yyyy')}
+                                                </div>
+                                              </div>
+                                              
+                                              <div className="flex items-center gap-2">
+                                                <div className="flex flex-col gap-1">
+                                                  <label className="text-xs text-gray-500">Tickets Sold</label>
+                                                  <Input
+                                                    type="number"
+                                                    min="0"
+                                                    value={currentValue}
+                                                    onChange={(e) => handleTicketInputChange(week.id, dayIndex, e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === 'Enter') {
+                                                        handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
+                                                      }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                      // Submit on blur as well
+                                                      handleTicketInputSubmit(week.id, dayIndex, e.target.value);
+                                                    }}
+                                                    className="w-24 h-8 text-xs"
+                                                    placeholder="0"
+                                                  />
+                                                </div>
+                                                
+                                                <div className="flex flex-col gap-1">
+                                                  <label className="text-xs text-gray-500">Add</label>
+                                                  <Select onValueChange={(value) => {
+                                                    if (value === 'donation') {
+                                                      const amount = prompt('Enter donation amount:');
+                                                      if (amount && !isNaN(parseFloat(amount))) {
+                                                        handleDailyDonation(format(entryDate, 'yyyy-MM-dd'), parseFloat(amount));
+                                                      }
+                                                    } else if (value === 'expense') {
+                                                      openDailyExpenseModal(format(entryDate, 'yyyy-MM-dd'), game.id);
+                                                    }
+                                                  }}>
+                                                    <SelectTrigger className="w-20 h-8 text-xs">
+                                                      <SelectValue placeholder="+" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      <SelectItem value="donation">Donation</SelectItem>
+                                                      <SelectItem value="expense">Expense</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </div>
+                                                
+                                                {existingEntry && (
+                                                  <div className="flex flex-col gap-1">
+                                                    <label className="text-xs text-gray-500">Amount</label>
+                                                    <div className="text-xs font-medium px-2 py-1 bg-blue-50 rounded border min-w-[60px] text-center">
+                                                      {formatCurrency(existingEntry.amount_collected)}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                      
+                                      {week.ticket_sales.length >= 7 && !week.winner_name && (
+                                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                                          <p className="text-sm text-yellow-800 mb-2">Week is complete! Please enter winner details.</p>
+                                          <Button
+                                            onClick={() => {
+                                              setCurrentWeekId(week.id);
+                                              setWinnerFormOpen(true);
+                                            }}
+                                            size="sm"
+                                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                                          >
+                                            Enter Winner Details
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expenses & Donations Section */}
+                    <div className="p-4 border-t">
+                      <div 
+                        className="flex justify-between items-center mb-4 cursor-pointer"
+                        onClick={() => toggleExpenses(game.id)}
+                      >
+                        <h3 className="text-lg font-semibold flex items-center">
+                          Expenses & Donations
+                          <div className="ml-2">
+                            {expandedExpenses === game.id ? 
+                              <ChevronUp className="h-5 w-5 text-muted-foreground" /> : 
+                              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                            }
+                          </div>
+                        </h3>
                         <Button 
-                          onClick={() => generateGamePdfReport(game)} 
-                          variant="export" 
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Download className="h-4 w-4" /> Export Game PDF
-                        </Button>
-                        <Button 
-                          onClick={() => openWeekForm(game.id)} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openExpenseModal(game.id, game.name);
+                          }} 
                           size="sm" 
-                          className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] flex items-center gap-2"
+                          variant="outline" 
+                          className="text-sm"
                         >
-                          <Plus className="h-4 w-4" /> Add Week
+                          Add Expense/Donation
                         </Button>
                       </div>
-                    </div>
-                    
-                    {game.weeks.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No weeks added yet.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {/* Week Calendar-style Layout */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[5px]">
-                          {game.weeks.map((week: any) => (
-                            <div key={week.id} className="space-y-2">
-                              {/* Week Button */}
-                              <Button
-                                onClick={() => {
-                                  toggleWeek(week.id);
-                                  setCurrentGameId(game.id);
-                                }}
-                                variant="outline"
-                                className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
-                                  expandedWeek === week.id
-                                    ? 'bg-[#4A7C59] border-[#4A7C59] text-white shadow-md'
-                                    : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
-                                }`}
-                              >
-                                Week {week.week_number}
-                              </Button>
-                              
-                              {/* Delete Button */}
-                              <Button 
-                                onClick={() => openDeleteConfirm(week.id, 'week')} 
-                                variant="ghost" 
-                                size="sm"
-                                className="w-full h-8 text-xs text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                              >
-                                <Trash2 className="h-3 w-3 mr-1" /> Delete
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        {/* Expanded Week Details */}
-                        {expandedWeek && game.weeks.find((w: any) => w.id === expandedWeek) && (
-                          <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
-                            {(() => {
-                              const week = game.weeks.find((w: any) => w.id === expandedWeek);
-                              
-                              // Calculate week totals from daily entries
-                              const weekTotalTickets = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
-                              const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
-                              const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
-                              const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
-                              
-                              return (
-                                <div>
-                                  {/* Week Details Header */}
-                                  <div className="space-y-2 mb-4 pb-4 border-b">
-                                    <div className="flex justify-between items-center">
-                                      <h4 className="font-semibold text-[#1F4E4A] text-lg">Week {week.week_number} Details</h4>
-                                      <div className="flex items-center gap-2">
+                      
+                      {expandedExpenses === game.id && (
+                        <>
+                          {game.expenses && game.expenses.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Memo</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {game.expenses.map((expense: any) => (
+                                    <TableRow key={expense.id}>
+                                      <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                      <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
+                                      <TableCell>{expense.memo}</TableCell>
+                                      <TableCell className="text-right">
                                         <Button 
-                                          onClick={() => openDeleteConfirm(week.id, 'week')} 
+                                          onClick={() => openDeleteConfirm(expense.id, 'expense')} 
                                           variant="ghost" 
-                                          size="icon"
+                                          size="icon" 
                                           className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
-                                        <button
-                                          onClick={() => setExpandedWeek(null)}
-                                          className="text-muted-foreground hover:text-foreground text-xl"
-                                        >
-                                          ×
-                                        </button>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="text-sm text-muted-foreground mb-3">
-                                      {format(new Date(week.start_date), 'MMM d')} - {format(new Date(week.end_date), 'MMM d, yyyy')}
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div><span className="text-muted-foreground">Tickets Sold:</span> {weekTotalTickets}</div>
-                                      <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(weekTotalSales)}</div>
-                                      <div><span className="text-muted-foreground">Organization Net:</span> {formatCurrency(weekOrganizationTotal)}</div>
-                                      <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(weekJackpotTotal)}</div>
-                                    </div>
-                                    
-                                    {week.winner_name && (
-                                      <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
-                                        <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
-                                        <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
-                                        <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
-                                        <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
-                                      </div>
-                                    )}
-                                    
-                                    {week.winner_name && (
-                                      <div className="pt-2 flex gap-2">
-                                        <Button
-                                          onClick={() => {
-                                            setCurrentWeekId(week.id);
-                                            setWinnerFormOpen(true);
-                                          }}
-                                          size="sm"
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          Edit Winner Details
-                                        </Button>
-                                        <Button
-                                          onClick={() => {
-                                            const winnerData = {
-                                              winnerName: week.winner_name,
-                                              slotChosen: week.slot_chosen,
-                                              cardSelected: week.card_selected,
-                                              payoutAmount: week.weekly_payout,
-                                              date: new Date().toISOString().split('T')[0],
-                                              gameNumber: game.game_number,
-                                              gameName: game.name,
-                                              weekNumber: week.week_number,
-                                              weekStartDate: week.start_date,
-                                              weekEndDate: week.end_date
-                                            };
-                                            handleOpenPayoutSlip(winnerData);
-                                          }}
-                                          size="sm"
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          Print Payout Slip
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* 7 Daily Entries */}
-                                  <div>
-                                    <h5 className="font-medium mb-3">Daily Entries (7 Days)</h5>
-                                    
-                                    <div className="space-y-3 h-fit">
-                                      {Array.from({ length: 7 }, (_, dayIndex) => {
-                                        const weekStartDate = new Date(week.start_date);
-                                        const entryDate = new Date(weekStartDate);
-                                        entryDate.setDate(entryDate.getDate() + dayIndex);
-                                        
-                                        // Find existing entry for this specific date
-                                        const existingEntry = week.ticket_sales.find((entry: any) => {
-                                          const existingDate = new Date(entry.date);
-                                          return existingDate.toDateString() === entryDate.toDateString();
-                                        });
-                                        
-                                        const inputKey = `${week.id}-${dayIndex}`;
-                                        const tempValue = tempTicketInputs[inputKey];
-                                        const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold || '');
-                                        
-                                        return (
-                                          <div key={dayIndex} className="flex items-center gap-4 p-3 bg-gray-50 rounded border">
-                                            <div className="min-w-0 flex-1">
-                                              <div className="text-sm font-medium text-gray-900">
-                                                Day {dayIndex + 1} - {format(entryDate, 'MMM d, yyyy')}
-                                              </div>
-                                            </div>
-                                            
-                                            <div className="flex items-center gap-2">
-                                              <div className="flex flex-col gap-1">
-                                                <label className="text-xs text-gray-500">Tickets Sold</label>
-                                                <Input
-                                                  type="number"
-                                                  min="0"
-                                                  value={currentValue}
-                                                  onChange={(e) => handleTicketInputChange(week.id, dayIndex, e.target.value)}
-                                                  onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                      handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
-                                                    }
-                                                  }}
-                                                  onBlur={(e) => {
-                                                    // Submit on blur as well
-                                                    handleTicketInputSubmit(week.id, dayIndex, e.target.value);
-                                                  }}
-                                                  className="w-24 h-8 text-xs"
-                                                  placeholder="0"
-                                                />
-                                              </div>
-                                              
-                                              <div className="flex flex-col gap-1">
-                                                <label className="text-xs text-gray-500">Add</label>
-                                                <Select onValueChange={(value) => {
-                                                  if (value === 'donation') {
-                                                    const amount = prompt('Enter donation amount:');
-                                                    if (amount && !isNaN(parseFloat(amount))) {
-                                                      handleDailyDonation(format(entryDate, 'yyyy-MM-dd'), parseFloat(amount));
-                                                    }
-                                                  } else if (value === 'expense') {
-                                                    openDailyExpenseModal(format(entryDate, 'yyyy-MM-dd'), game.id);
-                                                  }
-                                                }}>
-                                                  <SelectTrigger className="w-20 h-8 text-xs">
-                                                    <SelectValue placeholder="+" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    <SelectItem value="donation">Donation</SelectItem>
-                                                    <SelectItem value="expense">Expense</SelectItem>
-                                                  </SelectContent>
-                                                </Select>
-                                              </div>
-                                              
-                                              {existingEntry && (
-                                                <div className="flex flex-col gap-1">
-                                                  <label className="text-xs text-gray-500">Amount</label>
-                                                  <div className="text-xs font-medium px-2 py-1 bg-blue-50 rounded border min-w-[60px] text-center">
-                                                    {formatCurrency(existingEntry.amount_collected)}
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                    
-                                    {week.ticket_sales.length >= 7 && !week.winner_name && (
-                                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                                        <p className="text-sm text-yellow-800 mb-2">Week is complete! Please enter winner details.</p>
-                                        <Button
-                                          onClick={() => {
-                                            setCurrentWeekId(week.id);
-                                            setWinnerFormOpen(true);
-                                          }}
-                                          size="sm"
-                                          className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                                        >
-                                          Enter Winner Details
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Expenses & Donations Section */}
-                  <div className="p-4 border-t">
-                    <div 
-                      className="flex justify-between items-center mb-4 cursor-pointer"
-                      onClick={() => toggleExpenses(game.id)}
-                    >
-                      <h3 className="text-lg font-semibold flex items-center">
-                        Expenses & Donations
-                        <div className="ml-2">
-                          {expandedExpenses === game.id ? 
-                            <ChevronUp className="h-5 w-5 text-muted-foreground" /> : 
-                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                          }
-                        </div>
-                      </h3>
-                      <Button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openExpenseModal(game.id, game.name);
-                        }} 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-sm"
-                      >
-                        Add Expense/Donation
-                      </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>
+                          )}
+                        </>
+                      )}
                     </div>
-                    
-                    {expandedExpenses === game.id && (
-                      <>
-                        {game.expenses && game.expenses.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>Amount</TableHead>
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>Memo</TableHead>
-                                  <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {game.expenses.map((expense: any) => (
-                                  <TableRow key={expense.id}>
-                                    <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                    <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
-                                    <TableCell>{expense.memo}</TableCell>
-                                    <TableCell className="text-right">
-                                      <Button 
-                                        onClick={() => openDeleteConfirm(expense.id, 'expense')} 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        ) : (
-                          <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          ))
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })
         )}
       </div>
       
