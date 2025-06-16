@@ -67,16 +67,29 @@ export function WinnerForm({
     }
   }, [open, gameId, weekId]);
 
+  // Also refresh configuration when card is selected to ensure we have latest payouts
   useEffect(() => {
-    if (winnerForm.cardSelected) {
+    if (open && winnerForm.cardSelected) {
+      // Fetch fresh configuration before calculating payout
+      fetchConfiguration().then(() => {
+        calculatePayout();
+      });
+    }
+  }, [winnerForm.cardSelected, winnerForm.winnerPresent]);
+
+  // Separate effect for jackpot changes
+  useEffect(() => {
+    if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0) {
       calculatePayout();
     }
-  }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts]);
+  }, [currentJackpot, cardPayouts]);
 
   const fetchConfiguration = async () => {
-    setLoading(true);
     try {
-      // Force fresh fetch by clearing any cache
+      console.log('Fetching latest configuration...');
+      
+      // Force fresh fetch with timestamp to avoid any caching
+      const timestamp = new Date().getTime();
       const { data, error } = await supabase
         .from('configurations')
         .select('card_payouts, penalty_percentage, penalty_to_organization')
@@ -88,14 +101,14 @@ export function WinnerForm({
       }
       
       if (data) {
-        console.log('Fresh configuration data:', data);
+        console.log('Fresh configuration data received:', data);
         
         if (data.card_payouts) {
           const payoutsObj = typeof data.card_payouts === 'string' 
             ? JSON.parse(data.card_payouts) 
             : data.card_payouts;
           
-          console.log('Updated card payouts:', payoutsObj);
+          console.log('Updated card payouts from DB:', payoutsObj);
           setCardPayouts(payoutsObj);
         }
         
@@ -104,7 +117,8 @@ export function WinnerForm({
           penaltyToOrganization: data.penalty_to_organization || false
         });
         
-        console.log('Configuration updated successfully');
+        console.log('Configuration state updated successfully');
+        return data;
       }
     } catch (error) {
       console.error('Error fetching configuration:', error);
@@ -113,8 +127,6 @@ export function WinnerForm({
         description: "Failed to load latest configuration. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -202,9 +214,11 @@ export function WinnerForm({
   const calculatePayout = () => {
     let amount = 0;
     
-    console.log('Calculating payout for card:', winnerForm.cardSelected);
+    console.log('=== PAYOUT CALCULATION START ===');
+    console.log('Selected card:', winnerForm.cardSelected);
     console.log('Current jackpot:', currentJackpot);
-    console.log('Current card payouts:', cardPayouts);
+    console.log('Current card payouts object:', cardPayouts);
+    console.log('Winner present:', winnerForm.winnerPresent);
     
     if (winnerForm.cardSelected === 'Queen of Hearts') {
       amount = Number(currentJackpot) || 0;
@@ -218,16 +232,21 @@ export function WinnerForm({
     } else if (winnerForm.cardSelected && cardPayouts[winnerForm.cardSelected]) {
       // For other cards, use the fixed payout amount
       const payout = cardPayouts[winnerForm.cardSelected];
+      console.log('Found payout for', winnerForm.cardSelected, ':', payout);
+      
       if (typeof payout === 'number') {
         amount = Number(payout);
       } else if (payout === 'jackpot') {
         // Handle case where other cards might also be set to jackpot
         amount = Number(currentJackpot) || 0;
       }
-      console.log('Fixed payout for', winnerForm.cardSelected, ':', amount);
+      console.log('Final payout for', winnerForm.cardSelected, ':', amount);
+    } else {
+      console.log('No payout found for card:', winnerForm.cardSelected);
+      console.log('Available cards in payouts:', Object.keys(cardPayouts));
     }
     
-    console.log('Final calculated payout amount:', amount);
+    console.log('=== FINAL CALCULATED AMOUNT ===:', amount);
     setPayoutAmount(Number(amount) || 0);
   };
 
@@ -392,6 +411,11 @@ export function WinnerForm({
                     
                     <div className="text-xs text-muted-foreground">
                       Current Jackpot: ${currentJackpot.toFixed(2)}
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      Card: {winnerForm.cardSelected} | 
+                      Configured Payout: {cardPayouts[winnerForm.cardSelected] === 'jackpot' ? 'Full Jackpot' : `$${cardPayouts[winnerForm.cardSelected]}`}
                     </div>
                     
                     {winnerForm.cardSelected === 'Queen of Hearts' && !winnerForm.winnerPresent && (
