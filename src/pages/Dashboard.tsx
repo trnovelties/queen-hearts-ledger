@@ -13,6 +13,9 @@ import { ExpenseModal } from "@/components/ExpenseModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
 
 export default function Dashboard() {
@@ -43,11 +46,17 @@ export default function Dashboard() {
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
   const { toast } = useToast();
   const [currentGameName, setCurrentGameName] = useState<string>("");
-
   const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
-
-  // State to track temporary input values before submission
   const [tempTicketInputs, setTempTicketInputs] = useState<{[key: string]: string}>({});
+
+  // New state for daily expense/donation functionality
+  const [dailyExpenseModalOpen, setDailyExpenseModalOpen] = useState(false);
+  const [dailyExpenseForm, setDailyExpenseForm] = useState({
+    date: '',
+    amount: 0,
+    memo: '',
+    gameId: ''
+  });
 
   useEffect(() => {
     fetchGames();
@@ -958,6 +967,100 @@ export default function Dashboard() {
     }
   };
 
+  const handleDailyDonation = async (date: string, amount: number) => {
+    if (!currentGameId || amount <= 0) return;
+    
+    try {
+      const { error } = await supabase.from('expenses').insert([{
+        game_id: currentGameId,
+        date: date,
+        amount: amount,
+        memo: 'Daily donation',
+        is_donation: true
+      }]);
+      
+      if (error) throw error;
+      
+      // Update game totals
+      const game = games.find(g => g.id === currentGameId);
+      if (game) {
+        await supabase.from('games').update({
+          total_donations: game.total_donations + amount,
+          organization_net_profit: game.organization_net_profit - amount
+        }).eq('id', currentGameId);
+      }
+      
+      toast({
+        title: "Donation Added",
+        description: `Daily donation of ${formatCurrency(amount)} has been recorded.`
+      });
+      
+    } catch (error: any) {
+      console.error('Error adding daily donation:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add donation: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDailyExpense = async () => {
+    if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0) return;
+    
+    try {
+      const { error } = await supabase.from('expenses').insert([{
+        game_id: dailyExpenseForm.gameId,
+        date: dailyExpenseForm.date,
+        amount: dailyExpenseForm.amount,
+        memo: dailyExpenseForm.memo,
+        is_donation: false
+      }]);
+      
+      if (error) throw error;
+      
+      // Update game totals
+      const game = games.find(g => g.id === dailyExpenseForm.gameId);
+      if (game) {
+        await supabase.from('games').update({
+          total_expenses: game.total_expenses + dailyExpenseForm.amount,
+          organization_net_profit: game.organization_net_profit - dailyExpenseForm.amount
+        }).eq('id', dailyExpenseForm.gameId);
+      }
+      
+      toast({
+        title: "Expense Added",
+        description: `Daily expense of ${formatCurrency(dailyExpenseForm.amount)} has been recorded.`
+      });
+      
+      setDailyExpenseModalOpen(false);
+      setDailyExpenseForm({
+        date: '',
+        amount: 0,
+        memo: '',
+        gameId: ''
+      });
+      
+    } catch (error: any) {
+      console.error('Error adding daily expense:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add expense: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openDailyExpenseModal = (date: string, gameId: string) => {
+    setDailyExpenseForm({
+      date: date,
+      amount: 0,
+      memo: '',
+      gameId: gameId
+    });
+    setDailyExpenseModalOpen(true);
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -1237,6 +1340,29 @@ export default function Dashboard() {
                                                   </div>
                                                 </div>
                                               )}
+                                              
+                                              {/* NEW: Expense/Donation Dropdown */}
+                                              <div className="flex flex-col gap-1">
+                                                <label className="text-xs text-gray-500">Add</label>
+                                                <Select onValueChange={(value) => {
+                                                  if (value === 'donation') {
+                                                    const amount = prompt('Enter donation amount:');
+                                                    if (amount && !isNaN(parseFloat(amount))) {
+                                                      handleDailyDonation(format(entryDate, 'yyyy-MM-dd'), parseFloat(amount));
+                                                    }
+                                                  } else if (value === 'expense') {
+                                                    openDailyExpenseModal(format(entryDate, 'yyyy-MM-dd'), game.id);
+                                                  }
+                                                }}>
+                                                  <SelectTrigger className="w-20 h-8 text-xs">
+                                                    <SelectValue placeholder="+" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="donation">Donation</SelectItem>
+                                                    <SelectItem value="expense">Expense</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
                                             </div>
                                           </div>
                                         );
@@ -1441,6 +1567,64 @@ export default function Dashboard() {
         games={games}
         onComplete={handleGameComplete}
       />
+      
+      {/* NEW: Daily Expense Modal */}
+      <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Daily Expense</DialogTitle>
+            <DialogDescription>
+              Enter the expense details for {dailyExpenseForm.date && format(new Date(dailyExpenseForm.date), 'MMM d, yyyy')}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input 
+                id="amount" 
+                type="number" 
+                step="0.01"
+                min="0"
+                value={dailyExpenseForm.amount || ''} 
+                onChange={e => setDailyExpenseForm({
+                  ...dailyExpenseForm,
+                  amount: parseFloat(e.target.value) || 0
+                })} 
+                placeholder="0.00"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="memo">Memo</Label>
+              <Textarea 
+                id="memo" 
+                value={dailyExpenseForm.memo} 
+                onChange={e => setDailyExpenseForm({
+                  ...dailyExpenseForm,
+                  memo: e.target.value
+                })} 
+                placeholder="Enter expense description..."
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setDailyExpenseModalOpen(false)} variant="secondary">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDailyExpense} 
+              type="submit" 
+              variant="default"
+              disabled={dailyExpenseForm.amount <= 0}
+            >
+              Add Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
