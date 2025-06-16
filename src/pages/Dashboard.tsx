@@ -227,7 +227,7 @@ export default function Dashboard() {
       const entryDate = new Date(weekStartDate);
       entryDate.setDate(entryDate.getDate() + dayIndex);
 
-      // Find existing entry for this day
+      // Find existing entry for this specific date
       const existingEntry = week.ticket_sales.find((entry: any) => {
         const existingDate = new Date(entry.date);
         return existingDate.toDateString() === entryDate.toDateString();
@@ -1076,10 +1076,15 @@ export default function Dashboard() {
                                     
                                     <div className="space-y-3 h-fit">
                                       {Array.from({ length: 7 }, (_, dayIndex) => {
-                                        const existingEntry = week.ticket_sales.find((entry: any, index: number) => index === dayIndex);
                                         const weekStartDate = new Date(week.start_date);
                                         const entryDate = new Date(weekStartDate);
                                         entryDate.setDate(entryDate.getDate() + dayIndex);
+                                        
+                                        // Find existing entry for this specific date (not by array index)
+                                        const existingEntry = week.ticket_sales.find((entry: any) => {
+                                          const existingDate = new Date(entry.date);
+                                          return existingDate.toDateString() === entryDate.toDateString();
+                                        });
                                         
                                         const inputKey = `${week.id}-${dayIndex}`;
                                         const tempValue = tempTicketInputs[inputKey];
