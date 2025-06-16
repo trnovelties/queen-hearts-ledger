@@ -1166,7 +1166,7 @@ export default function Dashboard() {
         </button>
       </div>
       
-      <div className="space-y-4" style={{ backgroundColor: '#C3FFFA' }}>
+      <div className="space-y-4">
         {displayGames.length === 0 ? (
           <Card>
             <CardContent className="p-6 flex justify-center items-center">
