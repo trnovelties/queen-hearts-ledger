@@ -94,6 +94,7 @@ export default function Admin() {
   // Fetch configuration on component mount
   useEffect(() => {
     async function fetchConfig() {
+      console.log('🔍 Fetching configuration...');
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -102,11 +103,14 @@ export default function Admin() {
           .limit(1)
           .maybeSingle();
           
+        console.log('📊 Configuration fetch result:', { data, error });
+          
         if (error && error.code !== 'PGRST116') {
           throw error;
         }
         
         if (data) {
+          console.log('✅ Configuration found, setting configId:', data.id);
           setConfigId(data.id);
           setGameSettings({
             ticketPrice: data.ticket_price,
@@ -119,21 +123,26 @@ export default function Admin() {
           
           if (data.card_payouts) {
             try {
+              console.log('🃏 Raw card payouts from DB:', data.card_payouts);
               // Parse the card payouts from the database
               const payoutsData = typeof data.card_payouts === 'string' 
                 ? JSON.parse(data.card_payouts) 
                 : data.card_payouts;
+              
+              console.log('🃏 Parsed card payouts:', payoutsData);
               
               const payoutsArray: CardPayout[] = Object.entries(payoutsData).map(([card, payout]) => ({
                 card,
                 payout: payout === 'jackpot' ? 'jackpot' : Number(payout)
               }));
               
+              console.log('🃏 Card payouts array:', payoutsArray);
+              
               if (payoutsArray.length > 0) {
                 setCardPayouts(payoutsArray);
               }
             } catch (parseError) {
-              console.error('Error parsing card payouts:', parseError);
+              console.error('❌ Error parsing card payouts:', parseError);
               toast({
                 title: "Warning",
                 description: "Could not parse existing card payouts. Using defaults.",
@@ -141,9 +150,11 @@ export default function Admin() {
               });
             }
           }
+        } else {
+          console.log('ℹ️ No configuration found, will create new one on save');
         }
       } catch (error: any) {
-        console.error('Error fetching configuration:', error);
+        console.error('❌ Error fetching configuration:', error);
         toast({
           title: "Error",
           description: "Failed to load configuration settings.",
@@ -237,14 +248,19 @@ export default function Admin() {
     }
   };
   
-  // Improved card payouts saving function
+  // Improved card payouts saving function with comprehensive debugging
   const handleSaveCardPayouts = async () => {
+    console.log('🚀 Starting card payouts save...');
+    console.log('🆔 Current configId:', configId);
+    console.log('🃏 Current cardPayouts:', cardPayouts);
+    
     // Validate card payouts
     const invalidCardPayouts = cardPayouts.filter(
       card => !card.card.trim() || (typeof card.payout === "number" && (isNaN(card.payout) || card.payout < 0))
     );
     
     if (invalidCardPayouts.length > 0) {
+      console.log('❌ Invalid card payouts found:', invalidCardPayouts);
       toast({
         title: "Validation Error",
         description: "All cards must have a valid name and non-negative payout amount.",
@@ -258,11 +274,17 @@ export default function Admin() {
     const duplicates = cardNames.filter((name, index) => cardNames.indexOf(name) !== index);
     
     if (duplicates.length > 0) {
+      console.log('❌ Duplicate cards found:', duplicates);
       toast({
         title: "Validation Error",
         description: "Duplicate card names found. Each card must be unique.",
         variant: "destructive",
       });
+      return;
+    }
+    
+    if (loading) {
+      console.log('⏳ Already loading, preventing duplicate save');
       return;
     }
     
@@ -277,22 +299,28 @@ export default function Admin() {
         }
       });
       
-      console.log('Saving card payouts:', payoutsObject);
+      console.log('💾 Payouts object to save:', payoutsObject);
       
       const configData = {
         card_payouts: payoutsObject,
         updated_at: new Date().toISOString()
       };
+      
+      console.log('📋 Config data to save:', configData);
 
       let result;
       if (configId) {
-        // Update existing configuration - use direct table update
+        console.log('🔄 Updating existing configuration with ID:', configId);
+        // Update existing configuration
         result = await supabase
           .from('configurations')
           .update(configData)
           .eq('id', configId)
           .select();
+          
+        console.log('📤 Update result:', result);
       } else {
+        console.log('➕ Creating new configuration...');
         // Insert new configuration with all required fields
         const newConfigData = {
           ...configData,
@@ -304,27 +332,40 @@ export default function Admin() {
           minimum_starting_jackpot: gameSettings.minimumStartingJackpot
         };
         
+        console.log('📋 New config data:', newConfigData);
+        
         result = await supabase
           .from('configurations')
           .insert(newConfigData)
           .select();
         
+        console.log('📤 Insert result:', result);
+        
         if (result.data && result.data.length > 0) {
-          setConfigId(result.data[0].id);
+          const newId = result.data[0].id;
+          console.log('✅ New configuration created with ID:', newId);
+          setConfigId(newId);
         }
       }
         
       if (result.error) {
-        console.error('Database error:', result.error);
+        console.error('💥 Database error:', result.error);
         throw result.error;
       }
       
+      console.log('🎉 Card payouts saved successfully!');
       toast({
         title: "Card Payouts Saved",
         description: "Card payout settings have been updated successfully.",
       });
     } catch (error: any) {
-      console.error('Error saving card payouts:', error);
+      console.error('💥 Error saving card payouts:', error);
+      console.error('💥 Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       toast({
         title: "Error",
         description: error.message || "Failed to save card payouts.",
@@ -337,6 +378,7 @@ export default function Admin() {
   
   // Handle updating a card payout
   const updateCardPayout = (index: number, field: 'card' | 'payout', value: string | number) => {
+    console.log('🔧 Updating card payout:', { index, field, value });
     const updatedPayouts = [...cardPayouts];
     if (field === 'card') {
       updatedPayouts[index].card = value as string;
@@ -349,6 +391,7 @@ export default function Admin() {
       }
     }
     setCardPayouts(updatedPayouts);
+    console.log('🔧 Updated payouts:', updatedPayouts);
   };
   
   // Handle removing a card
