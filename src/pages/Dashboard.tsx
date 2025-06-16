@@ -44,6 +44,8 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [currentGameName, setCurrentGameName] = useState<string>("");
 
+  const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
+
   useEffect(() => {
     fetchGames();
 
@@ -164,6 +166,11 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  // Filter games based on active tab
+  const currentGames = games.filter(game => !game.end_date);
+  const archivedGames = games.filter(game => game.end_date);
+  const displayGames = activeTab === 'current' ? currentGames : archivedGames;
 
   const createWeek = async () => {
     if (!currentGameId) return;
@@ -833,16 +840,42 @@ export default function Dashboard() {
           <Plus className="h-4 w-4 mr-2" /> Create Game
         </Button>
       </div>
+
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('current')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'current'
+              ? 'bg-white text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Current Game
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'archived'
+              ? 'bg-white text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Archived Games
+        </button>
+      </div>
       
       <div className="space-y-4" style={{ backgroundColor: '#C3FFFA' }}>
-        {games.length === 0 ? (
+        {displayGames.length === 0 ? (
           <Card>
             <CardContent className="p-6 flex justify-center items-center">
-              <p className="text-muted-foreground">No games created yet. Click "Create Game" to get started.</p>
+              <p className="text-muted-foreground">
+                {activeTab === 'current' ? 'No current games. Click "Create Game" to get started.' : 'No archived games yet.'}
+              </p>
             </CardContent>
           </Card>
         ) : (
-          games.map(game => (
+          displayGames.map(game => (
             <Card key={game.id} className="overflow-hidden">
               <CardHeader 
                 className={`flex flex-col items-start justify-between cursor-pointer ${expandedGame === game.id ? 'bg-accent/50' : ''}`} 
@@ -912,69 +945,90 @@ export default function Dashboard() {
                     {game.weeks.length === 0 ? (
                       <p className="text-muted-foreground text-sm">No weeks added yet.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {game.weeks.map((week: any) => (
-                          <Card key={week.id} className="overflow-hidden" style={{ backgroundColor: '#EDFFDF' }}>
-                            <CardHeader 
-                              className={`py-3 flex flex-col cursor-pointer ${expandedWeek === week.id ? 'bg-accent/30' : ''}`} 
+                          <div key={week.id} className="relative">
+                            {/* Week Button */}
+                            <button
                               onClick={() => toggleWeek(week.id)}
+                              className={`w-full p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+                                expandedWeek === week.id
+                                  ? 'border-[#A1E96C] bg-[#A1E96C]/10 shadow-md'
+                                  : 'border-gray-200 bg-white hover:border-[#A1E96C]/50 hover:bg-[#A1E96C]/5'
+                              }`}
                             >
-                              {/* Week title and dates */}
-                              <div className="flex flex-row items-center justify-between">
-                                <div className="font-semibold">
-                                  Week {week.week_number} ({format(new Date(week.start_date), 'MMM d, yyyy')} - {format(new Date(week.end_date), 'MMM d, yyyy')})
-                                </div>
-                                <div className="flex items-center">
-                                  <Button 
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      openDeleteConfirm(week.id, 'week');
-                                    }} 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                  
-                                  {expandedWeek === week.id ? (
-                                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                                  ) : (
-                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                  )}
-                                </div>
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="font-semibold text-[#1F4E4A]">Week {week.week_number}</span>
+                                <Button 
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    openDeleteConfirm(week.id, 'week');
+                                  }} 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </div>
-
-                              {/* First row of information - text-left to ensure left alignment */}
-                              <div className="text-sm flex flex-wrap mt-2 gap-4 text-left">
-                                <div><span className="text-muted-foreground">Tickets Sold:</span> {week.weekly_tickets_sold}</div>
-                                <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}</div>
-                                <div><span className="text-muted-foreground">Organization Net Profit:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
-                                <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
+                              
+                              <div className="text-xs text-muted-foreground mb-2">
+                                {format(new Date(week.start_date), 'MMM d')} - {format(new Date(week.end_date), 'MMM d, yyyy')}
                               </div>
-
-                              {/* Second row with winner information if available - also text-left for alignment */}
-                              <div className="text-sm flex flex-wrap mt-2 gap-4 text-left">
+                              
+                              <div className="space-y-1 text-xs">
+                                <div><span className="text-muted-foreground">Tickets:</span> {week.weekly_tickets_sold}</div>
+                                <div><span className="text-muted-foreground">Sales:</span> {formatCurrency(week.weekly_sales)}</div>
                                 {week.winner_name && (
-                                  <>
-                                    <div><span className="text-muted-foreground">Winner Name:</span> {week.winner_name}</div>
-                                    <div><span className="text-muted-foreground">Slot Selected:</span> {week.slot_chosen}</div>
-                                    <div><span className="text-muted-foreground">Card Selected:</span> {week.card_selected}</div>
-                                    <div><span className="text-muted-foreground">Payout Amount:</span> {formatCurrency(week.weekly_payout)}</div>
-                                    <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
-                                  </>
-                                )}
-                                {!week.winner_name && (
-                                  <div className="text-muted-foreground">No winner information yet</div>
+                                  <div className="text-green-600 font-medium">
+                                    Winner: {week.winner_name}
+                                  </div>
                                 )}
                               </div>
-                            </CardHeader>
+                              
+                              <div className="mt-2 flex justify-center">
+                                {expandedWeek === week.id ? (
+                                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            </button>
                             
+                            {/* Expanded Week Content */}
                             {expandedWeek === week.id && (
-                              <CardContent className="p-0 border-t">
-                                <div className="p-3 bg-muted/20 flex flex-wrap gap-2 text-sm">
+                              <div className="absolute top-full left-0 right-0 z-10 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[400px]">
+                                {/* Week Details Header */}
+                                <div className="space-y-2 mb-4 pb-4 border-b">
+                                  <div className="flex justify-between items-center">
+                                    <h4 className="font-semibold text-[#1F4E4A]">Week {week.week_number} Details</h4>
+                                    <button
+                                      onClick={() => setExpandedWeek(null)}
+                                      className="text-muted-foreground hover:text-foreground"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div><span className="text-muted-foreground">Tickets Sold:</span> {week.weekly_tickets_sold}</div>
+                                    <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(week.weekly_sales)}</div>
+                                    <div><span className="text-muted-foreground">Organization Net:</span> {formatCurrency(week.weekly_sales * (game.organization_percentage / 100))}</div>
+                                    <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(week.weekly_sales * (game.jackpot_percentage / 100))}</div>
+                                  </div>
+                                  
                                   {week.winner_name && (
-                                    <div className="w-full mt-2">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
+                                      <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
+                                      <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
+                                      <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
+                                      <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
+                                    </div>
+                                  )}
+                                  
+                                  {week.winner_name && (
+                                    <div className="pt-2">
                                       <Button
                                         onClick={() => {
                                           const winnerData = {
@@ -1001,16 +1055,17 @@ export default function Dashboard() {
                                   )}
                                 </div>
                                 
-                                <div className="p-3 border-t">
+                                {/* Daily Entries */}
+                                <div>
                                   <div className="flex justify-between items-center mb-3">
-                                    <h4 className="font-semibold">Daily Entries</h4>
+                                    <h5 className="font-medium">Daily Entries</h5>
                                     {week.ticket_sales.length < 7 && (
                                       <Button 
                                         onClick={() => openRowForm(game.id, week.id)} 
                                         size="sm" 
-                                        className="text-sm bg-[#1F4E4A] text-[#EDFFDF] hover:bg-[#1F4E4A]/90 hover:text-[#EDFFDF]"
+                                        className="text-xs bg-[#1F4E4A] text-white hover:bg-[#1F4E4A]/90"
                                       >
-                                        <Plus className="h-3 w-3 mr-1 text-[#EDFFDF]" /> Add Entry
+                                        <Plus className="h-3 w-3 mr-1" /> Add Entry
                                       </Button>
                                     )}
                                   </div>
@@ -1018,53 +1073,37 @@ export default function Dashboard() {
                                   {week.ticket_sales.length === 0 ? (
                                     <p className="text-muted-foreground text-sm">No daily entries yet.</p>
                                   ) : (
-                                    <div className="overflow-x-auto">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Tickets</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Organization</TableHead>
-                                            <TableHead>Jackpot</TableHead>
-                                            <TableHead>Ending Jackpot</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {week.ticket_sales.map((entry: any) => (
-                                            <TableRow key={entry.id}>
-                                              <TableCell>{format(new Date(entry.date), 'MMM d, yyyy')}</TableCell>
-                                              <TableCell>{entry.tickets_sold}</TableCell>
-                                              <TableCell>{formatCurrency(entry.amount_collected)}</TableCell>
-                                              <TableCell>{formatCurrency(entry.organization_total)}</TableCell>
-                                              <TableCell>{formatCurrency(entry.jackpot_total)}</TableCell>
-                                              <TableCell>{formatCurrency(entry.ending_jackpot_total)}</TableCell>
-                                              <TableCell className="text-right">
-                                                <Button 
-                                                  onClick={() => openDeleteConfirm(entry.id, 'entry')} 
-                                                  variant="ghost" 
-                                                  size="icon" 
-                                                  className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
+                                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                                      {week.ticket_sales.map((entry: any) => (
+                                        <div key={entry.id} className="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
+                                          <div className="space-y-1">
+                                            <div className="font-medium">{format(new Date(entry.date), 'MMM d, yyyy')}</div>
+                                            <div className="text-muted-foreground">
+                                              {entry.tickets_sold} tickets • {formatCurrency(entry.amount_collected)}
+                                            </div>
+                                          </div>
+                                          <Button 
+                                            onClick={() => openDeleteConfirm(entry.id, 'entry')} 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-destructive hover:text-destructive/90"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      ))}
                                     </div>
                                   )}
                                 </div>
-                              </CardContent>
+                              </div>
                             )}
-                          </Card>
+                          </div>
                         ))}
                       </div>
                     )}
                   </div>
 
+                  {/* Expenses & Donations Section */}
                   <div className="p-4 border-t">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Expenses & Donations</h3>
