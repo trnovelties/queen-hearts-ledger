@@ -61,10 +61,10 @@ export function WinnerForm({
   // Force fetch the absolute latest configuration data
   const fetchLatestConfiguration = async () => {
     try {
-      console.log('Fetching ABSOLUTE LATEST configuration data...');
+      console.log('🔄 Fetching ABSOLUTE LATEST configuration data...');
       
-      // Add a timestamp to prevent any caching
-      const timestamp = new Date().getTime();
+      // Clear any potential caching by using a random parameter
+      const randomParam = Math.random();
       
       const { data, error } = await supabase
         .from('configurations')
@@ -74,21 +74,28 @@ export function WinnerForm({
         .maybeSingle();
       
       if (error) {
-        console.error('Error fetching latest configuration:', error);
+        console.error('❌ Error fetching latest configuration:', error);
         throw error;
       }
       
       if (data) {
-        console.log('ABSOLUTE LATEST configuration data received:', data);
-        console.log('Configuration updated_at:', data.updated_at);
+        console.log('✅ ABSOLUTE LATEST configuration data received:', data);
+        console.log('📅 Configuration updated_at:', data.updated_at);
         
         if (data.card_payouts) {
           const payoutsObj = typeof data.card_payouts === 'string' 
             ? JSON.parse(data.card_payouts) 
             : data.card_payouts;
           
-          console.log('Setting ABSOLUTE LATEST card payouts:', payoutsObj);
+          console.log('💰 Setting ABSOLUTE LATEST card payouts:', payoutsObj);
+          console.log('🎯 Specific card values:');
+          console.log('  - 8 of Hearts:', payoutsObj['8 of Hearts']);
+          console.log('  - 8 of Clubs:', payoutsObj['8 of Clubs']);
+          console.log('  - 8 of Diamonds:', payoutsObj['8 of Diamonds']);
+          console.log('  - 8 of Spades:', payoutsObj['8 of Spades']);
+          
           setCardPayouts(payoutsObj);
+          return payoutsObj;
         }
         
         setPenaltyConfig({
@@ -99,7 +106,7 @@ export function WinnerForm({
         return data;
       }
     } catch (error) {
-      console.error('Error fetching latest configuration:', error);
+      console.error('💥 Error fetching latest configuration:', error);
       toast({
         title: "Error",
         description: "Failed to load latest configuration. Please try again.",
@@ -112,11 +119,11 @@ export function WinnerForm({
   const calculatePayoutWithLatestData = (selectedCard: string, isPresent: boolean, jackpot: number, payouts: Record<string, any>) => {
     let amount = 0;
     
-    console.log('=== CALCULATING PAYOUT WITH LATEST DATA ===');
-    console.log('Selected card:', selectedCard);
-    console.log('Current jackpot:', jackpot);
-    console.log('Latest payouts being used:', payouts);
-    console.log('Winner present:', isPresent);
+    console.log('🧮 === CALCULATING PAYOUT WITH LATEST DATA ===');
+    console.log('🎴 Selected card:', selectedCard);
+    console.log('💎 Current jackpot:', jackpot);
+    console.log('📋 All available payouts:', Object.keys(payouts));
+    console.log('✅ Winner present:', isPresent);
     
     if (selectedCard === 'Queen of Hearts') {
       amount = Number(jackpot) || 0;
@@ -125,12 +132,12 @@ export function WinnerForm({
       if (!isPresent) {
         const penaltyAmount = amount * (penaltyConfig.penaltyPercentage / 100);
         amount -= penaltyAmount;
-        console.log('Applied penalty:', penaltyAmount, 'New amount:', amount);
+        console.log('⚠️ Applied penalty:', penaltyAmount, 'New amount:', amount);
       }
-    } else if (selectedCard && payouts[selectedCard]) {
+    } else if (selectedCard && payouts[selectedCard] !== undefined) {
       // For other cards, use the fixed payout amount
       const payout = payouts[selectedCard];
-      console.log('Found payout for', selectedCard, ':', payout);
+      console.log('🎯 Found payout for', selectedCard, ':', payout);
       
       if (typeof payout === 'number') {
         amount = Number(payout);
@@ -138,13 +145,14 @@ export function WinnerForm({
         // Handle case where other cards might also be set to jackpot
         amount = Number(jackpot) || 0;
       }
-      console.log('Final payout for', selectedCard, ':', amount);
+      console.log('💵 Final payout for', selectedCard, ':', amount);
     } else {
-      console.log('No payout found for card:', selectedCard);
-      console.log('Available cards in payouts:', Object.keys(payouts));
+      console.log('❌ No payout found for card:', selectedCard);
+      console.log('📋 Available cards in payouts:', Object.keys(payouts));
+      console.log('🔍 Exact match check:', payouts[selectedCard]);
     }
     
-    console.log('=== FINAL CALCULATED AMOUNT ===:', amount);
+    console.log('🏆 === FINAL CALCULATED AMOUNT ===:', amount);
     return Number(amount) || 0;
   };
 
@@ -248,9 +256,9 @@ export function WinnerForm({
           await fetchJackpotAmount();
           await fetchGameAndWeekDetails();
           
-          console.log('All data initialized with latest configuration');
+          console.log('✅ All data initialized with latest configuration');
         } catch (error) {
-          console.error('Error initializing data:', error);
+          console.error('💥 Error initializing data:', error);
         } finally {
           setLoading(false);
         }
@@ -263,7 +271,7 @@ export function WinnerForm({
   // Recalculate payout when card selection or presence changes
   useEffect(() => {
     if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0 && currentJackpot >= 0) {
-      console.log('Recalculating payout due to selection change...');
+      console.log('🔄 Recalculating payout due to selection change...');
       const amount = calculatePayoutWithLatestData(
         winnerForm.cardSelected, 
         winnerForm.winnerPresent, 
@@ -276,25 +284,28 @@ export function WinnerForm({
 
   // Handle card selection change - always fetch latest config
   const handleCardSelection = async (selectedCard: string) => {
+    console.log('🎴 Card selected:', selectedCard, '- fetching ABSOLUTE LATEST configuration...');
     setWinnerForm({...winnerForm, cardSelected: selectedCard});
     
     if (selectedCard) {
-      console.log('Card selected, fetching ABSOLUTE LATEST configuration...');
       // Always fetch the absolute latest configuration for this specific card selection
-      const latestConfig = await fetchLatestConfiguration();
+      const latestPayouts = await fetchLatestConfiguration();
       const latestJackpot = await fetchJackpotAmount();
       
-      if (latestConfig?.card_payouts) {
-        const latestPayouts = typeof latestConfig.card_payouts === 'string' 
-          ? JSON.parse(latestConfig.card_payouts) 
-          : latestConfig.card_payouts;
+      if (latestPayouts?.card_payouts) {
+        const payoutsToUse = typeof latestPayouts.card_payouts === 'string' 
+          ? JSON.parse(latestPayouts.card_payouts) 
+          : latestPayouts.card_payouts;
           
-        console.log('Using ABSOLUTE LATEST payouts for calculation:', latestPayouts);
+        console.log('🎯 Using ABSOLUTE LATEST payouts for calculation:', payoutsToUse);
+        console.log('🔍 Looking for card:', selectedCard);
+        console.log('💰 Found value:', payoutsToUse[selectedCard]);
+        
         const amount = calculatePayoutWithLatestData(
           selectedCard, 
           winnerForm.winnerPresent, 
           latestJackpot, 
-          latestPayouts
+          payoutsToUse
         );
         setPayoutAmount(amount);
       }
