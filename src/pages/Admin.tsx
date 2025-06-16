@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,9 @@ export default function Admin() {
     minimumStartingJackpot: 500
   });
   
+  // Initialize with all standard 54 cards
   const [cardPayouts, setCardPayouts] = useState<CardPayout[]>([
+    // Hearts
     { card: "2 of Hearts", payout: 25 },
     { card: "3 of Hearts", payout: 25 },
     { card: "4 of Hearts", payout: 25 },
@@ -40,10 +43,49 @@ export default function Admin() {
     { card: "Queen of Hearts", payout: "jackpot" },
     { card: "King of Hearts", payout: 30 },
     { card: "Ace of Hearts", payout: 35 },
-    // Add other suits
+    // Diamonds
+    { card: "2 of Diamonds", payout: 25 },
+    { card: "3 of Diamonds", payout: 25 },
+    { card: "4 of Diamonds", payout: 25 },
+    { card: "5 of Diamonds", payout: 25 },
+    { card: "6 of Diamonds", payout: 25 },
+    { card: "7 of Diamonds", payout: 25 },
+    { card: "8 of Diamonds", payout: 25 },
+    { card: "9 of Diamonds", payout: 25 },
+    { card: "10 of Diamonds", payout: 25 },
+    { card: "Jack of Diamonds", payout: 30 },
     { card: "Queen of Diamonds", payout: 40 },
+    { card: "King of Diamonds", payout: 30 },
+    { card: "Ace of Diamonds", payout: 35 },
+    // Clubs
+    { card: "2 of Clubs", payout: 25 },
+    { card: "3 of Clubs", payout: 25 },
+    { card: "4 of Clubs", payout: 25 },
+    { card: "5 of Clubs", payout: 25 },
+    { card: "6 of Clubs", payout: 25 },
+    { card: "7 of Clubs", payout: 25 },
+    { card: "8 of Clubs", payout: 25 },
+    { card: "9 of Clubs", payout: 25 },
+    { card: "10 of Clubs", payout: 25 },
+    { card: "Jack of Clubs", payout: 30 },
     { card: "Queen of Clubs", payout: 40 },
+    { card: "King of Clubs", payout: 30 },
+    { card: "Ace of Clubs", payout: 35 },
+    // Spades
+    { card: "2 of Spades", payout: 25 },
+    { card: "3 of Spades", payout: 25 },
+    { card: "4 of Spades", payout: 25 },
+    { card: "5 of Spades", payout: 25 },
+    { card: "6 of Spades", payout: 25 },
+    { card: "7 of Spades", payout: 25 },
+    { card: "8 of Spades", payout: 25 },
+    { card: "9 of Spades", payout: 25 },
+    { card: "10 of Spades", payout: 25 },
+    { card: "Jack of Spades", payout: 30 },
     { card: "Queen of Spades", payout: 40 },
+    { card: "King of Spades", payout: 30 },
+    { card: "Ace of Spades", payout: 35 },
+    // Jokers
     { card: "Joker", payout: 50 },
   ]);
   
@@ -57,9 +99,11 @@ export default function Admin() {
         const { data, error } = await supabase
           .from('configurations')
           .select('*')
-          .single();
+          .maybeSingle();
           
-        if (error) throw error;
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
         
         if (data) {
           setGameSettings({
@@ -72,11 +116,28 @@ export default function Admin() {
           });
           
           if (data.card_payouts) {
-            const payoutsArray = Object.entries(data.card_payouts).map(([card, payout]) => ({
-              card,
-              payout
-            }));
-            setCardPayouts(payoutsArray);
+            try {
+              // Parse the card payouts from the database
+              const payoutsData = typeof data.card_payouts === 'string' 
+                ? JSON.parse(data.card_payouts) 
+                : data.card_payouts;
+              
+              const payoutsArray = Object.entries(payoutsData).map(([card, payout]) => ({
+                card,
+                payout: payout === 'jackpot' ? 'jackpot' : Number(payout)
+              }));
+              
+              if (payoutsArray.length > 0) {
+                setCardPayouts(payoutsArray);
+              }
+            } catch (parseError) {
+              console.error('Error parsing card payouts:', parseError);
+              toast({
+                title: "Warning",
+                description: "Could not parse existing card payouts. Using defaults.",
+                variant: "destructive",
+              });
+            }
           }
         }
       } catch (error: any) {
@@ -135,7 +196,8 @@ export default function Admin() {
           jackpot_percentage: gameSettings.jackpotPercentage,
           penalty_percentage: gameSettings.penaltyPercentage,
           penalty_to_organization: gameSettings.penaltyToOrganization,
-          minimum_starting_jackpot: gameSettings.minimumStartingJackpot
+          minimum_starting_jackpot: gameSettings.minimumStartingJackpot,
+          updated_at: new Date().toISOString()
         });
         
       if (error) throw error;
@@ -160,13 +222,26 @@ export default function Admin() {
   const handleSaveCardPayouts = async () => {
     // Validate card payouts
     const invalidCardPayouts = cardPayouts.filter(
-      card => !card.card || (typeof card.payout === "number" && card.payout < 0)
+      card => !card.card.trim() || (typeof card.payout === "number" && (isNaN(card.payout) || card.payout < 0))
     );
     
     if (invalidCardPayouts.length > 0) {
       toast({
         title: "Validation Error",
-        description: "Card payouts must have a valid card name and non-negative payout.",
+        description: "All cards must have a valid name and non-negative payout amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check for duplicate cards
+    const cardNames = cardPayouts.map(c => c.card.trim().toLowerCase());
+    const duplicates = cardNames.filter((name, index) => cardNames.indexOf(name) !== index);
+    
+    if (duplicates.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: "Duplicate card names found. Each card must be unique.",
         variant: "destructive",
       });
       return;
@@ -177,21 +252,27 @@ export default function Admin() {
       // Convert array to object format for storage
       const payoutsObject: Record<string, number | string> = {};
       cardPayouts.forEach(({ card, payout }) => {
-        payoutsObject[card] = payout;
+        const trimmedCard = card.trim();
+        if (trimmedCard) {
+          payoutsObject[trimmedCard] = payout;
+        }
       });
+      
+      console.log('Saving card payouts:', payoutsObject);
       
       const { error } = await supabase
         .from('configurations')
         .upsert({
           id: '1', // Use a fixed ID for the single configuration record
-          card_payouts: payoutsObject
+          card_payouts: payoutsObject,
+          updated_at: new Date().toISOString()
         });
         
       if (error) throw error;
       
       toast({
         title: "Card Payouts Saved",
-        description: "Card payout settings have been updated.",
+        description: "Card payout settings have been updated successfully.",
       });
     } catch (error: any) {
       console.error('Error saving card payouts:', error);
@@ -203,6 +284,28 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Handle updating a card payout
+  const updateCardPayout = (index: number, field: 'card' | 'payout', value: string | number) => {
+    const updatedPayouts = [...cardPayouts];
+    if (field === 'card') {
+      updatedPayouts[index].card = value as string;
+    } else {
+      if (value === 'jackpot') {
+        updatedPayouts[index].payout = 'jackpot';
+      } else {
+        const numValue = typeof value === 'string' ? parseFloat(value) : value;
+        updatedPayouts[index].payout = isNaN(numValue) ? 0 : numValue;
+      }
+    }
+    setCardPayouts(updatedPayouts);
+  };
+  
+  // Handle removing a card
+  const removeCard = (index: number) => {
+    const updatedPayouts = cardPayouts.filter((_, i) => i !== index);
+    setCardPayouts(updatedPayouts);
   };
   
   return (
@@ -242,7 +345,7 @@ export default function Admin() {
                         value={gameSettings.ticketPrice}
                         onChange={(e) => setGameSettings({
                           ...gameSettings,
-                          ticketPrice: parseFloat(e.target.value)
+                          ticketPrice: parseFloat(e.target.value) || 0
                         })}
                       />
                     </div>
@@ -257,7 +360,7 @@ export default function Admin() {
                         value={gameSettings.penaltyPercentage}
                         onChange={(e) => setGameSettings({
                           ...gameSettings,
-                          penaltyPercentage: parseFloat(e.target.value)
+                          penaltyPercentage: parseFloat(e.target.value) || 0
                         })}
                       />
                       <p className="text-sm text-muted-foreground">
@@ -276,7 +379,7 @@ export default function Admin() {
                         max="100"
                         value={gameSettings.organizationPercentage}
                         onChange={(e) => {
-                          const org = parseFloat(e.target.value);
+                          const org = parseFloat(e.target.value) || 0;
                           setGameSettings({
                             ...gameSettings,
                             organizationPercentage: org,
@@ -295,7 +398,7 @@ export default function Admin() {
                         max="100"
                         value={gameSettings.jackpotPercentage}
                         onChange={(e) => {
-                          const jackpot = parseFloat(e.target.value);
+                          const jackpot = parseFloat(e.target.value) || 0;
                           setGameSettings({
                             ...gameSettings,
                             jackpotPercentage: jackpot,
@@ -316,7 +419,7 @@ export default function Admin() {
                       value={gameSettings.minimumStartingJackpot}
                       onChange={(e) => setGameSettings({
                         ...gameSettings,
-                        minimumStartingJackpot: parseFloat(e.target.value)
+                        minimumStartingJackpot: parseFloat(e.target.value) || 0
                       })}
                     />
                     <p className="text-sm text-muted-foreground">
@@ -353,7 +456,7 @@ export default function Admin() {
             <CardHeader>
               <CardTitle>Card Payout Configuration</CardTitle>
               <CardDescription>
-                Set payout amounts for each card in the deck.
+                Set payout amounts for each card in the deck. The Queen of Hearts is always set to "jackpot".
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -363,29 +466,27 @@ export default function Admin() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto">
                     <table className="w-full">
-                      <thead>
+                      <thead className="sticky top-0 bg-background">
                         <tr className="border-b">
                           <th className="py-2 text-left">Card</th>
                           <th className="py-2 text-left">Payout ($)</th>
+                          <th className="py-2 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {cardPayouts.map((cardPayout, index) => (
                           <tr key={index} className="border-b">
-                            <td className="py-2">
+                            <td className="py-2 pr-2">
                               <Input
                                 value={cardPayout.card}
-                                onChange={(e) => {
-                                  const updatedPayouts = [...cardPayouts];
-                                  updatedPayouts[index].card = e.target.value;
-                                  setCardPayouts(updatedPayouts);
-                                }}
+                                onChange={(e) => updateCardPayout(index, 'card', e.target.value)}
+                                placeholder="e.g., Ace of Hearts"
                               />
                             </td>
-                            <td className="py-2">
-                              {cardPayout.payout === "jackpot" ? (
+                            <td className="py-2 pr-2">
+                              {cardPayout.card === "Queen of Hearts" ? (
                                 <Input
                                   value="jackpot"
                                   disabled
@@ -395,13 +496,23 @@ export default function Admin() {
                                 <Input
                                   type="number"
                                   min="0"
-                                  value={cardPayout.payout}
-                                  onChange={(e) => {
-                                    const updatedPayouts = [...cardPayouts];
-                                    updatedPayouts[index].payout = parseFloat(e.target.value);
-                                    setCardPayouts(updatedPayouts);
-                                  }}
+                                  step="0.01"
+                                  value={cardPayout.payout === 'jackpot' ? '' : cardPayout.payout}
+                                  onChange={(e) => updateCardPayout(index, 'payout', e.target.value)}
+                                  placeholder="25.00"
                                 />
+                              )}
+                            </td>
+                            <td className="py-2">
+                              {cardPayout.card !== "Queen of Hearts" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeCard(index)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  Remove
+                                </Button>
                               )}
                             </td>
                           </tr>
@@ -414,7 +525,7 @@ export default function Admin() {
                     <Button 
                       variant="outline" 
                       onClick={() => {
-                        setCardPayouts([...cardPayouts, { card: "", payout: 0 }]);
+                        setCardPayouts([...cardPayouts, { card: "", payout: 25 }]);
                       }}
                     >
                       Add Card
