@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -238,7 +237,7 @@ export default function Admin() {
     }
   };
   
-  // Handle saving card payouts
+  // Improved card payouts saving function
   const handleSaveCardPayouts = async () => {
     // Validate card payouts
     const invalidCardPayouts = cardPayouts.filter(
@@ -287,33 +286,38 @@ export default function Admin() {
 
       let result;
       if (configId) {
-        // Update existing configuration
+        // Update existing configuration - use direct table update
         result = await supabase
           .from('configurations')
           .update(configData)
-          .eq('id', configId);
+          .eq('id', configId)
+          .select();
       } else {
-        // Insert new configuration
+        // Insert new configuration with all required fields
+        const newConfigData = {
+          ...configData,
+          ticket_price: gameSettings.ticketPrice,
+          organization_percentage: gameSettings.organizationPercentage,
+          jackpot_percentage: gameSettings.jackpotPercentage,
+          penalty_percentage: gameSettings.penaltyPercentage,
+          penalty_to_organization: gameSettings.penaltyToOrganization,
+          minimum_starting_jackpot: gameSettings.minimumStartingJackpot
+        };
+        
         result = await supabase
           .from('configurations')
-          .insert({
-            ...configData,
-            ticket_price: gameSettings.ticketPrice,
-            organization_percentage: gameSettings.organizationPercentage,
-            jackpot_percentage: gameSettings.jackpotPercentage,
-            penalty_percentage: gameSettings.penaltyPercentage,
-            penalty_to_organization: gameSettings.penaltyToOrganization,
-            minimum_starting_jackpot: gameSettings.minimumStartingJackpot
-          })
-          .select()
-          .single();
+          .insert(newConfigData)
+          .select();
         
-        if (result.data) {
-          setConfigId(result.data.id);
+        if (result.data && result.data.length > 0) {
+          setConfigId(result.data[0].id);
         }
       }
         
-      if (result.error) throw result.error;
+      if (result.error) {
+        console.error('Database error:', result.error);
+        throw result.error;
+      }
       
       toast({
         title: "Card Payouts Saved",
