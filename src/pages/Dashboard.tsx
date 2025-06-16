@@ -1201,7 +1201,7 @@ export default function Dashboard() {
                                 variant="outline"
                                 className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
                                   expandedWeek === week.id
-                                    ? 'bg-[#7ED321] border-[#7ED321] text-[#1F4E4A] shadow-md'
+                                    ? 'bg-[#6CB33A] border-[#6CB33A] text-white shadow-md'
                                     : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
                                 }`}
                               >
@@ -1232,12 +1232,22 @@ export default function Dashboard() {
                                   <div className="space-y-2 mb-4 pb-4 border-b">
                                     <div className="flex justify-between items-center">
                                       <h4 className="font-semibold text-[#1F4E4A] text-lg">Week {week.week_number} Details</h4>
-                                      <button
-                                        onClick={() => setExpandedWeek(null)}
-                                        className="text-muted-foreground hover:text-foreground text-xl"
-                                      >
-                                        ×
-                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        <Button 
+                                          onClick={() => openDeleteConfirm(week.id, 'week')} 
+                                          variant="ghost" 
+                                          size="icon"
+                                          className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                        <button
+                                          onClick={() => setExpandedWeek(null)}
+                                          className="text-muted-foreground hover:text-foreground text-xl"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
                                     </div>
                                     
                                     <div className="text-sm text-muted-foreground mb-3">
