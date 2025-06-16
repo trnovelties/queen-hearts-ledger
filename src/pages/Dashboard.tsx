@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -263,6 +264,56 @@ export default function Dashboard() {
         previousJackpotTotal : // Monday sales don't add to current jackpot
         previousJackpotTotal + jackpotTotal;
 
+      // Optimistically update local state first
+      setGames(prevGames => prevGames.map(g => {
+        if (g.id !== currentGameId) return g;
+        
+        return {
+          ...g,
+          weeks: g.weeks.map((w: any) => {
+            if (w.id !== weekId) return w;
+            
+            const updatedTicketSales = existingEntry 
+              ? w.ticket_sales.map((entry: any) => {
+                  const entryDate = new Date(entry.date);
+                  const targetDate = new Date(weekStartDate);
+                  targetDate.setDate(targetDate.getDate() + dayIndex);
+                  
+                  if (entryDate.toDateString() === targetDate.toDateString()) {
+                    return {
+                      ...entry,
+                      tickets_sold: ticketsSold,
+                      amount_collected: amountCollected,
+                      cumulative_collected: cumulativeCollected,
+                      organization_total: organizationTotal,
+                      jackpot_total: jackpotTotal,
+                      ending_jackpot_total: endingJackpotTotal
+                    };
+                  }
+                  return entry;
+                })
+              : [...w.ticket_sales, {
+                  id: `temp-${Date.now()}`, // temporary ID
+                  game_id: currentGameId,
+                  week_id: weekId,
+                  date: format(entryDate, 'yyyy-MM-dd'),
+                  tickets_sold: ticketsSold,
+                  ticket_price: ticketPrice,
+                  amount_collected: amountCollected,
+                  cumulative_collected: cumulativeCollected,
+                  organization_total: organizationTotal,
+                  jackpot_total: jackpotTotal,
+                  ending_jackpot_total: endingJackpotTotal
+                }];
+            
+            return {
+              ...w,
+              ticket_sales: updatedTicketSales
+            };
+          })
+        };
+      }));
+
       if (existingEntry) {
         // Update existing entry
         const { error } = await supabase.from('ticket_sales').update({
@@ -311,6 +362,8 @@ export default function Dashboard() {
       
     } catch (error: any) {
       console.error('Error updating daily entry:', error);
+      // Revert optimistic update on error
+      fetchGames();
       toast({
         title: "Error",
         description: `Failed to update daily entry: ${error.message}`,
