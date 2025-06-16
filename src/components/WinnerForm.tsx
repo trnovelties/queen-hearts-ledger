@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -78,12 +79,11 @@ export function WinnerForm({
       const { data, error } = await supabase
         .from('configurations')
         .select('card_payouts, penalty_percentage, penalty_to_organization')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
       if (data) {
-        // Fix: Make sure we properly parse the card_payouts JSON
         if (data.card_payouts) {
           const payoutsObj = typeof data.card_payouts === 'string' 
             ? JSON.parse(data.card_payouts) 
@@ -93,8 +93,8 @@ export function WinnerForm({
         }
         
         setPenaltyConfig({
-          penaltyPercentage: data.penalty_percentage,
-          penaltyToOrganization: data.penalty_to_organization
+          penaltyPercentage: data.penalty_percentage || 10,
+          penaltyToOrganization: data.penalty_to_organization || false
         });
       }
     } catch (error) {
@@ -105,35 +105,57 @@ export function WinnerForm({
   };
 
   const fetchJackpotAmount = async () => {
-    if (!gameId) return;
+    if (!gameId || !weekId) return;
     
     try {
-      const { data, error } = await supabase
+      // Get the current week's ticket sales to calculate the current jackpot
+      const { data: weekSales, error: weekError } = await supabase
         .from('ticket_sales')
-        .select('ending_jackpot_total')
+        .select('*')
         .eq('game_id', gameId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .eq('week_id', weekId)
+        .order('date', { ascending: true });
       
-      if (error) throw error;
+      if (weekError) throw weekError;
       
-      if (data && data.length > 0) {
-        setCurrentJackpot(data[0].ending_jackpot_total);
+      if (weekSales && weekSales.length > 0) {
+        // Get the latest entry's ending_jackpot_total
+        const latestSale = weekSales[weekSales.length - 1];
+        console.log('Latest ticket sale ending jackpot:', latestSale.ending_jackpot_total);
+        setCurrentJackpot(Number(latestSale.ending_jackpot_total) || 0);
       } else {
-        // If no ticket sales yet, use game's carryover jackpot
-        const { data: game, error: gameError } = await supabase
-          .from('games')
-          .select('carryover_jackpot')
-          .eq('id', gameId)
-          .single();
+        // If no ticket sales for this week, get the previous week's ending jackpot or game's carryover
+        const { data: prevWeekSales, error: prevError } = await supabase
+          .from('ticket_sales')
+          .select('ending_jackpot_total')
+          .eq('game_id', gameId)
+          .neq('week_id', weekId)
+          .order('created_at', { ascending: false })
+          .limit(1);
           
-        if (gameError) throw gameError;
-        if (game) {
-          setCurrentJackpot(game.carryover_jackpot);
+        if (prevError) throw prevError;
+        
+        if (prevWeekSales && prevWeekSales.length > 0) {
+          console.log('Previous week ending jackpot:', prevWeekSales[0].ending_jackpot_total);
+          setCurrentJackpot(Number(prevWeekSales[0].ending_jackpot_total) || 0);
+        } else {
+          // Fall back to game's carryover jackpot
+          const { data: game, error: gameError } = await supabase
+            .from('games')
+            .select('carryover_jackpot')
+            .eq('id', gameId)
+            .maybeSingle();
+            
+          if (gameError) throw gameError;
+          if (game) {
+            console.log('Game carryover jackpot:', game.carryover_jackpot);
+            setCurrentJackpot(Number(game.carryover_jackpot) || 0);
+          }
         }
       }
     } catch (error) {
       console.error('Error fetching jackpot amount:', error);
+      setCurrentJackpot(0);
     }
   };
 
@@ -145,7 +167,7 @@ export function WinnerForm({
         .from('games')
         .select('*')
         .eq('id', gameId)
-        .single();
+        .maybeSingle();
       
       if (gameError) throw gameError;
       setGameDetails(game);
@@ -154,7 +176,7 @@ export function WinnerForm({
         .from('weeks')
         .select('*')
         .eq('id', weekId)
-        .single();
+        .maybeSingle();
       
       if (weekError) throw weekError;
       setWeekDetails(week);
@@ -166,23 +188,33 @@ export function WinnerForm({
   const calculatePayout = () => {
     let amount = 0;
     
+    console.log('Calculating payout for card:', winnerForm.cardSelected);
+    console.log('Current jackpot:', currentJackpot);
+    console.log('Card payouts:', cardPayouts);
+    
     if (winnerForm.cardSelected === 'Queen of Hearts') {
-      amount = currentJackpot;
+      amount = Number(currentJackpot) || 0;
       
       // Apply penalty if winner is not present
       if (!winnerForm.winnerPresent) {
         const penaltyAmount = amount * (penaltyConfig.penaltyPercentage / 100);
         amount -= penaltyAmount;
+        console.log('Applied penalty:', penaltyAmount, 'New amount:', amount);
       }
     } else if (winnerForm.cardSelected && cardPayouts[winnerForm.cardSelected]) {
       // For other cards, use the fixed payout amount
       const payout = cardPayouts[winnerForm.cardSelected];
       if (typeof payout === 'number') {
-        amount = payout;
+        amount = Number(payout);
+      } else if (payout === 'jackpot') {
+        // Handle case where other cards might also be set to jackpot
+        amount = Number(currentJackpot) || 0;
       }
+      console.log('Fixed payout for', winnerForm.cardSelected, ':', amount);
     }
     
-    setPayoutAmount(amount);
+    console.log('Final payout amount:', amount);
+    setPayoutAmount(Number(amount) || 0);
   };
 
   const submitWinner = async () => {
@@ -200,14 +232,17 @@ export function WinnerForm({
       }).eq('id', weekId);
 
       // Update the last ticket sale record with the payout
+      const newEndingJackpot = Math.max(0, currentJackpot - payoutAmount);
+      
       await supabase.from('ticket_sales').update({
         weekly_payout_amount: payoutAmount,
-        ending_jackpot_total: currentJackpot - payoutAmount
+        ending_jackpot_total: newEndingJackpot
       }).eq('week_id', weekId).order('created_at', { ascending: false }).limit(1);
 
       // Update the game's total payouts
+      const currentTotalPayouts = Number(gameDetails?.total_payouts) || 0;
       await supabase.from('games').update({
-        total_payouts: (gameDetails?.total_payouts || 0) + payoutAmount
+        total_payouts: currentTotalPayouts + payoutAmount
       }).eq('id', gameId);
 
       // If Queen of Hearts was drawn, end the game
@@ -299,7 +334,7 @@ export function WinnerForm({
                   type="number" 
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
                   value={winnerForm.slotChosen} 
-                  onChange={e => setWinnerForm({...winnerForm, slotChosen: parseInt(e.target.value)})} 
+                  onChange={e => setWinnerForm({...winnerForm, slotChosen: parseInt(e.target.value) || 1})} 
                   min="1" 
                   max="54" 
                 />
@@ -339,6 +374,10 @@ export function WinnerForm({
                     <label className="text-sm font-medium">Payout Amount</label>
                     <div className="flex items-center h-10 px-3 py-2 border border-input bg-muted/50 rounded-md text-lg font-semibold">
                       ${payoutAmount.toFixed(2)}
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      Current Jackpot: ${currentJackpot.toFixed(2)}
                     </div>
                     
                     {winnerForm.cardSelected === 'Queen of Hearts' && !winnerForm.winnerPresent && (
