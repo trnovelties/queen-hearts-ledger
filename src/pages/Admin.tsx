@@ -90,6 +90,7 @@ export default function Admin() {
   ]);
   
   const [loading, setLoading] = useState(false);
+  const [configId, setConfigId] = useState<string | null>(null);
   
   // Fetch configuration on component mount
   useEffect(() => {
@@ -99,6 +100,7 @@ export default function Admin() {
         const { data, error } = await supabase
           .from('configurations')
           .select('*')
+          .limit(1)
           .maybeSingle();
           
         if (error && error.code !== 'PGRST116') {
@@ -106,6 +108,7 @@ export default function Admin() {
         }
         
         if (data) {
+          setConfigId(data.id);
           setGameSettings({
             ticketPrice: data.ticket_price,
             organizationPercentage: data.organization_percentage,
@@ -122,7 +125,7 @@ export default function Admin() {
                 ? JSON.parse(data.card_payouts) 
                 : data.card_payouts;
               
-              const payoutsArray = Object.entries(payoutsData).map(([card, payout]) => ({
+              const payoutsArray: CardPayout[] = Object.entries(payoutsData).map(([card, payout]) => ({
                 card,
                 payout: payout === 'jackpot' ? 'jackpot' : Number(payout)
               }));
@@ -187,20 +190,37 @@ export default function Admin() {
     
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('configurations')
-        .upsert({
-          id: '1', // Use a fixed ID for the single configuration record
-          ticket_price: gameSettings.ticketPrice,
-          organization_percentage: gameSettings.organizationPercentage,
-          jackpot_percentage: gameSettings.jackpotPercentage,
-          penalty_percentage: gameSettings.penaltyPercentage,
-          penalty_to_organization: gameSettings.penaltyToOrganization,
-          minimum_starting_jackpot: gameSettings.minimumStartingJackpot,
-          updated_at: new Date().toISOString()
-        });
+      const configData = {
+        ticket_price: gameSettings.ticketPrice,
+        organization_percentage: gameSettings.organizationPercentage,
+        jackpot_percentage: gameSettings.jackpotPercentage,
+        penalty_percentage: gameSettings.penaltyPercentage,
+        penalty_to_organization: gameSettings.penaltyToOrganization,
+        minimum_starting_jackpot: gameSettings.minimumStartingJackpot,
+        updated_at: new Date().toISOString()
+      };
+
+      let result;
+      if (configId) {
+        // Update existing configuration
+        result = await supabase
+          .from('configurations')
+          .update(configData)
+          .eq('id', configId);
+      } else {
+        // Insert new configuration
+        result = await supabase
+          .from('configurations')
+          .insert(configData)
+          .select()
+          .single();
         
-      if (error) throw error;
+        if (result.data) {
+          setConfigId(result.data.id);
+        }
+      }
+        
+      if (result.error) throw result.error;
       
       toast({
         title: "Settings Saved",
@@ -260,15 +280,40 @@ export default function Admin() {
       
       console.log('Saving card payouts:', payoutsObject);
       
-      const { error } = await supabase
-        .from('configurations')
-        .upsert({
-          id: '1', // Use a fixed ID for the single configuration record
-          card_payouts: payoutsObject,
-          updated_at: new Date().toISOString()
-        });
+      const configData = {
+        card_payouts: payoutsObject,
+        updated_at: new Date().toISOString()
+      };
+
+      let result;
+      if (configId) {
+        // Update existing configuration
+        result = await supabase
+          .from('configurations')
+          .update(configData)
+          .eq('id', configId);
+      } else {
+        // Insert new configuration
+        result = await supabase
+          .from('configurations')
+          .insert({
+            ...configData,
+            ticket_price: gameSettings.ticketPrice,
+            organization_percentage: gameSettings.organizationPercentage,
+            jackpot_percentage: gameSettings.jackpotPercentage,
+            penalty_percentage: gameSettings.penaltyPercentage,
+            penalty_to_organization: gameSettings.penaltyToOrganization,
+            minimum_starting_jackpot: gameSettings.minimumStartingJackpot
+          })
+          .select()
+          .single();
         
-      if (error) throw error;
+        if (result.data) {
+          setConfigId(result.data.id);
+        }
+      }
+        
+      if (result.error) throw result.error;
       
       toast({
         title: "Card Payouts Saved",
