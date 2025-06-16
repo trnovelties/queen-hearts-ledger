@@ -31,8 +31,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [weekForm, setWeekForm] = useState({
     weekNumber: 1,
-    startDate: new Date(),
-    endDate: new Date(new Date().setDate(new Date().getDate() + 6))
+    startDate: new Date()
   });
   const [rowForm, setRowForm] = useState({
     date: new Date(),
@@ -188,6 +187,10 @@ export default function Dashboard() {
     if (!currentGameId) return;
     
     try {
+      // Calculate end date as 6 days after start date (7 days total)
+      const endDate = new Date(weekForm.startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      
       const {
         data,
         error
@@ -195,7 +198,7 @@ export default function Dashboard() {
         game_id: currentGameId,
         week_number: weekForm.weekNumber,
         start_date: format(weekForm.startDate, 'yyyy-MM-dd'),
-        end_date: format(weekForm.endDate, 'yyyy-MM-dd')
+        end_date: format(endDate, 'yyyy-MM-dd')
       }]).select();
       
       if (error) throw error;
@@ -208,8 +211,7 @@ export default function Dashboard() {
       setWeekFormOpen(false);
       setWeekForm({
         weekNumber: 1,
-        startDate: new Date(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 6))
+        startDate: new Date()
       });
     } catch (error: any) {
       console.error('Error creating week:', error);
@@ -478,8 +480,7 @@ export default function Dashboard() {
     
     setWeekForm({
       weekNumber: lastWeekNumber + 1,
-      startDate: new Date(),
-      endDate: new Date(new Date().setDate(new Date().getDate() + 6))
+      startDate: new Date()
     });
     
     setCurrentGameId(gameId);
@@ -1458,7 +1459,7 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle>Add New Week</DialogTitle>
             <DialogDescription>
-              Enter the details for the new week.
+              Enter the details for the new week. The end date will be automatically calculated as 7 days from the start date.
             </DialogDescription>
           </DialogHeader>
           
@@ -1487,18 +1488,9 @@ export default function Dashboard() {
                 }) : null}
                 placeholder="Select start date"
               />
-            </div>
-            
-            <div className="grid gap-2">
-              <DatePickerWithInput
-                label="End Date"
-                date={weekForm.endDate}
-                setDate={(date) => date ? setWeekForm({
-                  ...weekForm,
-                  endDate: date
-                }) : null}
-                placeholder="Select end date"
-              />
+              <p className="text-xs text-muted-foreground">
+                End date will be automatically set to {weekForm.startDate ? format(new Date(weekForm.startDate.getTime() + 6 * 24 * 60 * 60 * 1000), 'MMM d, yyyy') : 'N/A'}
+              </p>
             </div>
           </div>
           
