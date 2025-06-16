@@ -67,29 +67,17 @@ export function WinnerForm({
     }
   }, [open, gameId, weekId]);
 
-  // Also refresh configuration when card is selected to ensure we have latest payouts
-  useEffect(() => {
-    if (open && winnerForm.cardSelected) {
-      // Fetch fresh configuration before calculating payout
-      fetchConfiguration().then(() => {
-        calculatePayout();
-      });
-    }
-  }, [winnerForm.cardSelected, winnerForm.winnerPresent]);
-
-  // Separate effect for jackpot changes
+  // Calculate payout whenever card selection, presence status, jackpot, or payouts change
   useEffect(() => {
     if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0) {
       calculatePayout();
     }
-  }, [currentJackpot, cardPayouts]);
+  }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts]);
 
   const fetchConfiguration = async () => {
     try {
       console.log('Fetching latest configuration...');
       
-      // Force fresh fetch with timestamp to avoid any caching
-      const timestamp = new Date().getTime();
       const { data, error } = await supabase
         .from('configurations')
         .select('card_payouts, penalty_percentage, penalty_to_organization')
