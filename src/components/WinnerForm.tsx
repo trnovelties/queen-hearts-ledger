@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,32 +58,36 @@ export function WinnerForm({
     return cards;
   };
 
-  // Fetch fresh configuration data
-  const fetchConfiguration = async () => {
+  // Force fetch the absolute latest configuration data
+  const fetchLatestConfiguration = async () => {
     try {
-      console.log('Fetching FRESH configuration data...');
+      console.log('Fetching ABSOLUTE LATEST configuration data...');
+      
+      // Add a timestamp to prevent any caching
+      const timestamp = new Date().getTime();
       
       const { data, error } = await supabase
         .from('configurations')
-        .select('card_payouts, penalty_percentage, penalty_to_organization')
+        .select('card_payouts, penalty_percentage, penalty_to_organization, updated_at')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       
       if (error) {
-        console.error('Error fetching configuration:', error);
+        console.error('Error fetching latest configuration:', error);
         throw error;
       }
       
       if (data) {
-        console.log('FRESH configuration data received:', data);
+        console.log('ABSOLUTE LATEST configuration data received:', data);
+        console.log('Configuration updated_at:', data.updated_at);
         
         if (data.card_payouts) {
           const payoutsObj = typeof data.card_payouts === 'string' 
             ? JSON.parse(data.card_payouts) 
             : data.card_payouts;
           
-          console.log('Setting FRESH card payouts:', payoutsObj);
+          console.log('Setting ABSOLUTE LATEST card payouts:', payoutsObj);
           setCardPayouts(payoutsObj);
         }
         
@@ -96,7 +99,7 @@ export function WinnerForm({
         return data;
       }
     } catch (error) {
-      console.error('Error fetching configuration:', error);
+      console.error('Error fetching latest configuration:', error);
       toast({
         title: "Error",
         description: "Failed to load latest configuration. Please try again.",
@@ -105,14 +108,14 @@ export function WinnerForm({
     }
   };
 
-  // Calculate payout with fresh data
-  const calculatePayoutWithData = (selectedCard: string, isPresent: boolean, jackpot: number, payouts: Record<string, any>) => {
+  // Calculate payout with the latest data
+  const calculatePayoutWithLatestData = (selectedCard: string, isPresent: boolean, jackpot: number, payouts: Record<string, any>) => {
     let amount = 0;
     
-    console.log('=== CALCULATING PAYOUT WITH FRESH DATA ===');
+    console.log('=== CALCULATING PAYOUT WITH LATEST DATA ===');
     console.log('Selected card:', selectedCard);
     console.log('Current jackpot:', jackpot);
-    console.log('Payouts being used:', payouts);
+    console.log('Latest payouts being used:', payouts);
     console.log('Winner present:', isPresent);
     
     if (selectedCard === 'Queen of Hearts') {
@@ -240,14 +243,12 @@ export function WinnerForm({
       const initializeData = async () => {
         setLoading(true);
         try {
-          // Fetch all data in parallel
-          const [configData] = await Promise.all([
-            fetchConfiguration(),
-            fetchJackpotAmount(),
-            fetchGameAndWeekDetails()
-          ]);
+          // Always fetch the absolute latest configuration
+          await fetchLatestConfiguration();
+          await fetchJackpotAmount();
+          await fetchGameAndWeekDetails();
           
-          console.log('All data initialized');
+          console.log('All data initialized with latest configuration');
         } catch (error) {
           console.error('Error initializing data:', error);
         } finally {
@@ -261,9 +262,9 @@ export function WinnerForm({
 
   // Recalculate payout when card selection or presence changes
   useEffect(() => {
-    if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0 && currentJackpot > 0) {
+    if (winnerForm.cardSelected && Object.keys(cardPayouts).length > 0 && currentJackpot >= 0) {
       console.log('Recalculating payout due to selection change...');
-      const amount = calculatePayoutWithData(
+      const amount = calculatePayoutWithLatestData(
         winnerForm.cardSelected, 
         winnerForm.winnerPresent, 
         currentJackpot, 
@@ -273,27 +274,27 @@ export function WinnerForm({
     }
   }, [winnerForm.cardSelected, winnerForm.winnerPresent, currentJackpot, cardPayouts]);
 
-  // Handle card selection change - fetch fresh config
+  // Handle card selection change - always fetch latest config
   const handleCardSelection = async (selectedCard: string) => {
     setWinnerForm({...winnerForm, cardSelected: selectedCard});
     
     if (selectedCard) {
-      console.log('Card selected, fetching FRESH configuration...');
-      // Fetch fresh configuration for this specific card selection
-      const freshConfig = await fetchConfiguration();
-      const freshJackpot = await fetchJackpotAmount();
+      console.log('Card selected, fetching ABSOLUTE LATEST configuration...');
+      // Always fetch the absolute latest configuration for this specific card selection
+      const latestConfig = await fetchLatestConfiguration();
+      const latestJackpot = await fetchJackpotAmount();
       
-      if (freshConfig?.card_payouts) {
-        const freshPayouts = typeof freshConfig.card_payouts === 'string' 
-          ? JSON.parse(freshConfig.card_payouts) 
-          : freshConfig.card_payouts;
+      if (latestConfig?.card_payouts) {
+        const latestPayouts = typeof latestConfig.card_payouts === 'string' 
+          ? JSON.parse(latestConfig.card_payouts) 
+          : latestConfig.card_payouts;
           
-        console.log('Using FRESH payouts for calculation:', freshPayouts);
-        const amount = calculatePayoutWithData(
+        console.log('Using ABSOLUTE LATEST payouts for calculation:', latestPayouts);
+        const amount = calculatePayoutWithLatestData(
           selectedCard, 
           winnerForm.winnerPresent, 
-          freshJackpot, 
-          freshPayouts
+          latestJackpot, 
+          latestPayouts
         );
         setPayoutAmount(amount);
       }
