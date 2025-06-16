@@ -1,4 +1,3 @@
-
 import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -108,19 +107,19 @@ export function PayoutSlipModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[80vw] max-w-none">
+      <DialogContent className="w-[80vw] h-[80vh] max-w-none max-h-none overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payout Slip</DialogTitle>
         </DialogHeader>
         
-        <div className="p-2">
+        <div className="flex flex-col h-full">
           {!winnerData ? (
             <div className="text-center p-4">
               <p>No winner data available. Please try again.</p>
             </div>
           ) : (
             <>
-              <div className="mb-6">
+              <div className="mb-4 flex-shrink-0">
                 <Label htmlFor="authorizedSignatureName" className="mb-2 block">Authorized Signature Name</Label>
                 <Input
                   id="authorizedSignatureName"
@@ -131,7 +130,7 @@ export function PayoutSlipModal({
                 />
               </div>
               
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end mb-4 flex-shrink-0">
                 <Button 
                   onClick={handleGeneratePDF} 
                   className="bg-[#1F4E4A] text-[#EDFFDF] hover:bg-[#1F4E4A]/90"
@@ -140,60 +139,61 @@ export function PayoutSlipModal({
                 </Button>
               </div>
               
-              <div 
-                ref={slipRef} 
-                className="bg-white p-8 border rounded-md shadow-sm"
-                style={{ minHeight: '500px' }}
-              >
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold mb-1">Queen of Hearts</h2>
-                  <h3 className="text-xl font-semibold mb-4">Winner Payout Slip</h3>
-                  <div className="text-lg font-medium">{profile?.organization_name || 'Organization'}</div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div>
-                    <div className="font-semibold text-gray-600">Game:</div>
-                    <div>{winnerData.gameName} (#{winnerData.gameNumber})</div>
+              <div className="flex-1 overflow-y-auto">
+                <div 
+                  ref={slipRef} 
+                  className="bg-white p-6 border rounded-md shadow-sm mx-auto max-w-2xl"
+                >
+                  <div className="text-center mb-6">
+                    <h2 className="text-xl font-bold mb-1">Queen of Hearts</h2>
+                    <h3 className="text-lg font-semibold mb-3">Winner Payout Slip</h3>
+                    <div className="text-base font-medium">{profile?.organization_name || 'Organization'}</div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-600">Week:</div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
                     <div>
-                      Week {winnerData.weekNumber} ({format(new Date(winnerData.weekStartDate), 'MMM d, yyyy')} - {format(new Date(winnerData.weekEndDate), 'MMM d, yyyy')})
+                      <div className="font-semibold text-gray-600">Game:</div>
+                      <div>{winnerData.gameName} (#{winnerData.gameNumber})</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-600">Week:</div>
+                      <div>
+                        Week {winnerData.weekNumber} ({format(new Date(winnerData.weekStartDate), 'MMM d, yyyy')} - {format(new Date(winnerData.weekEndDate), 'MMM d, yyyy')})
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div>
-                    <div className="font-semibold text-gray-600">Date of Drawing:</div>
-                    <div>{format(new Date(winnerData.date), 'MMMM d, yyyy')}</div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
+                    <div>
+                      <div className="font-semibold text-gray-600">Date of Drawing:</div>
+                      <div>{format(new Date(winnerData.date), 'MMMM d, yyyy')}</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-600">Winner:</div>
+                      <div className="font-semibold">{winnerData.winnerName}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-600">Winner:</div>
-                    <div className="font-semibold">{winnerData.winnerName}</div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
+                    <div>
+                      <div className="font-semibold text-gray-600">Slot Chosen:</div>
+                      <div>{winnerData.slotChosen}</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-600">Card Exposed:</div>
+                      <div>{winnerData.cardSelected}</div>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div>
-                    <div className="font-semibold text-gray-600">Slot Chosen:</div>
-                    <div>{winnerData.slotChosen}</div>
+                  
+                  <div className="mb-8 border-t border-b py-3 text-center">
+                    <div className="font-semibold text-gray-600 text-sm">Amount Won:</div>
+                    <div className="text-xl font-bold">{formatCurrency(winnerData.payoutAmount)}</div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-600">Card Exposed:</div>
-                    <div>{winnerData.cardSelected}</div>
-                  </div>
-                </div>
-                
-                <div className="mb-12 border-t border-b py-4">
-                  <div className="font-semibold text-gray-600">Amount Won:</div>
-                  <div className="text-2xl font-bold">{formatCurrency(winnerData.payoutAmount)}</div>
-                </div>
-                
-                <div className="mt-16 pt-2 border-t border-gray-400">
-                  <div className="font-semibold text-gray-600 text-center">
-                    {authorizedName ? authorizedName : 'Authorized Signature'}
+                  
+                  <div className="mt-12 pt-2 border-t border-gray-400">
+                    <div className="font-semibold text-gray-600 text-center text-sm">
+                      {authorizedName ? authorizedName : 'Authorized Signature'}
+                    </div>
                   </div>
                 </div>
               </div>
