@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
   const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
+  const [expandedExpenses, setExpandedExpenses] = useState<string | null>(null);
   const [gameFormOpen, setGameFormOpen] = useState(false);
   const [weekFormOpen, setWeekFormOpen] = useState(false);
   const [rowFormOpen, setRowFormOpen] = useState(false);
@@ -465,10 +466,15 @@ export default function Dashboard() {
   const toggleGame = (gameId: string) => {
     setExpandedGame(expandedGame === gameId ? null : gameId);
     setExpandedWeek(null);
+    setExpandedExpenses(null);
   };
 
   const toggleWeek = (weekId: string) => {
     setExpandedWeek(expandedWeek === weekId ? null : weekId);
+  };
+
+  const toggleExpenses = (gameId: string) => {
+    setExpandedExpenses(expandedExpenses === gameId ? null : gameId);
   };
 
   const openWeekForm = (gameId: string) => {
@@ -1183,7 +1189,7 @@ export default function Dashboard() {
                     ) : (
                       <div className="space-y-4">
                         {/* Week Calendar-style Layout */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[5px]">
                           {game.weeks.map((week: any) => (
                             <div key={week.id} className="space-y-2">
                               {/* Week Button */}
@@ -1195,7 +1201,7 @@ export default function Dashboard() {
                                 variant="outline"
                                 className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
                                   expandedWeek === week.id
-                                    ? 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] shadow-md'
+                                    ? 'bg-[#7ED321] border-[#7ED321] text-[#1F4E4A] shadow-md'
                                     : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
                                 }`}
                               >
@@ -1396,10 +1402,24 @@ export default function Dashboard() {
 
                   {/* Expenses & Donations Section */}
                   <div className="p-4 border-t">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold">Expenses & Donations</h3>
+                    <div 
+                      className="flex justify-between items-center mb-4 cursor-pointer"
+                      onClick={() => toggleExpenses(game.id)}
+                    >
+                      <h3 className="text-lg font-semibold flex items-center">
+                        Expenses & Donations
+                        <div className="ml-2">
+                          {expandedExpenses === game.id ? 
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" /> : 
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          }
+                        </div>
+                      </h3>
                       <Button 
-                        onClick={() => openExpenseModal(game.id, game.name)} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openExpenseModal(game.id, game.name);
+                        }} 
                         size="sm" 
                         variant="outline" 
                         className="text-sm"
@@ -1408,42 +1428,46 @@ export default function Dashboard() {
                       </Button>
                     </div>
                     
-                    {game.expenses && game.expenses.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Amount</TableHead>
-                              <TableHead>Type</TableHead>
-                              <TableHead>Memo</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {game.expenses.map((expense: any) => (
-                              <TableRow key={expense.id}>
-                                <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                                <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
-                                <TableCell>{expense.memo}</TableCell>
-                                <TableCell className="text-right">
-                                  <Button 
-                                    onClick={() => openDeleteConfirm(expense.id, 'expense')} 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>
+                    {expandedExpenses === game.id && (
+                      <>
+                        {game.expenses && game.expenses.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Date</TableHead>
+                                  <TableHead>Amount</TableHead>
+                                  <TableHead>Type</TableHead>
+                                  <TableHead>Memo</TableHead>
+                                  <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {game.expenses.map((expense: any) => (
+                                  <TableRow key={expense.id}>
+                                    <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                    <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
+                                    <TableCell>{expense.memo}</TableCell>
+                                    <TableCell className="text-right">
+                                      <Button 
+                                        onClick={() => openDeleteConfirm(expense.id, 'expense')} 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>
+                        )}
+                      </>
                     )}
                   </div>
                 </CardContent>
