@@ -62,7 +62,7 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
                 </div>
                 
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Payout Amount</p>
+                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Distribution Amount</p>
                   <p className="text-lg font-bold text-[#654321]">{formatCurrency(winner.amount)}</p>
                 </div>
                 
@@ -98,7 +98,7 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
                   size="sm"
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  Print Payout Slip
+                  Print Distribution Slip
                 </Button>
                 
                 <div className="ml-auto flex items-center gap-3">

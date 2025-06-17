@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { CardPayoutConfig } from "@/components/CardPayoutConfig";
+import { CardDistributionConfig } from "@/components/CardDistributionConfig";
 
 export default function Admin() {
   const { toast } = useToast();
@@ -291,7 +290,7 @@ export default function Admin() {
         
         {/* Card Distributions Tab */}
         <TabsContent value="card-distributions" className="space-y-4">
-          <CardPayoutConfig />
+          <CardDistributionConfig />
         </TabsContent>
       </Tabs>
     </div>
