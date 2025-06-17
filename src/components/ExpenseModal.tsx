@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { DatePickerWithInput } from "@/components/ui/datepicker";
+import { DatePicker } from "@/components/ui/datepicker";
 
 interface ExpenseModalProps {
   open: boolean;
@@ -114,7 +114,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
             <div className="col-span-3">
-              <DatePickerWithInput
+              <DatePicker
                 date={selectedDate}
                 setDate={(date) => date && setSelectedDate(date)}
                 placeholder="Select date"
