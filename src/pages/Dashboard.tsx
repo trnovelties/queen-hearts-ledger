@@ -3,12 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
-import { Plus, Calendar, Users, DollarSign, Trophy, Trash2 } from "lucide-react";
+import { Plus, Calendar, Users, DollarSign, Trophy, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { GameForm } from "@/components/GameForm";
 import { TicketSalesRow } from "@/components/TicketSalesRow";
 import { WinnerForm } from "@/components/WinnerForm";
@@ -21,9 +24,23 @@ const Dashboard = () => {
   const [showGameForm, setShowGameForm] = useState(false);
   const [showWeekForm, setShowWeekForm] = useState<string | null>(null);
   const [weekFormData, setWeekFormData] = useState({ startDate: '', endDate: '' });
+  const [expenseModalOpen, setExpenseModalOpen] = useState<{open: boolean, gameId: string, gameName: string}>({
+    open: false,
+    gameId: '',
+    gameName: ''
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Format currency helper function
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
 
   // Fetch games
   const { data: games, isLoading } = useQuery({
@@ -236,7 +253,7 @@ const Dashboard = () => {
             <DialogHeader>
               <DialogTitle>Create New Game</DialogTitle>
             </DialogHeader>
-            <GameForm onClose={() => setShowGameForm(false)} />
+            <GameForm />
           </DialogContent>
         </Dialog>
       </div>
@@ -372,7 +389,7 @@ const Dashboard = () => {
                                         {weekTicketSales.map((sale) => (
                                           <TicketSalesRow 
                                             key={sale.id} 
-                                            sale={sale} 
+                                            ticketSale={sale} 
                                             gameId={game.id}
                                             weekId={week.id}
                                           />
@@ -395,8 +412,8 @@ const Dashboard = () => {
                                           <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
                                         </div>
                                         <PayoutSlipModal 
-                                          week={week} 
-                                          game={game}
+                                          weekData={week} 
+                                          gameData={game}
                                         />
                                       </div>
                                     </div>
@@ -406,7 +423,6 @@ const Dashboard = () => {
                                     <WinnerForm 
                                       gameId={game.id}
                                       weekId={week.id}
-                                      weekNumber={week.week_number}
                                       disabled={!!week.winner_name}
                                     />
                                   </div>
@@ -421,7 +437,18 @@ const Dashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <h4 className="font-medium">Expenses & Donations</h4>
-                        <ExpenseModal gameId={game.id} />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setExpenseModalOpen({
+                            open: true,
+                            gameId: game.id,
+                            gameName: game.name
+                          })}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Expense
+                        </Button>
                       </div>
                       {gameExpenses.length > 0 ? (
                         <div className="space-y-1">
@@ -451,6 +478,13 @@ const Dashboard = () => {
           );
         })}
       </div>
+
+      <ExpenseModal 
+        open={expenseModalOpen.open}
+        onOpenChange={(open) => setExpenseModalOpen(prev => ({...prev, open}))}
+        gameId={expenseModalOpen.gameId}
+        gameName={expenseModalOpen.gameName}
+      />
     </div>
   );
 };
