@@ -98,7 +98,7 @@ export function GameComparisonTable({ games, formatCurrency }: GameComparisonTab
                 <TableHead className="font-semibold text-[#132E2C]">Duration</TableHead>
                 <TableHead className="font-semibold text-[#132E2C]">Revenue</TableHead>
                 <TableHead className="font-semibold text-[#132E2C]">Tickets Sold</TableHead>
-                <TableHead className="font-semibold text-[#132E2C]">Payouts</TableHead>
+                <TableHead className="font-semibold text-[#132E2C]">Distributions</TableHead>
                 <TableHead className="font-semibold text-[#132E2C]">Net Profit</TableHead>
                 <TableHead className="font-semibold text-[#132E2C]">Profit Margin</TableHead>
                 <TableHead className="font-semibold text-[#132E2C]">ROI</TableHead>
