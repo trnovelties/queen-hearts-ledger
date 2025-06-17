@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Plus, Calendar, DollarSign, Trophy, Users } from "lucide-react";
+import { format } from "date-fns";
+import { Tables } from "@/integrations/supabase/types";
+import { Plus, Calendar, Users, DollarSign, Trophy, Trash2 } from "lucide-react";
 import { GameForm } from "@/components/GameForm";
 import { TicketSalesRow } from "@/components/TicketSalesRow";
 import { WinnerForm } from "@/components/WinnerForm";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { ExpenseModal } from "@/components/ExpenseModal";
-import { formatCurrency } from "@/lib/utils";
 
 const Dashboard = () => {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
