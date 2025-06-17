@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Pencil, Save, X, Print } from "lucide-react";
+import { Pencil, Save, X } from "lucide-react";
 
 interface OrganizationRulesData {
   id?: string;
@@ -144,75 +144,6 @@ TOTAL ESTIMATED START UP COSTS- $1,100.00`
     fetchRulesData(); // Reset to original data
   };
 
-  const handlePrint = () => {
-    const printContent = `
-      <html>
-        <head>
-          <title>${rulesData.organization_name} - Queen of Hearts Rules</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 20px;
-              line-height: 1.6;
-            }
-            h1 {
-              text-align: center;
-              color: #1f4e4a;
-              border-bottom: 2px solid #1f4e4a;
-              padding-bottom: 10px;
-            }
-            h2 {
-              color: #1f4e4a;
-              margin-top: 30px;
-            }
-            .rules-section {
-              margin-bottom: 30px;
-            }
-            .startup-costs {
-              background-color: #f7f8fc;
-              padding: 20px;
-              border-radius: 8px;
-              font-family: monospace;
-              white-space: pre-line;
-            }
-            .rules-content {
-              white-space: pre-line;
-              text-align: justify;
-            }
-            @media print {
-              body {
-                margin: 0;
-                padding: 15px;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>${rulesData.organization_name}</h1>
-          <div class="rules-section">
-            <h2>Rules for the Queen of Hearts</h2>
-            <div class="rules-content">${formatDisplayText(rulesData.rules_content, rulesData.organization_name)}</div>
-          </div>
-          <div class="rules-section">
-            <h2>Startup Costs</h2>
-            <div class="startup-costs">${rulesData.startup_costs}</div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }
-  };
-
   const formatDisplayText = (text: string, orgName: string) => {
     return text.replace(/ORGANIZATION NAME HERE/g, orgName);
   };
@@ -249,16 +180,10 @@ TOTAL ESTIMATED START UP COSTS- $1,100.00`
                   </Button>
                 </>
               ) : (
-                <>
-                  <Button onClick={handlePrint} variant="outline" size="sm">
-                    <Print className="h-4 w-4 mr-2" />
-                    Print
-                  </Button>
-                  <Button onClick={() => setEditing(true)} size="sm">
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </>
+                <Button onClick={() => setEditing(true)} size="sm">
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
               )}
             </div>
           </div>
