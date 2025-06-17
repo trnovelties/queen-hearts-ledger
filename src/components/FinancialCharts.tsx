@@ -62,7 +62,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
             weeklyData[weekKey] = {
               name: weekKey,
               Revenue: 0,
-              Payouts: 0,
+              Distributions: 0,
               Expenses: 0,
               Donations: 0,
               NetProfit: 0,
@@ -74,7 +74,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
           }
           
           weeklyData[weekKey].Revenue += week.weekly_sales;
-          weeklyData[weekKey].Payouts += week.weekly_payout;
+          weeklyData[weekKey].Distributions += week.weekly_payout;
           weeklyData[weekKey].TicketsSold += week.weekly_tickets_sold;
         });
         
@@ -119,7 +119,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
       return games.map(game => ({
         name: game.name,
         Revenue: game.total_sales,
-        Payouts: game.total_payouts,
+        Distributions: game.total_payouts,
         Expenses: game.total_expenses,
         Donations: game.total_donations,
         NetProfit: game.organization_net_profit,
@@ -133,7 +133,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
     return [{
       name: "Total Performance",
       Revenue: games.reduce((sum, game) => sum + game.total_sales, 0),
-      Payouts: games.reduce((sum, game) => sum + game.total_payouts, 0),
+      Distributions: games.reduce((sum, game) => sum + game.total_payouts, 0),
       Expenses: games.reduce((sum, game) => sum + game.total_expenses, 0),
       Donations: games.reduce((sum, game) => sum + game.total_donations, 0),
       NetProfit: games.reduce((sum, game) => sum + game.organization_net_profit, 0),
@@ -240,10 +240,10 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                   name="Revenue"
                 />
                 <Bar 
-                  dataKey="Payouts" 
+                  dataKey="Distributions" 
                   fill={chartColors.primary} 
                   radius={[4, 4, 0, 0]}
-                  name="Payouts"
+                  name="Distributions"
                 />
                 <Line 
                   type="monotone" 
