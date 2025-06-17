@@ -1,299 +1,204 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { CardPayoutConfig } from "@/components/CardPayoutConfig";
+import { CardDistributionConfig } from "@/components/CardPayoutConfig";
 
 export default function Admin() {
   const { toast } = useToast();
   const { isAdmin } = useAuth();
-  const [gameSettings, setGameSettings] = useState({
-    ticketPrice: 2,
-    organizationPercentage: 40,
-    jackpotPercentage: 60,
-    penaltyPercentage: 10,
-    penaltyToOrganization: false,
-    minimumStartingJackpot: 500
-  });
-  
   const [loading, setLoading] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
-  
-  // Fetch configuration on component mount
+  const [ticketPrice, setTicketPrice] = useState(2);
+  const [organizationPercentage, setOrganizationPercentage] = useState(40);
+  const [jackpotPercentage, setJackpotPercentage] = useState(60);
+  const [penaltyPercentage, setPenaltyPercentage] = useState(10);
+  const [penaltyToOrganization, setPenaltyToOrganization] = useState(false);
+	const [minimumStartingJackpot, setMinimumStartingJackpot] = useState(500);
+
   useEffect(() => {
-    async function fetchConfig() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('configurations')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-          
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-        
-        if (data) {
-          setConfigId(data.id);
-          setGameSettings({
-            ticketPrice: data.ticket_price,
-            organizationPercentage: data.organization_percentage,
-            jackpotPercentage: data.jackpot_percentage,
-            penaltyPercentage: data.penalty_percentage,
-            penaltyToOrganization: data.penalty_to_organization || false,
-            minimumStartingJackpot: data.minimum_starting_jackpot || 500
-          });
-        }
-      } catch (error: any) {
+    if (!isAdmin) return;
+    fetchConfig();
+  }, [isAdmin]);
+
+  const fetchConfig = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('configurations')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (error) {
         console.error('Error fetching configuration:', error);
         toast({
           title: "Error",
-          description: "Failed to load configuration settings.",
+          description: "Failed to load game settings.",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    }
-    
-    fetchConfig();
-  }, [toast]);
-  
-  // Handle saving game settings
-  const handleSaveGameSettings = async () => {
-    // Validate percentages
-    if (gameSettings.organizationPercentage + gameSettings.jackpotPercentage !== 100) {
-      toast({
-        title: "Validation Error",
-        description: "Organization and Jackpot percentages must add up to 100%.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (gameSettings.ticketPrice <= 0) {
-      toast({
-        title: "Validation Error",
-        description: "Ticket price must be greater than zero.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (gameSettings.minimumStartingJackpot < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Minimum starting jackpot cannot be negative.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const configData = {
-        ticket_price: gameSettings.ticketPrice,
-        organization_percentage: gameSettings.organizationPercentage,
-        jackpot_percentage: gameSettings.jackpotPercentage,
-        penalty_percentage: gameSettings.penaltyPercentage,
-        penalty_to_organization: gameSettings.penaltyToOrganization,
-        minimum_starting_jackpot: gameSettings.minimumStartingJackpot,
-        updated_at: new Date().toISOString()
-      };
 
-      let result;
-      if (configId) {
-        // Update existing configuration
-        result = await supabase
-          .from('configurations')
-          .update(configData)
-          .eq('id', configId);
-      } else {
-        // Insert new configuration
-        result = await supabase
-          .from('configurations')
-          .insert(configData)
-          .select()
-          .single();
-        
-        if (result.data) {
-          setConfigId(result.data.id);
-        }
+      if (data) {
+        setConfigId(data.id);
+        setTicketPrice(data.ticket_price || 2);
+        setOrganizationPercentage(data.organization_percentage || 40);
+        setJackpotPercentage(data.jackpot_percentage || 60);
+        setPenaltyPercentage(data.penalty_percentage || 10);
+        setPenaltyToOrganization(data.penalty_to_organization || false);
+				setMinimumStartingJackpot(data.minimum_starting_jackpot || 500);
       }
-        
-      if (result.error) throw result.error;
-      
-      toast({
-        title: "Settings Saved",
-        description: "Default game settings have been updated.",
-      });
     } catch (error: any) {
-      console.error('Error saving game settings:', error);
+      console.error('Error in fetchConfig:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save settings.",
+        description: "Failed to load game settings.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const handleSaveGameSettings = async () => {
+    setLoading(true);
+    try {
+      const updates = {
+        ticket_price: ticketPrice,
+        organization_percentage: organizationPercentage,
+        jackpot_percentage: jackpotPercentage,
+        penalty_percentage: penaltyPercentage,
+        penalty_to_organization: penaltyToOrganization,
+				minimum_starting_jackpot: minimumStartingJackpot,
+        updated_at: new Date().toISOString(),
+      };
+
+      let response;
+      if (configId) {
+        response = await supabase
+          .from('configurations')
+          .update(updates)
+          .eq('id', configId);
+      } else {
+        response = await supabase
+          .from('configurations')
+          .insert([updates]);
+      }
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      toast({
+        title: "Game Settings Saved",
+        description: "Game settings have been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error saving game settings:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save game settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="text-center py-8">
+        <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+        <p className="text-muted-foreground mt-2">You don't have permission to view this page.</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Organization Settings</h1>
-      
-      <Tabs defaultValue="game-settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="game-settings">Game Settings</TabsTrigger>
-          <TabsTrigger value="card-distributions">Card Distributions</TabsTrigger>
-        </TabsList>
-        
-        {/* Game Settings Tab */}
-        <TabsContent value="game-settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Default Game Settings</CardTitle>
-              <CardDescription>
-                Configure default settings for new Queen of Hearts games.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {loading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="ticketPrice">Default Ticket Price ($)</Label>
-                      <Input
-                        id="ticketPrice"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={gameSettings.ticketPrice}
-                        onChange={(e) => setGameSettings({
-                          ...gameSettings,
-                          ticketPrice: parseFloat(e.target.value) || 0
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="penaltyPercentage">Penalty Percentage (%)</Label>
-                      <Input
-                        id="penaltyPercentage"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={gameSettings.penaltyPercentage}
-                        onChange={(e) => setGameSettings({
-                          ...gameSettings,
-                          penaltyPercentage: parseFloat(e.target.value) || 0
-                        })}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Amount deducted if winner is not present
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="organizationPercentage">Organization Percentage (%)</Label>
-                      <Input
-                        id="organizationPercentage"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={gameSettings.organizationPercentage}
-                        onChange={(e) => {
-                          const org = parseFloat(e.target.value) || 0;
-                          setGameSettings({
-                            ...gameSettings,
-                            organizationPercentage: org,
-                            jackpotPercentage: 100 - org
-                          });
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="jackpotPercentage">Jackpot Percentage (%)</Label>
-                      <Input
-                        id="jackpotPercentage"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={gameSettings.jackpotPercentage}
-                        onChange={(e) => {
-                          const jackpot = parseFloat(e.target.value) || 0;
-                          setGameSettings({
-                            ...gameSettings,
-                            jackpotPercentage: jackpot,
-                            organizationPercentage: 100 - jackpot
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="minimumStartingJackpot">Minimum Starting Jackpot ($)</Label>
-                    <Input
-                      id="minimumStartingJackpot"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={gameSettings.minimumStartingJackpot}
-                      onChange={(e) => setGameSettings({
-                        ...gameSettings,
-                        minimumStartingJackpot: parseFloat(e.target.value) || 0
-                      })}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      The minimum amount for a new game's jackpot
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="penaltyToOrganization"
-                      checked={gameSettings.penaltyToOrganization}
-                      onCheckedChange={(checked) => setGameSettings({
-                        ...gameSettings,
-                        penaltyToOrganization: checked
-                      })}
-                    />
-                    <Label htmlFor="penaltyToOrganization">
-                      Add penalty to organization funds (otherwise, rolls over to next jackpot)
-                    </Label>
-                  </div>
-                  
-                  <Button onClick={handleSaveGameSettings} disabled={loading}>
-                    {loading ? 'Saving...' : 'Save Settings'}
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Card Distributions Tab */}
-        <TabsContent value="card-distributions" className="space-y-4">
-          <CardPayoutConfig />
-        </TabsContent>
-      </Tabs>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Admin Configuration</h1>
+        <p className="text-muted-foreground">Manage game settings and card distributions</p>
+      </div>
+
+      {/* Game Settings Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Game Settings</CardTitle>
+          <CardDescription>Configure the core settings for the Queen of Hearts game.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="ticketPrice">Ticket Price</Label>
+              <Input
+                type="number"
+                id="ticketPrice"
+                value={ticketPrice}
+                onChange={(e) => setTicketPrice(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="minimumStartingJackpot">Minimum Starting Jackpot</Label>
+              <Input
+                type="number"
+                id="minimumStartingJackpot"
+                value={minimumStartingJackpot}
+                onChange={(e) => setMinimumStartingJackpot(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="organizationPercentage">Organization (%)</Label>
+              <Input
+                type="number"
+                id="organizationPercentage"
+                value={organizationPercentage}
+                onChange={(e) => setOrganizationPercentage(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="jackpotPercentage">Jackpot (%)</Label>
+              <Input
+                type="number"
+                id="jackpotPercentage"
+                value={jackpotPercentage}
+                onChange={(e) => setJackpotPercentage(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="penaltyPercentage">Penalty (%)</Label>
+              <Input
+                type="number"
+                id="penaltyPercentage"
+                value={penaltyPercentage}
+                onChange={(e) => setPenaltyPercentage(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="penaltyToOrganization"
+              checked={penaltyToOrganization}
+              onCheckedChange={(checked) => setPenaltyToOrganization(checked)}
+            />
+            <Label htmlFor="penaltyToOrganization">Send Penalty to Organization</Label>
+          </div>
+          <Button onClick={handleSaveGameSettings} disabled={loading}>
+            {loading ? 'Saving...' : 'Save Game Settings'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Card Distributions Configuration */}
+      <CardDistributionConfig />
     </div>
   );
 }

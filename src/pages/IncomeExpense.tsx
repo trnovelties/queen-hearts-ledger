@@ -1,829 +1,570 @@
-
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { format } from 'date-fns';
+import { DateRange } from "react-day-picker";
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, File, Download } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { DatePickerWithInput } from "@/components/ui/datepicker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { format } from "date-fns";
-import { Tables } from "@/integrations/supabase/types";
-import { 
-  Download, 
-  PlusCircle, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Target, 
-  BarChart3, 
-  Filter, 
-  Calendar,
-  Receipt,
-  Users,
-  Trophy,
-  Banknote,
-  HeartHandshake,
-  ArrowUpRight,
-  ArrowDownRight,
-  PieChart,
-  Activity
-} from "lucide-react";
-import jsPDF from "jspdf";
-import { ExpenseModal } from "@/components/ExpenseModal";
-import { FinancialCharts } from "@/components/FinancialCharts";
-import { GameComparisonTable } from "@/components/GameComparisonTable";
-import { DetailedFinancialTable } from "@/components/DetailedFinancialTable";
-import { FinancialOverview } from "@/components/FinancialOverview";
-import { WinnerInformation } from "@/components/WinnerInformation";
 
-// Define types
-type Game = Tables<"games">;
-type Week = Tables<"weeks">;
-type TicketSale = Tables<"ticket_sales">;
-type Expense = Tables<"expenses">;
-
-interface GameSummary extends Game {
-  weeks: Week[];
-  ticket_sales: TicketSale[];
-  expenses: Expense[];
+interface GameSummary {
+  id: string;
+  game_number: number;
+  game_name: string;
+  week_id: string;
+  week_number: number;
+  week_start_date: string;
+  week_end_date: string;
+  created_at: string;
+  total_tickets_sold: number;
+  total_sales: number;
+  total_distributions: number;
+  total_expenses: number;
+  total_donations: number;
+  organization_total_portion: number;
+  jackpot_total_portion: number;
+  organization_net_profit: number;
 }
 
 export default function IncomeExpense() {
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const { user } = useAuth();
-  const [games, setGames] = useState<GameSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedGame, setSelectedGame] = useState<string>("all");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [reportType, setReportType] = useState<"weekly" | "game" | "cumulative">("cumulative");
-  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+  const { profile } = useAuth();
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1), // Start of the year
+    to: new Date(), // Today
+  });
+  const [gameType, setGameType] = useState("all");
+  const [gameTypes, setGameTypes] = useState<string[]>([]);
+  const [gameSummaries, setGameSummaries] = useState<GameSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalTicketsSold, setTotalTicketsSold] = useState(0);
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalDistributions, setTotalDistributions] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalDonations, setTotalDonations] = useState(0);
+  const [organizationTotalPortion, setOrganizationTotalPortion] = useState(0);
+  const [jackpotTotalPortion, setJackpotTotalPortion] = useState(0);
+  const [organizationNetProfit, setOrganizationNetProfit] = useState(0);
+  const [filteredGames, setFilteredGames] = useState<GameSummary[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Set selected game from URL parameter
   useEffect(() => {
-    const gameId = searchParams.get("game");
-    if (gameId) {
-      setSelectedGame(gameId);
-    }
-  }, [searchParams]);
+    fetchGameTypes();
+    fetchGameSummaries();
+  }, []);
 
-  // Fetch all games and related data
   useEffect(() => {
-    async function fetchFinancialData() {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        const { data: gamesData, error: gamesError } = await supabase
-          .from('games')
-          .select('*')
-          .order('game_number', { ascending: false });
-        
-        if (gamesError) throw gamesError;
-        
-        if (gamesData) {
-          const gamesWithDetails: GameSummary[] = [];
-          
-          for (const game of gamesData) {
-            const { data: weeksData, error: weeksError } = await supabase
-              .from('weeks')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('week_number', { ascending: true });
-            
-            if (weeksError) throw weeksError;
-            
-            const { data: salesData, error: salesError } = await supabase
-              .from('ticket_sales')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('date', { ascending: true });
-            
-            if (salesError) throw salesError;
-            
-            const { data: expensesData, error: expensesError } = await supabase
-              .from('expenses')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('date', { ascending: true });
-            
-            if (expensesError) throw expensesError;
-            
-            gamesWithDetails.push({
-              ...game,
-              weeks: weeksData || [],
-              ticket_sales: salesData || [],
-              expenses: expensesData || [],
-            });
-          }
-          
-          setGames(gamesWithDetails);
-        }
-      } catch (error: any) {
-        console.error('Error fetching financial data:', error);
-        toast({
-          title: "Error Loading Data",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchFinancialData();
-  }, [user, toast]);
+    filterGames();
+  }, [gameSummaries, date, gameType, searchTerm]);
 
-  // Calculate summary data
-  const calculateSummaryData = () => {
-    let filteredGames = games;
-    
-    if (selectedGame !== "all") {
-      filteredGames = games.filter(game => game.id === selectedGame);
-    }
-    
-    if (startDate && endDate) {
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-      
-      filteredGames = filteredGames.map(game => {
-        const filteredSales = game.ticket_sales.filter(sale => 
-          sale.date >= startDateStr && sale.date <= endDateStr
-        );
-        
-        const filteredExpenses = game.expenses.filter(expense => 
-          expense.date >= startDateStr && expense.date <= endDateStr
-        );
-        
-        const filteredWeeks = game.weeks.filter(week => 
-          week.start_date >= startDateStr && week.end_date <= endDateStr
-        );
-        
-        return {
-          ...game,
-          ticket_sales: filteredSales,
-          expenses: filteredExpenses,
-          weeks: filteredWeeks,
-        };
-      });
-    }
-    
-    let totalSales = 0;
-    let totalDistributions = 0;
-    let totalExpenses = 0;
-    let totalDonations = 0;
-    let organizationTotalPortion = 0;
-    let totalTicketsSold = 0;
-    
-    filteredGames.forEach(game => {
-      if (startDate && endDate) {
-        const sales = game.ticket_sales.reduce((sum, sale) => sum + sale.amount_collected, 0);
-        totalSales += sales;
-        totalDistributions += game.ticket_sales.reduce((sum, sale) => sum + sale.weekly_payout_amount, 0);
-        
-        const expenses = game.expenses.filter(e => !e.is_donation);
-        const donations = game.expenses.filter(e => e.is_donation);
-        
-        totalExpenses += expenses.reduce((sum, expense) => sum + expense.amount, 0);
-        totalDonations += donations.reduce((sum, expense) => sum + expense.amount, 0);
-        
-        const orgPortion = game.ticket_sales.reduce((sum, sale) => sum + sale.organization_total, 0);
-        organizationTotalPortion += orgPortion;
-        
-        totalTicketsSold += game.ticket_sales.reduce((sum, sale) => sum + sale.tickets_sold, 0);
-      } else {
-        totalSales += game.total_sales;
-        totalDistributions += game.total_payouts;
-        totalExpenses += game.total_expenses;
-        totalDonations += game.total_donations;
-        
-        const orgPortion = game.total_sales * (game.organization_percentage / 100);
-        organizationTotalPortion += orgPortion;
-        
-        if (game.ticket_price > 0) {
-          totalTicketsSold += Math.round(game.total_sales / game.ticket_price);
-        }
-      }
-    });
-    
-    const organizationNetProfit = organizationTotalPortion - totalExpenses - totalDonations;
-    const jackpotTotalPortion = totalSales - organizationTotalPortion;
-    
-    return {
-      totalTicketsSold,
-      totalSales,
-      totalDistributions,
-      totalExpenses,
-      totalDonations,
-      organizationTotalPortion,
-      jackpotTotalPortion,
-      organizationNetProfit,
-      filteredGames,
-    };
-  };
-
-  const summary = calculateSummaryData();
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  // Get winner information based on selected game
-  const getWinnerInformation = () => {
-    const winners = [];
-    
-    if (selectedGame === "all") {
-      // Show all winners from all games
-      summary.filteredGames.forEach(game => {
-        game.weeks.forEach(week => {
-          if (week.winner_name) {
-            winners.push({
-              name: week.winner_name,
-              slot: week.slot_chosen,
-              card: week.card_selected,
-              amount: week.weekly_payout,
-              present: week.winner_present,
-              date: week.end_date,
-              gameName: game.name,
-              gameNumber: game.game_number,
-              weekNumber: week.week_number
-            });
-          }
-        });
-      });
-      // Sort by date descending (most recent first)
-      winners.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    } else {
-      // Show only winners from selected game
-      const selectedGameData = summary.filteredGames.find(game => game.id === selectedGame);
-      if (selectedGameData) {
-        selectedGameData.weeks.forEach(week => {
-          if (week.winner_name) {
-            winners.push({
-              name: week.winner_name,
-              slot: week.slot_chosen,
-              card: week.card_selected,
-              amount: week.weekly_payout,
-              present: week.winner_present,
-              date: week.end_date,
-              gameName: selectedGameData.name,
-              gameNumber: selectedGameData.game_number,
-              weekNumber: week.week_number
-            });
-          }
-        });
-        // Sort by week number descending (most recent first)
-        winners.sort((a, b) => b.weekNumber - a.weekNumber);
-      }
-    }
-    
-    return winners;
-  };
-
-  const winners = getWinnerInformation();
-
-  // Enhanced KPI Card Component
-  const KPICard = ({ 
-    title, 
-    value, 
-    icon: Icon, 
-    trend = 0, 
-    subtitle = "",
-    variant = "default",
-    percentage = 0 
-  }: {
-    title: string;
-    value: string | number;
-    icon: any;
-    trend?: number;
-    subtitle?: string;
-    variant?: "default" | "revenue" | "expense" | "profit";
-    percentage?: number;
-  }) => {
-    const cardStyles = {
-      default: "bg-white border-[#1F4E4A]/10",
-      revenue: "bg-gradient-to-br from-[#A1E96C]/10 to-[#A1E96C]/5 border-[#A1E96C]/30",
-      expense: "bg-gradient-to-br from-red-50 to-red-25 border-red-200",
-      profit: "bg-gradient-to-br from-[#1F4E4A]/10 to-[#132E2C]/5 border-[#1F4E4A]/30"
-    };
-
-    return (
-      <Card className={`${cardStyles[variant]} hover:shadow-lg transition-all duration-300 relative overflow-hidden`}>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold text-[#132E2C]/60 uppercase tracking-wider">{title}</p>
-                {percentage > 0 && (
-                  <Badge variant="secondary" className="text-xs bg-[#F7F8FC] text-[#132E2C]">
-                    {percentage.toFixed(1)}%
-                  </Badge>
-                )}
-              </div>
-              <p className="text-2xl font-bold text-[#1F4E4A] font-inter">
-                {typeof value === 'number' ? formatCurrency(value) : value}
-              </p>
-              {subtitle && (
-                <p className="text-xs text-[#132E2C]/50 font-medium">{subtitle}</p>
-              )}
-              {trend !== 0 && (
-                <div className={`flex items-center text-xs font-medium ${
-                  trend > 0 ? 'text-green-600' : 'text-red-500'
-                }`}>
-                  {trend > 0 ? (
-                    <ArrowUpRight className="h-3 w-3 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 mr-1" />
-                  )}
-                  {Math.abs(trend).toFixed(1)}% vs last period
-                </div>
-              )}
-            </div>
-            <div className={`p-3 rounded-xl ${
-              variant === 'revenue' ? 'bg-[#A1E96C]/20' :
-              variant === 'expense' ? 'bg-red-100' :
-              variant === 'profit' ? 'bg-[#1F4E4A]/20' :
-              'bg-[#F7F8FC]'
-            }`}>
-              <Icon className={`h-6 w-6 ${
-                variant === 'revenue' ? 'text-[#1F4E4A]' :
-                variant === 'expense' ? 'text-red-600' :
-                variant === 'profit' ? 'text-[#1F4E4A]' :
-                'text-[#1F4E4A]'
-              }`} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Enhanced PDF generation with comprehensive structure
-  const generatePdfReport = async () => {
+  const fetchGameTypes = async () => {
     try {
-      toast({
-        title: "Generating Report",
-        description: "Please wait while we prepare your comprehensive financial analysis...",
-      });
-      
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 20;
-      const leftMargin = 20;
-      const rightMargin = pageWidth - 20;
-      const lineHeight = 7;
-      
-      // Helper function to add new page if needed
-      const checkNewPage = (requiredSpace: number) => {
-        if (yPosition + requiredSpace > pageHeight - 20) {
-          doc.addPage();
-          yPosition = 20;
-        }
-      };
-      
-      // Header Section
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(24);
-      doc.setTextColor(31, 78, 74); // #1F4E4A
-      doc.text('Queen of Hearts Financial Report', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
-      
-      // Report metadata
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 5;
-      
-      const reportPeriod = startDate && endDate 
-        ? `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`
-        : 'All Time';
-      doc.text(`Report Period: ${reportPeriod}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 5;
-      
-      const gameScope = selectedGame === "all" ? "All Games" : games.find(g => g.id === selectedGame)?.name || "Unknown Game";
-      doc.text(`Scope: ${gameScope}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
-      
-      // Executive Summary Section
-      checkNewPage(50);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.setTextColor(31, 78, 74);
-      doc.text('Executive Summary', leftMargin, yPosition);
-      yPosition += 10;
-      
-      // Summary metrics in a structured layout
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
-      
-      const summaryData = [
-        ['Total Tickets Sold', summary.totalTicketsSold.toLocaleString()],
-        ['Total Revenue', formatCurrency(summary.totalSales)],
-        ['Total Distributions', formatCurrency(summary.totalDistributions)],
-        ['Total Expenses', formatCurrency(summary.totalExpenses)],
-        ['Total Donations', formatCurrency(summary.totalDonations)],
-        ['Organization Net Profit', formatCurrency(summary.organizationNetProfit)]
-      ];
-      
-      summaryData.forEach(([label, value]) => {
-        doc.setFont("helvetica", "bold");
-        doc.text(label + ':', leftMargin, yPosition);
-        doc.setFont("helvetica", "normal");
-        doc.text(value, leftMargin + 60, yPosition);
-        yPosition += lineHeight;
-      });
-      
-      yPosition += 10;
-      
-      // Financial Breakdown Section
-      checkNewPage(80);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.setTextColor(31, 78, 74);
-      doc.text('Financial Breakdown', leftMargin, yPosition);
-      yPosition += 10;
-      
-      // Three-column structure as per requirements
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(19, 46, 44);
-      
-      // Column 1: Overall Totals
-      doc.text('Overall Totals', leftMargin, yPosition);
-      yPosition += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      const overallTotals = [
-        ['Tickets Sold', summary.totalTicketsSold.toLocaleString()],
-        ['Ticket Sales', formatCurrency(summary.totalSales)],
-        ['Total Distributions', formatCurrency(summary.totalDistributions)],
-        ['Total Expenses', formatCurrency(summary.totalExpenses)],
-        ['Total Donated', formatCurrency(summary.totalDonations)]
-      ];
-      
-      overallTotals.forEach(([label, value]) => {
-        doc.text(`${label}: ${value}`, leftMargin + 5, yPosition);
-        yPosition += 5;
-      });
-      
-      // Reset position for second column
-      let column2Y = yPosition - (overallTotals.length * 5) - 8;
-      
-      // Column 2: Distribution Portion Allocation
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(19, 46, 44);
-      doc.text('Distribution Portion (60%)', leftMargin + 70, column2Y);
-      column2Y += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      doc.text(`Total Sales: ${formatCurrency(summary.jackpotTotalPortion)}`, leftMargin + 75, column2Y);
-      column2Y += 5;
-      doc.text(`Total Distributions: ${formatCurrency(summary.totalDistributions)}`, leftMargin + 75, column2Y);
-      column2Y += 5;
-      
-      // Column 3: Organization Portion Allocation
-      let column3Y = yPosition - (overallTotals.length * 5) - 8;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(19, 46, 44);
-      doc.text('Organization Portion (40%)', leftMargin + 130, column3Y);
-      column3Y += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      const orgPortionData = [
-        ['Total Sales', formatCurrency(summary.organizationTotalPortion)],
-        ['Total Expenses', formatCurrency(summary.totalExpenses)],
-        ['Total Donations', formatCurrency(summary.totalDonations)],
-        ['Net Profit', formatCurrency(summary.organizationNetProfit)]
-      ];
-      
-      orgPortionData.forEach(([label, value]) => {
-        doc.text(`${label}: ${value}`, leftMargin + 135, column3Y);
-        column3Y += 5;
-      });
-      
-      yPosition += 10;
-      
-      // Game Summary Section
-      if (summary.filteredGames.length > 0) {
-        checkNewPage(60);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.setTextColor(31, 78, 74);
-        doc.text('Game Summary', leftMargin, yPosition);
-        yPosition += 10;
-        
-        summary.filteredGames.forEach((game, index) => {
-          checkNewPage(30);
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.setTextColor(19, 46, 44);
-          doc.text(`${game.name}`, leftMargin, yPosition);
-          yPosition += 8;
-          
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(10);
-          doc.setTextColor(0, 0, 0);
-          
-          const gameData = [
-            ['Start Date', format(new Date(game.start_date), 'MMM d, yyyy')],
-            ['End Date', game.end_date ? format(new Date(game.end_date), 'MMM d, yyyy') : 'Ongoing'],
-            ['Total Sales', formatCurrency(game.total_sales)],
-            ['Total Distributions', formatCurrency(game.total_payouts)],
-            ['Total Expenses', formatCurrency(game.total_expenses)],
-            ['Total Donations', formatCurrency(game.total_donations)],
-            ['Net Profit', formatCurrency(game.organization_net_profit)],
-            ['Weeks Played', game.weeks.length.toString()]
-          ];
-          
-          gameData.forEach(([label, value]) => {
-            doc.text(`${label}: ${value}`, leftMargin + 10, yPosition);
-            yPosition += 5;
-          });
-          
-          yPosition += 5;
-        });
+      const { data, error } = await supabase
+        .from('game_types')
+        .select('name')
+        .order('name', { ascending: true });
+
+      if (error) {
+        throw error;
       }
-      
-      // Winner Information Section
-      if (winners.length > 0) {
-        checkNewPage(60);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.setTextColor(31, 78, 74);
-        doc.text('Recent Winners', leftMargin, yPosition);
-        yPosition += 10;
-        
-        // Show last 10 winners to avoid overwhelming the PDF
-        const recentWinners = winners.slice(0, 10);
-        
-        recentWinners.forEach((winner) => {
-          checkNewPage(15);
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(10);
-          doc.setTextColor(19, 46, 44);
-          doc.text(`${winner.name}`, leftMargin, yPosition);
-          
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(0, 0, 0);
-          doc.text(`${winner.gameName} - Week ${winner.weekNumber}`, leftMargin + 50, yPosition);
-          doc.text(`${winner.card} (Slot ${winner.slot})`, leftMargin + 110, yPosition);
-          doc.text(`${formatCurrency(winner.amount)}`, leftMargin + 160, yPosition);
-          yPosition += 6;
-        });
-        
-        if (winners.length > 10) {
-          yPosition += 5;
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(9);
-          doc.setTextColor(100, 100, 100);
-          doc.text(`... and ${winners.length - 10} more winners`, leftMargin, yPosition);
-        }
+
+      if (data) {
+        const types = data.map(item => item.name);
+        setGameTypes(['all', ...types]);
       }
-      
-      // Footer
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      const totalPages = doc.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-        doc.text('Queen of Hearts Financial Report', leftMargin, pageHeight - 10);
-      }
-      
-      const filename = `queen-of-hearts-financial-report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`;
-      doc.save(filename);
-      
+    } catch (error: any) {
+      console.error("Error fetching game types:", error);
       toast({
-        title: "Report Generated Successfully",
-        description: `Your comprehensive financial report has been downloaded as ${filename}`,
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to generate PDF report. Please try again.",
+        title: "Error",
+        description: "Failed to load game types.",
         variant: "destructive",
       });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F7F8FC] via-white to-[#F7F8FC]/50">
-        <div className="container mx-auto p-8">
-          <div className="flex flex-col items-center justify-center py-24 space-y-6">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#A1E96C] border-t-[#1F4E4A]"></div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold text-[#1F4E4A] font-inter">Loading Financial Data</h3>
-              <p className="text-[#132E2C]/60">Analyzing your Queen of Hearts performance...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const fetchGameSummaries = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('game_summaries')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setGameSummaries(data);
+      }
+    } catch (error: any) {
+      console.error("Error fetching game summaries:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load game summaries.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterGames = () => {
+    if (!date?.from || !date?.to) {
+      return;
+    }
+
+    const startDate = new Date(date.from);
+    const endDate = new Date(date.to);
+
+    const filtered = gameSummaries.filter((game) => {
+      const gameDate = new Date(game.created_at);
+      const isWithinRange = gameDate >= startDate && gameDate <= endDate;
+      const isMatchingType = gameType === "all" || game.game_name === gameType;
+      const isMatchingSearch = searchTerm === "" || game.game_name.toLowerCase().includes(searchTerm.toLowerCase());
+
+      return isWithinRange && isMatchingType && isMatchingSearch;
+    });
+
+    setFilteredGames(filtered);
+    calculateTotals(filtered);
+  };
+
+  const calculateTotals = (games: GameSummary[]) => {
+    const newTotalTicketsSold = games.reduce((acc, game) => acc + game.total_tickets_sold, 0);
+    const newTotalSales = games.reduce((acc, game) => acc + game.total_sales, 0);
+    const newTotalDistributions = games.reduce((acc, game) => acc + game.total_distributions, 0);
+    const newTotalExpenses = games.reduce((acc, game) => acc + game.total_expenses, 0);
+    const newTotalDonations = games.reduce((acc, game) => acc + game.total_donations, 0);
+    const newOrganizationTotalPortion = games.reduce((acc, game) => acc + game.organization_total_portion, 0);
+    const newJackpotTotalPortion = games.reduce((acc, game) => acc + game.jackpot_total_portion, 0);
+    const newOrganizationNetProfit = games.reduce((acc, game) => acc + game.organization_net_profit, 0);
+
+    setTotalTicketsSold(newTotalTicketsSold);
+    setTotalSales(newTotalSales);
+    setTotalDistributions(newTotalDistributions);
+    setTotalExpenses(newTotalExpenses);
+    setTotalDonations(newTotalDonations);
+    setOrganizationTotalPortion(newOrganizationTotalPortion);
+    setJackpotTotalPortion(newJackpotTotalPortion);
+    setOrganizationNetProfit(newOrganizationNetProfit);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  const formatDateRange = (dateRange: DateRange | undefined): string => {
+    if (!dateRange?.from || !dateRange?.to) {
+      return "No date selected";
+    }
+
+    const fromDate = format(dateRange.from, 'MMM d, yyyy');
+    const toDate = format(dateRange.to, 'MMM d, yyyy');
+
+    return `${fromDate} - ${toDate}`;
+  };
+
+  const generatePDF = async () => {
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPosition = margin;
+
+      // Header
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      const headerText = 'Income & Expense Report';
+      const headerWidth = pdf.getTextWidth(headerText);
+      const headerX = (pageWidth - headerWidth) / 2;
+      pdf.text(headerText, headerX, yPosition);
+      yPosition += 15;
+
+      // Organization Name
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'normal');
+      const orgName = profile?.organization_name || 'Organization Name';
+      const orgWidth = pdf.getTextWidth(orgName);
+      const orgX = (pageWidth - orgWidth) / 2;
+      pdf.text(orgName, orgX, yPosition);
+      yPosition += 10;
+
+      // Date Range
+      pdf.setFontSize(12);
+      const dateRangeText = `Date Range: ${formatDateRange(date)}`;
+      const dateRangeWidth = pdf.getTextWidth(dateRangeText);
+      const dateRangeX = (pageWidth - dateRangeWidth) / 2;
+      pdf.text(dateRangeText, dateRangeX, yPosition);
+      yPosition += 10;
+
+      // Summary Table
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Summary', margin, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      const summaryTableData = [
+        ['Total Tickets Sold', totalTicketsSold.toString()],
+        ['Total Sales', formatCurrency(totalSales)],
+        ['Total Distributions', formatCurrency(totalDistributions)],
+        ['Total Expenses', formatCurrency(totalExpenses)],
+        ['Total Donations', formatCurrency(totalDonations)],
+        ['Organization Total Portion', formatCurrency(organizationTotalPortion)],
+        ['Jackpot Total Portion', formatCurrency(jackpotTotalPortion)],
+        ['Organization Net Profit', formatCurrency(organizationNetProfit)],
+      ];
+
+      pdf.autoTable({
+        body: summaryTableData,
+        startY: yPosition,
+        margin: { left: margin, right: margin },
+        columnStyles: { 0: { fontStyle: 'bold' } },
+        styles: {
+          fontSize: 12,
+          textColor: [0, 0, 0],
+          cellPadding: 3,
+          overflow: 'linebreak',
+          lineWidth: 0.2,
+        },
+      });
+
+      yPosition = (pdf as any).lastAutoTable.finalY + 15;
+
+      // Game Summaries Table
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Game Summaries', margin, yPosition);
+      yPosition += 8;
+
+      const gameSummariesHeaders = ['Game', 'Tickets Sold', 'Sales', 'Distributions', 'Expenses', 'Donations', 'Org. Portion', 'Jackpot Portion', 'Net Profit'];
+      const gameSummariesData = filteredGames.map(game => [
+        game.game_name,
+        game.total_tickets_sold.toString(),
+        formatCurrency(game.total_sales),
+        formatCurrency(game.total_distributions),
+        formatCurrency(game.total_expenses),
+        formatCurrency(game.total_donations),
+        formatCurrency(game.organization_total_portion),
+        formatCurrency(game.jackpot_total_portion),
+        formatCurrency(game.organization_net_profit),
+      ]);
+
+      pdf.autoTable({
+        head: [gameSummariesHeaders],
+        body: gameSummariesData,
+        startY: yPosition,
+        margin: { left: margin, right: margin },
+        styles: {
+          fontSize: 10,
+          textColor: [0, 0, 0],
+          cellPadding: 3,
+          overflow: 'linebreak',
+          lineWidth: 0.2,
+        },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+        },
+      });
+
+      // Add a timestamp to the filename
+      const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+      const filename = `IncomeExpenseReport_${timestamp}.pdf`;
+
+      // Output the PDF
+      pdf.save(filename);
+
+      toast({
+        title: "Export Successful",
+        description: "Income & Expense report generated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF report.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F7F8FC] via-white to-[#F7F8FC]/50">
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Professional Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pb-6 border-b border-[#1F4E4A]/10">
-          <div className="space-y-3">
-            <h1 className="text-4xl font-bold text-[#1F4E4A] font-inter tracking-tight">
-              Financial Analytics & Reporting
-            </h1>
-            <p className="text-lg text-[#132E2C]/70 font-medium">
-              Comprehensive financial insights and performance analytics for Queen of Hearts fundraising
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button 
-              variant="outline"
-              onClick={generatePdfReport}
-              className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white font-medium"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export Report
-            </Button>
-          </div>
-        </div>
-
-        {/* Advanced Filters */}
-        <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <Filter className="h-5 w-5 text-[#1F4E4A]" />
-              <div>
-                <CardTitle className="text-[#1F4E4A] font-inter">Analysis Configuration</CardTitle>
-                <CardDescription className="text-[#132E2C]/60">
-                  Configure your financial analysis parameters and time ranges
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <Trophy className="h-4 w-4" />
-                  Game Selection
-                </Label>
-                <Select value={selectedGame} onValueChange={setSelectedGame}>
-                  <SelectTrigger className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium">
-                    <SelectValue placeholder="Select games" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Games</SelectItem>
-                    {games.map(game => (
-                      <SelectItem key={game.id} value={game.id}>{game.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Start Date
-                </Label>
-                <DatePickerWithInput
-                  date={startDate}
-                  setDate={setStartDate}
-                  placeholder="Select start date"
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  End Date
-                </Label>
-                <DatePickerWithInput
-                  date={endDate}
-                  setDate={setEndDate}
-                  placeholder="Select end date"
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Analysis Type
-                </Label>
-                <Select value={reportType} onValueChange={(value: any) => setReportType(value)}>
-                  <SelectTrigger className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weekly">Weekly Analysis</SelectItem>
-                    <SelectItem value="game">Game Analysis</SelectItem>
-                    <SelectItem value="cumulative">Cumulative Overview</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Overview Section */}
-        <FinancialOverview summary={summary} formatCurrency={formatCurrency} />
-
-        {/* Winner Information Section */}
-        {winners.length > 0 && (
-          <WinnerInformation winners={winners} formatCurrency={formatCurrency} />
-        )}
-
-        {/* Analytics Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-[#F7F8FC] p-1 rounded-xl h-12">
-            <TabsTrigger 
-              value="overview" 
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
-            >
-              <PieChart className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="comparison" 
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
-            >
-              <Target className="h-4 w-4 mr-2" />
-              Game Analysis
-            </TabsTrigger>
-            <TabsTrigger 
-              value="analytics" 
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
-            >
-              <Activity className="h-4 w-4 mr-2" />
-              Performance
-            </TabsTrigger>
-            <TabsTrigger 
-              value="details" 
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
-            >
-              <Receipt className="h-4 w-4 mr-2" />
-              Details
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <FinancialCharts 
-              games={summary.filteredGames}
-              reportType="cumulative"
-              selectedGame={selectedGame}
-            />
-          </TabsContent>
-
-          <TabsContent value="comparison" className="space-y-6">
-            <GameComparisonTable 
-              games={summary.filteredGames}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <FinancialCharts 
-              games={summary.filteredGames}
-              reportType={reportType}
-              selectedGame={selectedGame}
-            />
-          </TabsContent>
-
-          <TabsContent value="details" className="space-y-6">
-            <DetailedFinancialTable 
-              games={summary.filteredGames}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
-        </Tabs>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Income & Expense</h1>
+        <p className="text-muted-foreground">
+          View and manage income and expense reports for your organization
+        </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+          <CardDescription>
+            Filter games by date range, game type, and search term
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Date Range</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={
+                      "w-full justify-start text-left font-normal" +
+                      (date?.from ? "pl-3.5" : "text-muted-foreground")
+                    }
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date?.from ? (
+                      formatDateRange(date)
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                    pagedNavigation
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label>Game Type</Label>
+              <Select value={gameType} onValueChange={setGameType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a game type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gameTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Search</Label>
+              <Input
+                type="text"
+                placeholder="Search by game name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Summary</CardTitle>
+          <CardDescription>
+            Summary of income and expenses for the selected games
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Tickets Sold</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalTicketsSold}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Sales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(totalSales)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Distributions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(totalDistributions)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Expenses</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(totalExpenses)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Donations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(totalDonations)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Organization Total Portion</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(organizationTotalPortion)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Jackpot Total Portion</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(jackpotTotalPortion)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Organization Net Profit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(organizationNetProfit)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Game Summaries</CardTitle>
+          <CardDescription>
+            Detailed summaries for each game within the selected filters
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredGames.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-left">Game</TableHead>
+                    <TableHead className="text-left">Tickets Sold</TableHead>
+                    <TableHead className="text-left">Sales</TableHead>
+                    <TableHead className="text-left">Distributions</TableHead>
+                    <TableHead className="text-left">Expenses</TableHead>
+                    <TableHead className="text-left">Donations</TableHead>
+                    <TableHead className="text-left">Org. Portion</TableHead>
+                    <TableHead className="text-left">Jackpot Portion</TableHead>
+                    <TableHead className="text-left">Net Profit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGames.map((game) => (
+                    <TableRow key={game.id}>
+                      <TableCell className="font-medium">{game.game_name}</TableCell>
+                      <TableCell>{game.total_tickets_sold}</TableCell>
+                      <TableCell>{formatCurrency(game.total_sales)}</TableCell>
+                      <TableCell>{formatCurrency(game.total_distributions)}</TableCell>
+                      <TableCell>{formatCurrency(game.total_expenses)}</TableCell>
+                      <TableCell>{formatCurrency(game.total_donations)}</TableCell>
+                      <TableCell>
+                        {formatCurrency(game.organization_total_portion)}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(game.jackpot_total_portion)}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(game.organization_net_profit)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-right">
+                      <Button onClick={generatePDF}>
+                        Export Report <Download className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-4">No games found for the selected filters.</div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
