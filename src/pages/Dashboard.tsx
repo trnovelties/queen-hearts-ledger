@@ -2,111 +2,160 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { ChevronDown, ChevronUp, Plus, Trash } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
+interface Game {
+  id: string;
+  name: string;
+  game_number: number;
+  start_date: string;
+  end_date?: string;
+  ticket_price: number;
+  organization_percentage: number;
+  jackpot_percentage: number;
+  carryover_jackpot: number;
+  total_sales: number;
+  total_payouts: number;
+  total_expenses: number;
+  total_donations: number;
+  organization_net_profit: number;
+  minimum_starting_jackpot: number;
+}
+
+interface Week {
+  id: string;
+  game_id: string;
+  week_number: number;
+  start_date: string;
+  end_date: string;
+  weekly_sales: number;
+  weekly_tickets_sold: number;
+  weekly_payout: number;
+  winner_name?: string;
+  slot_chosen?: number;
+  card_selected?: string;
+  winner_present: boolean;
+}
+
+interface TicketSale {
+  id: string;
+  game_id: string;
+  week_id: string;
+  date: string;
+  tickets_sold: number;
+  ticket_price: number;
+  amount_collected: number;
+  cumulative_collected: number;
+  organization_total: number;
+  jackpot_total: number;
+  weekly_payout_amount: number;
+  ending_jackpot_total: number;
+}
+
+interface Expense {
+  id: string;
+  game_id: string;
+  date: string;
+  amount: number;
+  memo: string;
+  is_donation: boolean;
+}
+
 export default function Dashboard() {
-  const [games, setGames] = useState<any[]>([]);
-  const [weeks, setWeeks] = useState<Record<string, any[]>>({});
-  const [ticketSales, setTicketSales] = useState<Record<string, any[]>>({});
-  const [expenses, setExpenses] = useState<Record<string, any[]>>({});
+  const [games, setGames] = useState<Game[]>([]);
+  const [weeks, setWeeks] = useState<Record<string, Week[]>>({});
+  const [ticketSales, setTicketSales] = useState<Record<string, TicketSale[]>>({});
+  const [expenses, setExpenses] = useState<Record<string, Expense[]>>({});
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
-  const [expandedExpenses, setExpandedExpenses] = useState<string | null>(null);
-  const [newGameName, setNewGameName] = useState('');
-  const [newWeekName, setNewWeekName] = useState('');
+  const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
   const [newGameDialogOpen, setNewGameDialogOpen] = useState(false);
-  const [newWeekDialogOpen, setNewWeekDialogOpen] = useState(false);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [newTicketSaleDialogOpen, setNewTicketSaleDialogOpen] = useState(false);
-  const [newTicketSale, setNewTicketSale] = useState({
-    weekId: '',
-    quantity: '',
-    price: '',
-    notes: ''
+  const [newGameData, setNewGameData] = useState({
+    name: '',
+    ticket_price: 2,
+    organization_percentage: 40,
+    jackpot_percentage: 60,
+    minimum_starting_jackpot: 500
   });
-  const [newExpenseDialogOpen, setNewExpenseDialogOpen] = useState(false);
-  const [newExpense, setNewExpense] = useState({
-    gameId: '',
-    amount: '',
-    description: ''
-  });
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
-  const [deleteType, setDeleteType] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGames();
   }, []);
 
   const fetchGames = async () => {
-    const { data, error } = await supabase
-      .from('games')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (error) throw error;
+      setGames(data || []);
+    } catch (error) {
       console.error('Error fetching games:', error);
-      return;
+      toast({
+        title: "Error",
+        description: "Failed to fetch games",
+        variant: "destructive"
+      });
     }
-
-    setGames(data || []);
   };
 
   const fetchWeeks = async (gameId: string) => {
-    const { data, error } = await supabase
-      .from('weeks')
-      .select('*')
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('week_number', { ascending: true });
 
-    if (error) {
+      if (error) throw error;
+      
+      setWeeks(prev => ({ ...prev, [gameId]: data || [] }));
+      
+      // Fetch ticket sales for each week
+      data?.forEach(week => {
+        fetchTicketSales(week.id);
+      });
+    } catch (error) {
       console.error('Error fetching weeks:', error);
-      return;
     }
-
-    setWeeks(prev => ({ ...prev, [gameId]: data || [] }));
-
-    // Fetch ticket sales for each week
-    data?.forEach(week => {
-      fetchTicketSales(week.id);
-    });
   };
 
   const fetchTicketSales = async (weekId: string) => {
-    const { data, error } = await supabase
-      .from('ticket_sales')
-      .select('*')
-      .eq('week_id', weekId)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('week_id', weekId)
+        .order('date', { ascending: true });
 
-    if (error) {
+      if (error) throw error;
+      setTicketSales(prev => ({ ...prev, [weekId]: data || [] }));
+    } catch (error) {
       console.error('Error fetching ticket sales:', error);
-      return;
     }
-
-    setTicketSales(prev => ({ ...prev, [weekId]: data || [] }));
   };
 
   const fetchExpenses = async (gameId: string) => {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('date', { ascending: false });
 
-    if (error) {
+      if (error) throw error;
+      setExpenses(prev => ({ ...prev, [gameId]: data || [] }));
+    } catch (error) {
       console.error('Error fetching expenses:', error);
-      return;
     }
-
-    setExpenses(prev => ({ ...prev, [gameId]: data || [] }));
   };
 
   const toggleGameExpansion = (gameId: string) => {
@@ -115,852 +164,334 @@ export default function Dashboard() {
     } else {
       setExpandedGame(gameId);
       fetchWeeks(gameId);
-    }
-  };
-
-  const toggleExpensesExpansion = (gameId: string) => {
-    if (expandedExpenses === gameId) {
-      setExpandedExpenses(null);
-    } else {
-      setExpandedExpenses(gameId);
       fetchExpenses(gameId);
     }
   };
 
+  const toggleWeekExpansion = (weekId: string) => {
+    if (expandedWeek === weekId) {
+      setExpandedWeek(null);
+    } else {
+      setExpandedWeek(weekId);
+    }
+  };
+
   const handleCreateGame = async () => {
-    if (!newGameName.trim()) {
+    if (!newGameData.name.trim()) {
       toast({
         title: "Error",
-        description: "Game name cannot be empty",
+        description: "Game name is required",
         variant: "destructive"
       });
       return;
     }
 
-    const { data, error } = await supabase
-      .from('games')
-      .insert([{ 
-        name: newGameName,
-        game_number: 1,
-        start_date: new Date().toISOString().split('T')[0]
-      }])
-      .select();
-
-    if (error) {
+    if (newGameData.organization_percentage + newGameData.jackpot_percentage !== 100) {
       toast({
         title: "Error",
-        description: `Failed to create game: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setNewGameName('');
-    setNewGameDialogOpen(false);
-    fetchGames();
-    toast({
-      title: "Success",
-      description: "Game created successfully"
-    });
-  };
-
-  const handleCreateWeek = async () => {
-    if (!newWeekName.trim() || !selectedGameId) {
-      toast({
-        title: "Error",
-        description: "Week name cannot be empty and a game must be selected",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('weeks')
-      .insert([{ 
-        week_number: 1,
-        game_id: selectedGameId,
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date().toISOString().split('T')[0]
-      }])
-      .select();
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to create week: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setNewWeekName('');
-    setNewWeekDialogOpen(false);
-    fetchWeeks(selectedGameId);
-    toast({
-      title: "Success",
-      description: "Week created successfully"
-    });
-  };
-
-  const handleCreateTicketSale = async () => {
-    if (!newTicketSale.weekId || !newTicketSale.quantity || !newTicketSale.price) {
-      toast({
-        title: "Error",
-        description: "Week, quantity, and price are required",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('ticket_sales')
-      .insert([{
-        week_id: newTicketSale.weekId,
-        game_id: selectedGameId || '',
-        date: new Date().toISOString().split('T')[0],
-        tickets_sold: parseInt(newTicketSale.quantity),
-        ticket_price: parseFloat(newTicketSale.price),
-        amount_collected: parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price),
-        cumulative_collected: parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price),
-        organization_total: (parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price)) * 0.4,
-        jackpot_total: (parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price)) * 0.6,
-        ending_jackpot_total: (parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price)) * 0.6
-      }])
-      .select();
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to create ticket sale: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setNewTicketSale({
-      weekId: '',
-      quantity: '',
-      price: '',
-      notes: ''
-    });
-    setNewTicketSaleDialogOpen(false);
-    fetchTicketSales(newTicketSale.weekId);
-    toast({
-      title: "Success",
-      description: "Ticket sale created successfully"
-    });
-  };
-
-  const handleCreateExpense = async () => {
-    if (!newExpense.gameId || !newExpense.amount || !newExpense.description) {
-      toast({
-        title: "Error",
-        description: "Game, amount, and description are required",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert([{
-        game_id: newExpense.gameId,
-        amount: parseFloat(newExpense.amount),
-        memo: newExpense.description,
-        date: new Date().toISOString().split('T')[0]
-      }])
-      .select();
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to create expense: ${error.message}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setNewExpense({
-      gameId: '',
-      amount: '',
-      description: ''
-    });
-    setNewExpenseDialogOpen(false);
-    fetchExpenses(newExpense.gameId);
-    toast({
-      title: "Success",
-      description: "Expense created successfully"
-    });
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteItemId) {
-      toast({
-        title: "Error",
-        description: "No item selected for deletion.",
+        description: "Organization and jackpot percentages must total 100%",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      console.log(`Starting deletion of ${deleteType} with ID: ${deleteItemId}`);
+      const gameNumber = games.length + 1;
+      
+      const { data, error } = await supabase
+        .from('games')
+        .insert([{
+          name: newGameData.name,
+          game_number: gameNumber,
+          start_date: new Date().toISOString().split('T')[0],
+          ticket_price: newGameData.ticket_price,
+          organization_percentage: newGameData.organization_percentage,
+          jackpot_percentage: newGameData.jackpot_percentage,
+          minimum_starting_jackpot: newGameData.minimum_starting_jackpot,
+          carryover_jackpot: 0,
+          total_sales: 0,
+          total_payouts: 0,
+          total_expenses: 0,
+          total_donations: 0,
+          organization_net_profit: 0
+        }])
+        .select();
 
-      if (deleteType === 'game') {
-        // First, check if the game exists
-        const { data: gameCheck, error: gameCheckError } = await supabase
-          .from('games')
-          .select('id, name')
-          .eq('id', deleteItemId)
-          .single();
+      if (error) throw error;
 
-        if (gameCheckError) {
-          console.error('Game not found:', gameCheckError);
-          throw new Error(`Game not found: ${gameCheckError.message}`);
-        }
-
-        console.log('Game found:', gameCheck);
-
-        // Delete all ticket_sales for this game first
-        console.log('Deleting ticket sales...');
-        const { error: ticketSalesError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('game_id', deleteItemId);
-
-        if (ticketSalesError) {
-          console.error('Error deleting ticket sales:', ticketSalesError);
-          throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
-        }
-        console.log('Ticket sales deleted successfully');
-
-        // Delete all weeks for this game
-        console.log('Deleting weeks...');
-        const { error: weeksError } = await supabase
-          .from('weeks')
-          .delete()
-          .eq('game_id', deleteItemId);
-
-        if (weeksError) {
-          console.error('Error deleting weeks:', weeksError);
-          throw new Error(`Failed to delete weeks: ${weeksError.message}`);
-        }
-        console.log('Weeks deleted successfully');
-
-        // Delete all expenses for this game
-        console.log('Deleting expenses...');
-        const { error: expensesError } = await supabase
-          .from('expenses')
-          .delete()
-          .eq('game_id', deleteItemId);
-
-        if (expensesError) {
-          console.error('Error deleting expenses:', expensesError);
-          throw new Error(`Failed to delete expenses: ${expensesError.message}`);
-        }
-        console.log('Expenses deleted successfully');
-
-        // Finally delete the game itself
-        console.log('Deleting game...');
-        const { error: gameError } = await supabase
-          .from('games')
-          .delete()
-          .eq('id', deleteItemId);
-
-        if (gameError) {
-          console.error('Error deleting game:', gameError);
-          throw new Error(`Failed to delete game: ${gameError.message}`);
-        }
-        console.log('Game deleted successfully');
-
-        // Reset expanded states immediately
-        if (expandedGame === deleteItemId) {
-          setExpandedGame(null);
-        }
-        if (expandedExpenses === deleteItemId) {
-          setExpandedExpenses(null);
-        }
-
-        // Clear all related state
-        setWeeks({});
-        setTicketSales({});
-        setExpenses({});
-
-        // Immediately refresh the games list
-        await fetchGames();
-
-        toast({
-          title: "Game Deleted",
-          description: `Game "${gameCheck.name}" and all associated data have been deleted successfully.`
-        });
-
-      } else if (deleteType === 'week') {
-        // First delete all ticket sales for this week
-        const { error: ticketSalesError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('week_id', deleteItemId);
-
-        if (ticketSalesError) {
-          throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
-        }
-
-        // Then delete the week itself
-        const { data: weekData, error: weekError } = await supabase
-          .from('weeks')
-          .delete()
-          .eq('id', deleteItemId)
-          .select('game_id')
-          .single();
-
-        if (weekError) {
-          throw new Error(`Failed to delete week: ${weekError.message}`);
-        }
-
-        // Refresh the weeks for this game
-        fetchWeeks(weekData.game_id);
-
-        toast({
-          title: "Week Deleted",
-          description: "Week and all associated ticket sales have been deleted."
-        });
-      } else if (deleteType === 'entry') {
-        const { data: entryData, error: entryError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('id', deleteItemId)
-          .select('week_id')
-          .single();
-
-        if (entryError) {
-          throw new Error(`Failed to delete entry: ${entryError.message}`);
-        }
-
-        // Refresh the ticket sales for this week
-        fetchTicketSales(entryData.week_id);
-
-        toast({
-          title: "Entry Deleted",
-          description: "Ticket sale entry has been deleted."
-        });
-      } else if (deleteType === 'expense') {
-        const { data: expenseData, error: expenseError } = await supabase
-          .from('expenses')
-          .delete()
-          .eq('id', deleteItemId)
-          .select('game_id')
-          .single();
-
-        if (expenseError) {
-          throw new Error(`Failed to delete expense: ${expenseError.message}`);
-        }
-
-        // Refresh the expenses for this game
-        fetchExpenses(expenseData.game_id);
-
-        toast({
-          title: "Expense Deleted",
-          description: "Expense has been deleted."
-        });
-      }
-
-    } catch (error: any) {
-      console.error('Error during deletion:', error);
+      setNewGameData({
+        name: '',
+        ticket_price: 2,
+        organization_percentage: 40,
+        jackpot_percentage: 60,
+        minimum_starting_jackpot: 500
+      });
+      setNewGameDialogOpen(false);
+      fetchGames();
+      
       toast({
-        title: "Delete Failed",
-        description: error.message || `Failed to delete ${deleteType}: Unknown error`,
+        title: "Success",
+        description: "Game created successfully"
+      });
+    } catch (error) {
+      console.error('Error creating game:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create game",
         variant: "destructive"
       });
-    } finally {
-      setDeleteDialogOpen(false);
-      setDeleteItemId(null);
-      setDeleteType(null);
     }
   };
 
-  const calculateGameStats = (gameId: string) => {
-    let totalRevenue = 0;
-    let totalExpenses = 0;
-
-    // Calculate revenue from all weeks and their ticket sales
-    const gameWeeks = weeks[gameId] || [];
-    gameWeeks.forEach(week => {
-      const weekTicketSales = ticketSales[week.id] || [];
-      weekTicketSales.forEach(sale => {
-        totalRevenue += sale.tickets_sold * sale.ticket_price;
-      });
-    });
-
-    // Calculate expenses
-    const gameExpenses = expenses[gameId] || [];
-    gameExpenses.forEach(expense => {
-      totalExpenses += expense.amount;
-    });
-
-    const profit = totalRevenue - totalExpenses;
-
-    return {
-      totalRevenue,
-      totalExpenses,
-      profit
-    };
-  };
-
-  const calculateWeekStats = (weekId: string) => {
-    let totalRevenue = 0;
-    const weekTicketSales = ticketSales[weekId] || [];
-    
-    weekTicketSales.forEach(sale => {
-      totalRevenue += sale.tickets_sold * sale.ticket_price;
-    });
-
-    return {
-      totalRevenue,
-      totalTickets: weekTicketSales.reduce((sum, sale) => sum + sale.tickets_sold, 0)
-    };
-  };
-
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-6 px-4" style={{ backgroundColor: '#F7F8FC' }}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Game Dashboard</h1>
-        <div className="space-x-2">
-          <Button onClick={() => setNewGameDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Game
-          </Button>
-          <Button onClick={() => setNewWeekDialogOpen(true)} variant="outline">
-            <Plus className="mr-2 h-4 w-4" /> New Week
-          </Button>
-          <Button onClick={() => setNewTicketSaleDialogOpen(true)} variant="outline">
-            <Plus className="mr-2 h-4 w-4" /> New Ticket Sale
-          </Button>
-          <Button onClick={() => setNewExpenseDialogOpen(true)} variant="outline">
-            <Plus className="mr-2 h-4 w-4" /> New Expense
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold" style={{ color: '#132E2C' }}>
+          Queen of Hearts Manager
+        </h1>
+        <Button 
+          onClick={() => setNewGameDialogOpen(true)}
+          className="flex items-center gap-2"
+          style={{ backgroundColor: '#1F4E4A', color: 'white' }}
+        >
+          <Plus className="h-4 w-4" />
+          Create Game
+        </Button>
       </div>
 
       {games.length === 0 ? (
-        <Card className="mb-4">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">No games found. Create your first game to get started.</p>
+        <Card className="text-center py-12">
+          <CardContent>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: '#132E2C' }}>
+              No games found
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Create your first Queen of Hearts game to get started
+            </p>
+            <Button 
+              onClick={() => setNewGameDialogOpen(true)}
+              style={{ backgroundColor: '#A1E96C', color: '#132E2C' }}
+            >
+              Create Your First Game
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        games.map(game => (
-          <Card key={game.id} className="mb-4">
-            <CardHeader className="cursor-pointer" onClick={() => toggleGameExpansion(game.id)}>
-              <div className="flex justify-between items-center">
-                <CardTitle>{game.name}</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteType('game');
-                      setDeleteItemId(game.id);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash className="h-4 w-4 text-red-500" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    {expandedGame === game.id ? <ChevronUp /> : <ChevronDown />}
-                  </Button>
+        <div className="space-y-4">
+          {games.map(game => (
+            <Card key={game.id} className="shadow-md">
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => toggleGameExpansion(game.id)}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-xl" style={{ color: '#132E2C' }}>
+                      {game.name}
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">
+                      Started: {new Date(game.start_date).toLocaleDateString()}
+                      {game.end_date && ` | Ended: ${new Date(game.end_date).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Total Sales</p>
+                      <p className="font-semibold" style={{ color: '#1F4E4A' }}>
+                        {formatCurrency(game.total_sales)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Organization Net</p>
+                      <p className="font-semibold" style={{ color: '#A1E96C' }}>
+                        {formatCurrency(game.organization_net_profit)}
+                      </p>
+                    </div>
+                    {expandedGame === game.id ? 
+                      <ChevronUp className="h-5 w-5" /> : 
+                      <ChevronDown className="h-5 w-5" />
+                    }
+                  </div>
                 </div>
-              </div>
+              </CardHeader>
+
               {expandedGame === game.id && (
-                <div className="mt-2 grid grid-cols-3 gap-4">
-                  <div className="bg-green-100 dark:bg-green-900 p-2 rounded">
-                    <p className="text-sm font-medium">Total Revenue</p>
-                    <p className="text-lg font-bold">{formatCurrency(calculateGameStats(game.id).totalRevenue)}</p>
-                  </div>
-                  <div className="bg-red-100 dark:bg-red-900 p-2 rounded">
-                    <p className="text-sm font-medium">Total Expenses</p>
-                    <p className="text-lg font-bold">{formatCurrency(calculateGameStats(game.id).totalExpenses)}</p>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded">
-                    <p className="text-sm font-medium">Profit</p>
-                    <p className="text-lg font-bold">{formatCurrency(calculateGameStats(game.id).profit)}</p>
-                  </div>
-                </div>
-              )}
-            </CardHeader>
-            
-            {expandedGame === game.id && (
-              <CardContent>
-                <Tabs defaultValue="weeks">
-                  <TabsList>
-                    <TabsTrigger value="weeks">Weeks</TabsTrigger>
-                    <TabsTrigger value="expenses">Expenses</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="weeks">
-                    {weeks[game.id]?.length > 0 ? (
-                      <div className="space-y-4">
-                        {weeks[game.id].map(week => (
-                          <Card key={week.id}>
-                            <CardHeader>
-                              <div className="flex justify-between items-center">
-                                <CardTitle className="text-lg">Week {week.week_number}</CardTitle>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => {
-                                    setDeleteType('week');
-                                    setDeleteItemId(week.id);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                <div className="bg-green-100 dark:bg-green-900 p-2 rounded">
-                                  <p className="text-sm font-medium">Revenue</p>
-                                  <p className="text-lg font-bold">{formatCurrency(calculateWeekStats(week.id).totalRevenue)}</p>
-                                </div>
-                                <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded">
-                                  <p className="text-sm font-medium">Tickets Sold</p>
-                                  <p className="text-lg font-bold">{calculateWeekStats(week.id).totalTickets}</p>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent>
-                              <h4 className="font-medium mb-2">Ticket Sales</h4>
-                              {ticketSales[week.id]?.length > 0 ? (
-                                <div className="space-y-2">
-                                  {ticketSales[week.id].map(sale => (
-                                    <div key={sale.id} className="flex justify-between items-center p-2 bg-muted rounded">
-                                      <div>
-                                        <p className="font-medium">{sale.tickets_sold} tickets @ {formatCurrency(sale.ticket_price)}</p>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <p className="font-medium">{formatCurrency(sale.tickets_sold * sale.ticket_price)}</p>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm" 
-                                          onClick={() => {
-                                            setDeleteType('entry');
-                                            setDeleteItemId(sale.id);
-                                            setDeleteDialogOpen(true);
-                                          }}
-                                        >
-                                          <Trash className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-muted-foreground">No ticket sales recorded for this week.</p>
-                              )}
-                              <Button 
-                                className="mt-4" 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setNewTicketSale(prev => ({ ...prev, weekId: week.id }));
-                                  setNewTicketSaleDialogOpen(true);
-                                }}
-                              >
-                                <Plus className="mr-2 h-4 w-4" /> Add Ticket Sale
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-muted-foreground">No weeks found for this game.</p>
-                        <Button 
-                          className="mt-2" 
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedGameId(game.id);
-                            setNewWeekDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="mr-2 h-4 w-4" /> Add Week
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
-                  <TabsContent value="expenses">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-medium">Expenses</h3>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setNewExpense(prev => ({ ...prev, gameId: game.id }));
-                            setNewExpenseDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="mr-2 h-4 w-4" /> Add Expense
-                        </Button>
-                      </div>
-                      
-                      {expenses[game.id]?.length > 0 ? (
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Week cards will go here */}
+                    <div className="border-t pt-4">
+                      <h3 className="font-semibold mb-2" style={{ color: '#132E2C' }}>
+                        Weeks
+                      </h3>
+                      {weeks[game.id]?.length > 0 ? (
                         <div className="space-y-2">
-                          {expenses[game.id].map(expense => (
-                            <div key={expense.id} className="flex justify-between items-center p-2 bg-muted rounded">
-                              <div>
-                                <p className="font-medium">{expense.memo}</p>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium text-red-500">{formatCurrency(expense.amount)}</p>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => {
-                                    setDeleteType('expense');
-                                    setDeleteItemId(expense.id);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </div>
-                            </div>
+                          {weeks[game.id].map(week => (
+                            <Card key={week.id} className="border-l-4" style={{ borderLeftColor: '#A1E96C' }}>
+                              <CardHeader 
+                                className="cursor-pointer py-3"
+                                onClick={() => toggleWeekExpansion(week.id)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <h4 className="font-medium">Week {week.week_number}</h4>
+                                    <p className="text-sm text-gray-600">
+                                      {new Date(week.start_date).toLocaleDateString()} - {new Date(week.end_date).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                      <p className="text-sm text-gray-600">Tickets Sold</p>
+                                      <p className="font-medium">{week.weekly_tickets_sold}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm text-gray-600">Sales</p>
+                                      <p className="font-medium">{formatCurrency(week.weekly_sales)}</p>
+                                    </div>
+                                    {week.winner_name && (
+                                      <div className="text-right">
+                                        <p className="text-sm text-gray-600">Winner</p>
+                                        <p className="font-medium">{week.winner_name}</p>
+                                      </div>
+                                    )}
+                                    {expandedWeek === week.id ? 
+                                      <ChevronUp className="h-4 w-4" /> : 
+                                      <ChevronDown className="h-4 w-4" />
+                                    }
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              
+                              {expandedWeek === week.id && (
+                                <CardContent className="pt-0">
+                                  <div className="space-y-2">
+                                    {ticketSales[week.id]?.map(sale => (
+                                      <div key={sale.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                        <div>
+                                          <span className="font-medium">{new Date(sale.date).toLocaleDateString()}</span>
+                                          <span className="ml-2 text-gray-600">
+                                            {sale.tickets_sold} tickets @ {formatCurrency(sale.ticket_price)}
+                                          </span>
+                                        </div>
+                                        <span className="font-semibold">
+                                          {formatCurrency(sale.amount_collected)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                              )}
+                            </Card>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-muted-foreground">No expenses recorded for this game.</p>
+                        <p className="text-gray-600 text-center py-4">
+                          No weeks created yet
+                        </p>
                       )}
                     </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            )}
-          </Card>
-        ))
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
       )}
 
-      {/* New Game Dialog */}
+      {/* Create Game Dialog */}
       <Dialog open={newGameDialogOpen} onOpenChange={setNewGameDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Game</DialogTitle>
             <DialogDescription>
-              Enter the details for your new game.
+              Set up a new Queen of Hearts game with your preferred settings.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="gameName">Game Name</Label>
               <Input
-                id="name"
-                value={newGameName}
-                onChange={(e) => setNewGameName(e.target.value)}
-                className="col-span-3"
+                id="gameName"
+                value={newGameData.name}
+                onChange={(e) => setNewGameData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Game 1, Summer 2024"
               />
             </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ticketPrice">Ticket Price ($)</Label>
+                <Input
+                  id="ticketPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newGameData.ticket_price}
+                  onChange={(e) => setNewGameData(prev => ({ ...prev, ticket_price: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="minimumJackpot">Minimum Starting Jackpot ($)</Label>
+                <Input
+                  id="minimumJackpot"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newGameData.minimum_starting_jackpot}
+                  onChange={(e) => setNewGameData(prev => ({ ...prev, minimum_starting_jackpot: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="orgPercentage">Organization Percentage (%)</Label>
+                <Input
+                  id="orgPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newGameData.organization_percentage}
+                  onChange={(e) => setNewGameData(prev => ({ 
+                    ...prev, 
+                    organization_percentage: parseInt(e.target.value) || 0,
+                    jackpot_percentage: 100 - (parseInt(e.target.value) || 0)
+                  }))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="jackpotPercentage">Jackpot Percentage (%)</Label>
+                <Input
+                  id="jackpotPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newGameData.jackpot_percentage}
+                  onChange={(e) => setNewGameData(prev => ({ 
+                    ...prev, 
+                    jackpot_percentage: parseInt(e.target.value) || 0,
+                    organization_percentage: 100 - (parseInt(e.target.value) || 0)
+                  }))}
+                />
+              </div>
+            </div>
           </div>
+          
           <DialogFooter>
-            <Button onClick={handleCreateGame}>Create Game</Button>
+            <Button variant="outline" onClick={() => setNewGameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateGame}
+              style={{ backgroundColor: '#1F4E4A', color: 'white' }}
+            >
+              Create Game
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* New Week Dialog */}
-      <Dialog open={newWeekDialogOpen} onOpenChange={setNewWeekDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Week</DialogTitle>
-            <DialogDescription>
-              Enter the details for your new week.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="game" className="text-right">
-                Game
-              </Label>
-              <select
-                id="game"
-                value={selectedGameId || ''}
-                onChange={(e) => setSelectedGameId(e.target.value)}
-                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select a game</option>
-                {games.map(game => (
-                  <option key={game.id} value={game.id}>{game.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="weekName" className="text-right">
-                Week Name
-              </Label>
-              <Input
-                id="weekName"
-                value={newWeekName}
-                onChange={(e) => setNewWeekName(e.target.value)}
-                className="col-span-3"
-                placeholder="e.g., Week 1, Finals, etc."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleCreateWeek}>Create Week</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Ticket Sale Dialog */}
-      <Dialog open={newTicketSaleDialogOpen} onOpenChange={setNewTicketSaleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Ticket Sale</DialogTitle>
-            <DialogDescription>
-              Record a new ticket sale for a specific week.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="week" className="text-right">
-                Week
-              </Label>
-              <select
-                id="week"
-                value={newTicketSale.weekId}
-                onChange={(e) => setNewTicketSale(prev => ({ ...prev, weekId: e.target.value }))}
-                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select a week</option>
-                {games.map(game => (
-                  <optgroup key={game.id} label={game.name}>
-                    {(weeks[game.id] || []).map(week => (
-                      <option key={week.id} value={week.id}>Week {week.week_number}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="quantity" className="text-right">
-                Quantity
-              </Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={newTicketSale.quantity}
-                onChange={(e) => setNewTicketSale(prev => ({ ...prev, quantity: e.target.value }))}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price per Ticket
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                value={newTicketSale.price}
-                onChange={(e) => setNewTicketSale(prev => ({ ...prev, price: e.target.value }))}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="notes" className="text-right">
-                Notes
-              </Label>
-              <Input
-                id="notes"
-                value={newTicketSale.notes}
-                onChange={(e) => setNewTicketSale(prev => ({ ...prev, notes: e.target.value }))}
-                className="col-span-3"
-                placeholder="Optional"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleCreateTicketSale}>Add Sale</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Expense Dialog */}
-      <Dialog open={newExpenseDialogOpen} onOpenChange={setNewExpenseDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Expense</DialogTitle>
-            <DialogDescription>
-              Record a new expense for a game.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="expenseGame" className="text-right">
-                Game
-              </Label>
-              <select
-                id="expenseGame"
-                value={newExpense.gameId}
-                onChange={(e) => setNewExpense(prev => ({ ...prev, gameId: e.target.value }))}
-                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select a game</option>
-                {games.map(game => (
-                  <option key={game.id} value={game.id}>{game.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Amount
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                value={newExpense.amount}
-                onChange={(e) => setNewExpense(prev => ({ ...prev, amount: e.target.value }))}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description
-              </Label>
-              <Input
-                id="description"
-                value={newExpense.description}
-                onChange={(e) => setNewExpense(prev => ({ ...prev, description: e.target.value }))}
-                className="col-span-3"
-                placeholder="e.g., Venue Rental, Equipment, etc."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleCreateExpense}>Add Expense</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteType === 'game' && "This will delete the game and all associated weeks, ticket sales, and expenses."}
-              {deleteType === 'week' && "This will delete the week and all associated ticket sales."}
-              {deleteType === 'entry' && "This will delete this ticket sale entry."}
-              {deleteType === 'expense' && "This will delete this expense entry."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
