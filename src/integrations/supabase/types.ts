@@ -91,6 +91,7 @@ export type Database = {
           game_number: number
           id: string
           jackpot_percentage: number
+          minimum_starting_jackpot: number | null
           name: string
           organization_net_profit: number
           organization_percentage: number
@@ -108,6 +109,7 @@ export type Database = {
           game_number: number
           id?: string
           jackpot_percentage?: number
+          minimum_starting_jackpot?: number | null
           name: string
           organization_net_profit?: number
           organization_percentage?: number
@@ -125,6 +127,7 @@ export type Database = {
           game_number?: number
           id?: string
           jackpot_percentage?: number
+          minimum_starting_jackpot?: number | null
           name?: string
           organization_net_profit?: number
           organization_percentage?: number
@@ -143,9 +146,11 @@ export type Database = {
           created_at: string
           cumulative_collected: number
           date: string
+          displayed_jackpot_total: number | null
           ending_jackpot_total: number
           game_id: string
           id: string
+          jackpot_contributions_total: number | null
           jackpot_total: number
           organization_total: number
           ticket_price: number
@@ -158,9 +163,11 @@ export type Database = {
           created_at?: string
           cumulative_collected: number
           date: string
+          displayed_jackpot_total?: number | null
           ending_jackpot_total: number
           game_id: string
           id?: string
+          jackpot_contributions_total?: number | null
           jackpot_total: number
           organization_total: number
           ticket_price: number
@@ -173,9 +180,11 @@ export type Database = {
           created_at?: string
           cumulative_collected?: number
           date?: string
+          displayed_jackpot_total?: number | null
           ending_jackpot_total?: number
           game_id?: string
           id?: string
+          jackpot_contributions_total?: number | null
           jackpot_total?: number
           organization_total?: number
           ticket_price?: number
@@ -294,6 +303,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_displayed_jackpot: {
+        Args: {
+          contributions_total: number
+          minimum_jackpot: number
+          carryover_jackpot?: number
+        }
+        Returns: number
+      }
       get_user_profile: {
         Args: { user_id: string }
         Returns: {

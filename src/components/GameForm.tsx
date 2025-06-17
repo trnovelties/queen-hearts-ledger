@@ -1,202 +1,175 @@
 
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { DatePickerWithInput } from "@/components/ui/datepicker";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface GameFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  games: any[];
-  onComplete: () => void;
+  onSuccess: () => void;
+  onCancel: () => void;
 }
 
-export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
-  const [gameForm, setGameForm] = useState({
-    gameNumber: games.length > 0 ? games[games.length - 1].game_number + 1 : 1,
-    startDate: new Date(),
+export function GameForm({ onSuccess, onCancel }: GameFormProps) {
+  const [formData, setFormData] = useState({
+    name: '',
     ticketPrice: 2,
     organizationPercentage: 40,
     jackpotPercentage: 60,
     minimumStartingJackpot: 500
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { toast } = useToast();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  const createGame = async () => {
     try {
-      // Generate game name automatically from game number
-      const gameName = `Game ${gameForm.gameNumber}`;
-      
-      // Get the previous game to check for carryover jackpot
-      let carryoverJackpot = 0;
-      if (games.length > 0) {
-        const lastGame = games[games.length - 1];
-        
-        // Get the last ticket sale to find ending jackpot
-        const { data: lastSale, error: saleError } = await supabase
-          .from('ticket_sales')
-          .select('ending_jackpot_total')
-          .eq('game_id', lastGame.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        if (!saleError && lastSale && lastSale.length > 0) {
-          carryoverJackpot = lastSale[0].ending_jackpot_total;
-        }
-        
-        // Ensure minimum starting jackpot
-        carryoverJackpot = Math.max(carryoverJackpot, gameForm.minimumStartingJackpot);
-      } else {
-        // First game starts with minimum jackpot
-        carryoverJackpot = gameForm.minimumStartingJackpot;
+      // Validation
+      if (formData.organizationPercentage + formData.jackpotPercentage !== 100) {
+        toast.error("Organization and Jackpot percentages must total 100%");
+        return;
       }
 
-      const { data, error } = await supabase.from('games').insert([{
-        name: gameName, // Use the generated name
-        game_number: gameForm.gameNumber,
-        start_date: gameForm.startDate.toISOString().split('T')[0],
-        ticket_price: gameForm.ticketPrice,
-        organization_percentage: gameForm.organizationPercentage,
-        jackpot_percentage: gameForm.jackpotPercentage,
-        carryover_jackpot: carryoverJackpot
-      }]).select();
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Game Created",
-        description: `${gameName} has been created successfully.`
-      });
-      
-      onOpenChange(false);
-      onComplete();
-      
-      setGameForm({
-        gameNumber: gameForm.gameNumber + 1,
-        startDate: new Date(),
-        ticketPrice: 2,
-        organizationPercentage: 40,
-        jackpotPercentage: 60,
-        minimumStartingJackpot: 500
-      });
-    } catch (error: any) {
+      // Get the next game number
+      const { data: existingGames, error: gamesError } = await supabase
+        .from('games')
+        .select('game_number')
+        .order('game_number', { ascending: false })
+        .limit(1);
+
+      if (gamesError) throw gamesError;
+
+      const nextGameNumber = existingGames && existingGames.length > 0 
+        ? existingGames[0].game_number + 1 
+        : 1;
+
+      // Get carryover from last game if exists
+      let carryoverJackpot = 0;
+      if (existingGames && existingGames.length > 0) {
+        const { data: lastGame, error: lastGameError } = await supabase
+          .from('games')
+          .select('carryover_jackpot')
+          .eq('game_number', existingGames[0].game_number)
+          .single();
+
+        if (lastGameError) throw lastGameError;
+        carryoverJackpot = lastGame?.carryover_jackpot || 0;
+      }
+
+      // Create the game
+      const { data: game, error: gameError } = await supabase
+        .from('games')
+        .insert({
+          game_number: nextGameNumber,
+          name: formData.name,
+          start_date: new Date().toISOString().split('T')[0],
+          ticket_price: formData.ticketPrice,
+          organization_percentage: formData.organizationPercentage,
+          jackpot_percentage: formData.jackpotPercentage,
+          minimum_starting_jackpot: formData.minimumStartingJackpot,
+          carryover_jackpot: carryoverJackpot
+        })
+        .select()
+        .single();
+
+      if (gameError) throw gameError;
+
+      toast.success("Game created successfully!");
+      onSuccess();
+    } catch (error) {
       console.error('Error creating game:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create game: ${error.message}`,
-        variant: "destructive"
-      });
+      toast.error("Failed to create game");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create New Game</DialogTitle>
-          <DialogDescription>
-            Enter the details for the new Queen of Hearts game.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label htmlFor="gameNumber" className="text-sm font-medium">Game Number</label>
-            <Input 
-              id="gameNumber" 
-              type="number" 
-              value={gameForm.gameNumber} 
-              onChange={e => setGameForm({...gameForm, gameNumber: parseInt(e.target.value)})} 
-              min="1" 
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Create New Game</CardTitle>
+        <CardDescription>Set up a new Queen of Hearts game</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="gameName">Game Name</Label>
+            <Input
+              id="gameName"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Game 1"
+              required
             />
           </div>
-          
-          <div className="grid gap-2">
-            <DatePickerWithInput
-              label="Start Date"
-              date={gameForm.startDate}
-              setDate={(date) => date ? setGameForm({...gameForm, startDate: date}) : null}
-              placeholder="Select start date"
+
+          <div className="space-y-2">
+            <Label htmlFor="ticketPrice">Ticket Price ($)</Label>
+            <Input
+              id="ticketPrice"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={formData.ticketPrice}
+              onChange={(e) => setFormData({ ...formData, ticketPrice: parseFloat(e.target.value) || 0 })}
+              required
             />
           </div>
-          
-          <div className="grid gap-2">
-            <label htmlFor="ticketPrice" className="text-sm font-medium">Ticket Price ($)</label>
-            <Input 
-              id="ticketPrice" 
-              type="number" 
-              step="0.01" 
-              value={gameForm.ticketPrice} 
-              onChange={e => setGameForm({...gameForm, ticketPrice: parseFloat(e.target.value)})} 
-              min="0.01" 
+
+          <div className="space-y-2">
+            <Label htmlFor="minimumJackpot">Minimum Starting Jackpot ($)</Label>
+            <Input
+              id="minimumJackpot"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.minimumStartingJackpot}
+              onChange={(e) => setFormData({ ...formData, minimumStartingJackpot: parseFloat(e.target.value) || 0 })}
+              required
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <label htmlFor="organizationPercentage" className="text-sm font-medium">Organization % <span className="text-xs text-muted-foreground">(must total 100%)</span></label>
-              <Input 
-                id="organizationPercentage" 
-                type="number" 
-                value={gameForm.organizationPercentage} 
-                onChange={e => {
-                  const org = parseInt(e.target.value) || 0;
-                  setGameForm({
-                    ...gameForm,
-                    organizationPercentage: org,
-                    jackpotPercentage: 100 - org
-                  });
-                }} 
-                min="0" 
-                max="100" 
+            <div className="space-y-2">
+              <Label htmlFor="orgPercentage">Organization %</Label>
+              <Input
+                id="orgPercentage"
+                type="number"
+                min="0"
+                max="100"
+                value={formData.organizationPercentage}
+                onChange={(e) => setFormData({ ...formData, organizationPercentage: parseFloat(e.target.value) || 0 })}
+                required
               />
             </div>
-            
-            <div className="grid gap-2">
-              <label htmlFor="jackpotPercentage" className="text-sm font-medium">Jackpot %</label>
-              <Input 
-                id="jackpotPercentage" 
-                type="number" 
-                value={gameForm.jackpotPercentage} 
-                onChange={e => {
-                  const jackpot = parseInt(e.target.value) || 0;
-                  setGameForm({
-                    ...gameForm,
-                    jackpotPercentage: jackpot,
-                    organizationPercentage: 100 - jackpot
-                  });
-                }} 
-                min="0" 
-                max="100" 
-                disabled 
+            <div className="space-y-2">
+              <Label htmlFor="jackpotPercentage">Jackpot %</Label>
+              <Input
+                id="jackpotPercentage"
+                type="number"
+                min="0"
+                max="100"
+                value={formData.jackpotPercentage}
+                onChange={(e) => setFormData({ ...formData, jackpotPercentage: parseFloat(e.target.value) || 0 })}
+                required
               />
             </div>
           </div>
-          
-          <div className="grid gap-2">
-            <label htmlFor="minimumStartingJackpot" className="text-sm font-medium">Minimum Starting Jackpot ($)</label>
-            <Input 
-              id="minimumStartingJackpot" 
-              type="number" 
-              step="0.01" 
-              value={gameForm.minimumStartingJackpot} 
-              onChange={e => setGameForm({...gameForm, minimumStartingJackpot: parseFloat(e.target.value)})} 
-              min="0" 
-            />
+
+          <div className="flex gap-2 pt-4">
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? "Creating..." : "Create Game"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={() => createGame()}>Create Game</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
