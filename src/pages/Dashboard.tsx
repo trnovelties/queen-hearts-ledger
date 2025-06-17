@@ -1,21 +1,20 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { formatCurrency } from '@/lib/utils';
-import GameForm from '@/components/GameForm';
-import TicketSalesRow from '@/components/TicketSalesRow';
-import WinnerForm from '@/components/WinnerForm';
-import PayoutSlipModal from '@/components/PayoutSlipModal';
-import ExpenseModal from '@/components/ExpenseModal';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight, Plus, Calendar, DollarSign, Trophy, Users } from "lucide-react";
+import { GameForm } from "@/components/GameForm";
+import { TicketSalesRow } from "@/components/TicketSalesRow";
+import { WinnerForm } from "@/components/WinnerForm";
+import { PayoutSlipModal } from "@/components/PayoutSlipModal";
+import { ExpenseModal } from "@/components/ExpenseModal";
+import { formatCurrency } from "@/lib/utils";
 
 const Dashboard = () => {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
@@ -25,6 +24,7 @@ const Dashboard = () => {
   const [weekFormData, setWeekFormData] = useState({ startDate: '', endDate: '' });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Fetch games
   const { data: games, isLoading } = useQuery({
