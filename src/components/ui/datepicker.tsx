@@ -35,7 +35,7 @@ export function DatePicker({
           <Button
             variant={"outline"}
             className={cn(
-              "w-full justify-between text-left font-normal",
+              "w-full justify-between text-left font-normal border-[#1F4E4A]/20 hover:border-[#1F4E4A]/40 focus:ring-2 focus:ring-[#A1E96C]/50 focus:border-[#A1E96C]",
               !date && "text-muted-foreground",
               disabled && "opacity-50 cursor-not-allowed"
             )}
@@ -45,13 +45,14 @@ export function DatePicker({
             <CalendarIcon className="h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 shadow-lg border-[#1F4E4A]/20" align="start">
           <Calendar
             mode="single"
             selected={date}
             onSelect={setDate}
             disabled={disabledDates}
             initialFocus
+            className="pointer-events-auto"
           />
         </PopoverContent>
       </Popover>
@@ -70,7 +71,7 @@ export function DatePickerWithInput({
 }: DatePickerProps) {
   return (
     <div className={cn("grid gap-2", className)}>
-      {label && <label className="text-sm font-medium">{label}</label>}
+      {label && <label className="text-sm font-semibold text-[#132E2C]">{label}</label>}
       <Popover>
         <PopoverTrigger asChild>
           <div className="relative w-full">
@@ -88,20 +89,24 @@ export function DatePickerWithInput({
                 }
               }}
               placeholder={placeholder}
-              className="w-full pr-10"
+              className={cn(
+                "w-full pr-10 border-[#1F4E4A]/20 focus:ring-2 focus:ring-[#A1E96C]/50 focus:border-[#A1E96C] font-medium text-[#132E2C] placeholder:text-[#132E2C]/50",
+                disabled && "opacity-50 cursor-not-allowed bg-gray-50"
+              )}
               disabled={disabled}
-              type="text"
+              type="date"
             />
-            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none text-[#1F4E4A]" />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 shadow-lg border-[#1F4E4A]/20" align="start">
           <Calendar
             mode="single"
             selected={date}
             onSelect={setDate}
             disabled={disabledDates}
             initialFocus
+            className="pointer-events-auto"
           />
         </PopoverContent>
       </Popover>

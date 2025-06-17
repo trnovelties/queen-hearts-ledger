@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/datepicker";
+import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
@@ -121,23 +121,25 @@ export function TicketSalesRow({
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Add Ticket Sales</CardTitle>
-        <CardDescription>Record daily ticket sales for this week</CardDescription>
+    <Card className="w-full max-w-md border-[#1F4E4A]/20 shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[#1F4E4A] font-inter">Add Ticket Sales</CardTitle>
+        <CardDescription className="text-[#132E2C]/60">Record daily ticket sales for this week</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <DatePicker
+            <Label htmlFor="date" className="text-sm font-semibold text-[#132E2C]">Date</Label>
+            <DatePickerWithInput
               date={formData.date}
               setDate={(date) => setFormData({ ...formData, date: date || new Date() })}
+              placeholder="Select date"
+              className="w-full"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ticketsSold">Tickets Sold</Label>
+            <Label htmlFor="ticketsSold" className="text-sm font-semibold text-[#132E2C]">Tickets Sold</Label>
             <Input
               id="ticketsSold"
               type="text"
@@ -150,12 +152,13 @@ export function TicketSalesRow({
                 }
               }}
               placeholder="150"
+              className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ticketPrice">Ticket Price ($)</Label>
+            <Label htmlFor="ticketPrice" className="text-sm font-semibold text-[#132E2C]">Ticket Price ($)</Label>
             <Input
               id="ticketPrice"
               type="number"
@@ -163,24 +166,52 @@ export function TicketSalesRow({
               step="0.01"
               value={formData.ticketPrice}
               onChange={(e) => setFormData({ ...formData, ticketPrice: parseFloat(e.target.value) || 0 })}
+              className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium"
               required
             />
           </div>
 
           {/* Show calculated values */}
-          <div className="space-y-2 text-sm text-gray-600">
-            <div>Amount Collected: ${((parseFloat(formData.ticketsSold) || 0) * formData.ticketPrice).toFixed(2)}</div>
-            <div>Organization Total: ${(((parseFloat(formData.ticketsSold) || 0) * formData.ticketPrice) * (gameData.organization_percentage / 100)).toFixed(2)}</div>
-            <div>Jackpot Contribution: ${currentJackpotContribution.toFixed(2)}</div>
-            <div>Total Jackpot Contributions: ${totalJackpotContributions.toFixed(2)}</div>
-            <div className="font-semibold">Displayed Jackpot: ${displayedJackpot.toFixed(2)}</div>
+          <div className="space-y-3 p-4 bg-[#F7F8FC] rounded-lg border border-[#1F4E4A]/10">
+            <h4 className="text-sm font-semibold text-[#132E2C] mb-2">Calculated Values</h4>
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-[#132E2C]/70">Amount Collected:</span>
+                <span className="font-semibold text-[#1F4E4A]">${((parseFloat(formData.ticketsSold) || 0) * formData.ticketPrice).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#132E2C]/70">Organization Total:</span>
+                <span className="font-semibold text-[#1F4E4A]">${(((parseFloat(formData.ticketsSold) || 0) * formData.ticketPrice) * (gameData.organization_percentage / 100)).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#132E2C]/70">Jackpot Contribution:</span>
+                <span className="font-semibold text-[#1F4E4A]">${currentJackpotContribution.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#132E2C]/70">Total Jackpot Contributions:</span>
+                <span className="font-semibold text-[#1F4E4A]">${totalJackpotContributions.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[#1F4E4A]/10">
+                <span className="font-semibold text-[#132E2C]">Displayed Jackpot:</span>
+                <span className="font-bold text-[#A1E96C] text-lg">${displayedJackpot.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
+          <div className="flex gap-3 pt-4">
+            <Button 
+              type="submit" 
+              disabled={isLoading} 
+              className="flex-1 bg-[#1F4E4A] hover:bg-[#132E2C] text-white font-semibold"
+            >
               {isLoading ? "Adding..." : "Add Row"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white font-semibold"
+            >
               Cancel
             </Button>
           </div>

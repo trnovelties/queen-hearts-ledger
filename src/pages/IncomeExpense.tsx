@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -60,8 +61,8 @@ export default function IncomeExpense() {
   const [games, setGames] = useState<GameSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState<string>("all");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [reportType, setReportType] = useState<"weekly" | "game" | "cumulative">("cumulative");
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
 
@@ -149,17 +150,20 @@ export default function IncomeExpense() {
     }
     
     if (startDate && endDate) {
+      const startDateStr = format(startDate, 'yyyy-MM-dd');
+      const endDateStr = format(endDate, 'yyyy-MM-dd');
+      
       filteredGames = filteredGames.map(game => {
         const filteredSales = game.ticket_sales.filter(sale => 
-          sale.date >= startDate && sale.date <= endDate
+          sale.date >= startDateStr && sale.date <= endDateStr
         );
         
         const filteredExpenses = game.expenses.filter(expense => 
-          expense.date >= startDate && expense.date <= endDate
+          expense.date >= startDateStr && expense.date <= endDateStr
         );
         
         const filteredWeeks = game.weeks.filter(week => 
-          week.start_date >= startDate && week.end_date <= endDate
+          week.start_date >= startDateStr && week.end_date <= endDateStr
         );
         
         return {
@@ -480,11 +484,11 @@ export default function IncomeExpense() {
                   <Calendar className="h-4 w-4" />
                   Start Date
                 </Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium"
+                <DatePickerWithInput
+                  date={startDate}
+                  setDate={setStartDate}
+                  placeholder="Select start date"
+                  className="w-full"
                 />
               </div>
 
@@ -493,11 +497,11 @@ export default function IncomeExpense() {
                   <Calendar className="h-4 w-4" />
                   End Date
                 </Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium"
+                <DatePickerWithInput
+                  date={endDate}
+                  setDate={setEndDate}
+                  placeholder="Select end date"
+                  className="w-full"
                 />
               </div>
 
