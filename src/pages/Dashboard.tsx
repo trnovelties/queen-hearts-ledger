@@ -1313,9 +1313,14 @@ export default function Dashboard() {
                                 return (
                                   <div>
                                     {/* Week Details Header */}
-                                    <div className="space-y-2 mb-4 pb-4 border-b">
-                                      <div className="flex justify-between items-center">
-                                        <h4 className="font-semibold text-[#1F4E4A] text-lg">Week {week.week_number} Details</h4>
+                                    <div className="pb-6 border-b border-gray-200">
+                                      <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                          <h4 className="text-2xl font-bold text-[#1F4E4A] mb-2">Week {week.week_number}</h4>
+                                          <p className="text-gray-600 text-lg">
+                                            {format(new Date(week.start_date), 'MMMM d')} - {format(new Date(week.end_date), 'MMMM d, yyyy')}
+                                          </p>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                           <Button 
                                             onClick={() => openDeleteConfirm(week.id, 'week')} 
@@ -1327,76 +1332,104 @@ export default function Dashboard() {
                                           </Button>
                                           <button
                                             onClick={() => setExpandedWeek(null)}
-                                            className="text-muted-foreground hover:text-foreground text-xl"
+                                            className="text-gray-400 hover:text-gray-600 text-2xl font-light w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100"
                                           >
                                             ×
                                           </button>
                                         </div>
                                       </div>
                                       
-                                      <div className="text-sm text-muted-foreground mb-3">
-                                        {format(new Date(week.start_date), 'MMM d')} - {format(new Date(week.end_date), 'MMM d, yyyy')}
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div><span className="text-muted-foreground">Tickets Sold:</span> {weekTotalTickets}</div>
-                                        <div><span className="text-muted-foreground">Ticket Sales:</span> {formatCurrency(weekTotalSales)}</div>
-                                        <div><span className="text-muted-foreground">Organization Net:</span> {formatCurrency(weekOrganizationTotal)}</div>
-                                        <div><span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(weekJackpotTotal)}</div>
-                                      </div>
-                                      
-                                      {week.winner_name && (
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                          <div><span className="text-muted-foreground">Winner:</span> {week.winner_name}</div>
-                                          <div><span className="text-muted-foreground">Slot:</span> {week.slot_chosen}</div>
-                                          <div><span className="text-muted-foreground">Card:</span> {week.card_selected}</div>
-                                          <div><span className="text-muted-foreground">Payout:</span> {formatCurrency(week.weekly_payout)}</div>
-                                          <div><span className="text-muted-foreground">Present:</span> {week.winner_present ? 'Yes' : 'No'}</div>
+                                      {/* Week Summary Stats */}
+                                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                          <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
+                                          <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
                                         </div>
-                                      )}
+                                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                                          <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
+                                          <div className="text-sm text-green-600 font-medium">Total Sales</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                          <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
+                                          <div className="text-sm text-purple-600 font-medium">Organization Net</div>
+                                        </div>
+                                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                                          <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
+                                          <div className="text-sm text-orange-600 font-medium">Jackpot Total</div>
+                                        </div>
+                                      </div>
                                       
+                                      {/* Winner Information */}
                                       {week.winner_name && (
-                                        <div className="pt-2 flex gap-2">
-                                          <Button
-                                            onClick={() => {
-                                              setCurrentWeekId(week.id);
-                                              setWinnerFormOpen(true);
-                                            }}
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-xs"
-                                          >
-                                            Edit Winner Details
-                                          </Button>
-                                          <Button
-                                            onClick={() => {
-                                              const winnerData = {
-                                                winnerName: week.winner_name,
-                                                slotChosen: week.slot_chosen,
-                                                cardSelected: week.card_selected,
-                                                payoutAmount: week.weekly_payout,
-                                                date: new Date().toISOString().split('T')[0],
-                                                gameNumber: game.game_number,
-                                                gameName: game.name,
-                                                weekNumber: week.week_number,
-                                                weekStartDate: week.start_date,
-                                                weekEndDate: week.end_date
-                                              };
-                                              handleOpenPayoutSlip(winnerData);
-                                            }}
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-xs"
-                                          >
-                                            Print Payout Slip
-                                          </Button>
+                                        <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
+                                          <h5 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
+                                            🏆 Winner Information
+                                          </h5>
+                                          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+                                            <div className="space-y-1">
+                                              <div className="font-medium text-yellow-700">Winner Name</div>
+                                              <div className="text-yellow-900 font-semibold">{week.winner_name}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                              <div className="font-medium text-yellow-700">Slot Selected</div>
+                                              <div className="text-yellow-900 font-semibold">#{week.slot_chosen}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                              <div className="font-medium text-yellow-700">Card Drawn</div>
+                                              <div className="text-yellow-900 font-semibold">{week.card_selected}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                              <div className="font-medium text-yellow-700">Payout Amount</div>
+                                              <div className="text-yellow-900 font-semibold">{formatCurrency(week.weekly_payout)}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                              <div className="font-medium text-yellow-700">Winner Present</div>
+                                              <div className={`font-semibold ${week.winner_present ? 'text-green-600' : 'text-red-600'}`}>
+                                                {week.winner_present ? '✓ Yes' : '✗ No'}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="mt-4 flex gap-3">
+                                            <Button
+                                              onClick={() => {
+                                                setCurrentWeekId(week.id);
+                                                setWinnerFormOpen(true);
+                                              }}
+                                              size="sm"
+                                              className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] border border-[#A1E96C]"
+                                            >
+                                              Edit Winner Details
+                                            </Button>
+                                            <Button
+                                              onClick={() => {
+                                                const winnerData = {
+                                                  winnerName: week.winner_name,
+                                                  slotChosen: week.slot_chosen,
+                                                  cardSelected: week.card_selected,
+                                                  payoutAmount: week.weekly_payout,
+                                                  date: new Date().toISOString().split('T')[0],
+                                                  gameNumber: game.game_number,
+                                                  gameName: game.name,
+                                                  weekNumber: week.week_number,
+                                                  weekStartDate: week.start_date,
+                                                  weekEndDate: week.end_date
+                                                };
+                                                handleOpenPayoutSlip(winnerData);
+                                              }}
+                                              size="sm"
+                                              className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] border border-[#A1E96C]"
+                                            >
+                                              Print Payout Slip
+                                            </Button>
+                                          </div>
                                         </div>
                                       )}
                                     </div>
                                     
                                     {/* 7 Daily Entries */}
-                                    <div>
-                                      <h5 className="font-medium mb-3">Daily Entries (7 Days)</h5>
+                                    <div className="pt-6">
+                                      <h5 className="text-lg font-semibold mb-4 text-[#1F4E4A]">Daily Entries (7 Days)</h5>
                                       
                                       <div className="space-y-3 h-fit">
                                         {Array.from({ length: 7 }, (_, dayIndex) => {
@@ -1415,16 +1448,19 @@ export default function Dashboard() {
                                           const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold || '');
                                           
                                           return (
-                                            <div key={dayIndex} className="flex items-center gap-4 p-3 bg-gray-50 rounded border">
+                                            <div key={dayIndex} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
                                               <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-medium text-gray-900">
-                                                  Day {dayIndex + 1} - {format(entryDate, 'MMM d, yyyy')}
+                                                <div className="text-base font-semibold text-gray-900">
+                                                  Day {dayIndex + 1}
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                  {format(entryDate, 'EEEE, MMMM d, yyyy')}
                                                 </div>
                                               </div>
                                               
-                                              <div className="flex items-center gap-2">
+                                              <div className="flex items-center gap-3">
                                                 <div className="flex flex-col gap-1">
-                                                  <label className="text-xs text-gray-500">Tickets Sold</label>
+                                                  <label className="text-xs font-medium text-gray-600">Tickets Sold</label>
                                                   <Input
                                                     type="number"
                                                     min="0"
@@ -1439,13 +1475,13 @@ export default function Dashboard() {
                                                       // Submit on blur as well
                                                       handleTicketInputSubmit(week.id, dayIndex, e.target.value);
                                                     }}
-                                                    className="w-24 h-8 text-xs"
+                                                    className="w-28 h-9 text-center font-medium"
                                                     placeholder="0"
                                                   />
                                                 </div>
                                                 
                                                 <div className="flex flex-col gap-1">
-                                                  <label className="text-xs text-gray-500">Add</label>
+                                                  <label className="text-xs font-medium text-gray-600">Quick Add</label>
                                                   <Select onValueChange={(value) => {
                                                     if (value === 'donation') {
                                                       const amount = prompt('Enter donation amount:');
@@ -1456,7 +1492,7 @@ export default function Dashboard() {
                                                       openDailyExpenseModal(format(entryDate, 'yyyy-MM-dd'), game.id);
                                                     }
                                                   }}>
-                                                    <SelectTrigger className="w-20 h-8 text-xs">
+                                                    <SelectTrigger className="w-24 h-9">
                                                       <SelectValue placeholder="+" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -1468,8 +1504,8 @@ export default function Dashboard() {
                                                 
                                                 {existingEntry && (
                                                   <div className="flex flex-col gap-1">
-                                                    <label className="text-xs text-gray-500">Amount</label>
-                                                    <div className="text-xs font-medium px-2 py-1 bg-blue-50 rounded border min-w-[60px] text-center">
+                                                    <label className="text-xs font-medium text-gray-600">Day Total</label>
+                                                    <div className="text-sm font-bold px-3 py-2 bg-blue-100 text-blue-800 rounded border border-blue-200 min-w-[80px] text-center">
                                                       {formatCurrency(existingEntry.amount_collected)}
                                                     </div>
                                                   </div>
@@ -1481,18 +1517,23 @@ export default function Dashboard() {
                                       </div>
                                       
                                       {week.ticket_sales.length >= 7 && !week.winner_name && (
-                                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                                          <p className="text-sm text-yellow-800 mb-2">Week is complete! Please enter winner details.</p>
-                                          <Button
-                                            onClick={() => {
-                                              setCurrentWeekId(week.id);
-                                              setWinnerFormOpen(true);
-                                            }}
-                                            size="sm"
-                                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                                          >
-                                            Enter Winner Details
-                                          </Button>
+                                        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                          <div className="flex items-center gap-3">
+                                            <div className="flex-1">
+                                              <p className="text-sm font-medium text-amber-800">Week is complete!</p>
+                                              <p className="text-xs text-amber-700">Please enter winner details to finalize this week.</p>
+                                            </div>
+                                            <Button
+                                              onClick={() => {
+                                                setCurrentWeekId(week.id);
+                                                setWinnerFormOpen(true);
+                                              }}
+                                              size="sm"
+                                              className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                                            >
+                                              Enter Winner Details
+                                            </Button>
+                                          </div>
                                         </div>
                                       )}
                                     </div>
