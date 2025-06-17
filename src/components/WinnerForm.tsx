@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,14 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
 
 interface WinnerFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   gameId: string;
   weekId: string;
-  gameData: {
+  gameData?: {
     ticket_price: number;
     organization_percentage: number;
     jackpot_percentage: number;
@@ -20,20 +24,22 @@ interface WinnerFormProps {
     carryover_jackpot: number;
     total_payouts: number;
   };
-  currentJackpotTotal: number;
-  jackpotContributions: number;
-  onSuccess: () => void;
-  onCancel: () => void;
+  currentJackpotTotal?: number;
+  jackpotContributions?: number;
+  onComplete: () => void;
+  onOpenPayoutSlip: (winnerData: any) => void;
 }
 
 export function WinnerForm({ 
+  open,
+  onOpenChange,
   gameId, 
   weekId, 
   gameData, 
-  currentJackpotTotal, 
-  jackpotContributions,
-  onSuccess, 
-  onCancel 
+  currentJackpotTotal = 0, 
+  jackpotContributions = 0,
+  onComplete, 
+  onOpenPayoutSlip 
 }: WinnerFormProps) {
   const [formData, setFormData] = useState({
     winnerName: '',
@@ -50,8 +56,8 @@ export function WinnerForm({
   // Use the hook to calculate proper displayed jackpot
   const displayedJackpot = useJackpotCalculation({
     jackpotContributions: jackpotContributions,
-    minimumJackpot: gameData.minimum_starting_jackpot || 500,
-    carryoverJackpot: gameData.carryover_jackpot || 0
+    minimumJackpot: gameData?.minimum_starting_jackpot || 500,
+    carryoverJackpot: gameData?.carryover_jackpot || 0
   });
 
   useEffect(() => {
@@ -163,7 +169,7 @@ export function WinnerForm({
           .update({
             end_date: new Date().toISOString().split('T')[0],
             carryover_jackpot: carryoverAmount,
-            total_payouts: (gameData.total_payouts || 0) + finalPayout
+            total_payouts: (gameData?.total_payouts || 0) + finalPayout
           })
           .eq('id', gameId);
 
@@ -173,7 +179,7 @@ export function WinnerForm({
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            total_payouts: (gameData.total_payouts || 0) + finalPayout
+            total_payouts: (gameData?.total_payouts || 0) + finalPayout
           })
           .eq('id', gameId);
 
@@ -192,8 +198,21 @@ export function WinnerForm({
 
       if (updateSaleError) throw updateSaleError;
 
+      // Prepare winner data for payout slip
+      const winnerData = {
+        winnerName: formData.winnerName,
+        cardSelected: formData.cardSelected,
+        slotChosen: formData.slotChosen,
+        amountWon: finalPayout,
+        authorizedSignatureName: formData.authorizedSignatureName,
+        gameId,
+        weekId
+      };
+
       toast.success("Winner details saved successfully!");
-      onSuccess();
+      onComplete();
+      onOpenPayoutSlip(winnerData);
+      onOpenChange(false);
     } catch (error) {
       console.error('Error saving winner details:', error);
       toast.error("Failed to save winner details");
@@ -203,100 +222,104 @@ export function WinnerForm({
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Record Winner Details</CardTitle>
-        <CardDescription>Enter the winner's information for this week</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="winnerName">Winner's Name</Label>
-            <Input
-              id="winnerName"
-              type="text"
-              value={formData.winnerName}
-              onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
-              placeholder="John Doe"
-              required
-            />
-          </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <Card className="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle>Record Winner Details</CardTitle>
+            <CardDescription>Enter the winner's information for this week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="winnerName">Winner's Name</Label>
+                <Input
+                  id="winnerName"
+                  type="text"
+                  value={formData.winnerName}
+                  onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cardSelected">Card Selected</Label>
-            <Select onValueChange={(value) => {
-              setFormData({ ...formData, cardSelected: value });
-              const payout = cardPayouts.find(card => card.card === value)?.payout || 0;
-              setSelectedPayout(payout);
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a card" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
-                {cardPayouts.map((card, index) => (
-                  <SelectItem key={index} value={card.card}>{card.card} - ${card.payout}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="cardSelected">Card Selected</Label>
+                <Select onValueChange={(value) => {
+                  setFormData({ ...formData, cardSelected: value });
+                  const payout = cardPayouts.find(card => card.card === value)?.payout || 0;
+                  setSelectedPayout(payout);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a card" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
+                    {cardPayouts.map((card, index) => (
+                      <SelectItem key={index} value={card.card}>{card.card} - ${card.payout}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {formData.cardSelected !== 'Queen of Hearts' && (
-            <div className="space-y-2">
-              <Label htmlFor="selectedPayout">Selected Payout</Label>
-              <Input
-                id="selectedPayout"
-                type="number"
-                value={selectedPayout}
-                readOnly
-              />
-            </div>
-          )}
+              {formData.cardSelected !== 'Queen of Hearts' && (
+                <div className="space-y-2">
+                  <Label htmlFor="selectedPayout">Selected Payout</Label>
+                  <Input
+                    id="selectedPayout"
+                    type="number"
+                    value={selectedPayout}
+                    readOnly
+                  />
+                </div>
+              )}
 
-          <div className="space-y-2">
-            <Label htmlFor="slotChosen">Slot Chosen</Label>
-            <Input
-              id="slotChosen"
-              type="number"
-              min="1"
-              max="52"
-              value={formData.slotChosen}
-              onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="slotChosen">Slot Chosen</Label>
+                <Input
+                  id="slotChosen"
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={formData.slotChosen}
+                  onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
+                  required
+                />
+              </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="winnerPresent"
-              checked={formData.winnerPresent}
-              onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked !== undefined ? checked : true })}
-            />
-            <Label htmlFor="winnerPresent">Winner Present</Label>
-          </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="winnerPresent"
+                  checked={formData.winnerPresent}
+                  onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked === true })}
+                />
+                <Label htmlFor="winnerPresent">Winner Present</Label>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="authorizedSignatureName">Authorized Signature Name</Label>
-            <Input
-              id="authorizedSignatureName"
-              type="text"
-              value={formData.authorizedSignatureName}
-              onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
-              placeholder="Jane Smith"
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="authorizedSignatureName">Authorized Signature Name</Label>
+                <Input
+                  id="authorizedSignatureName"
+                  type="text"
+                  value={formData.authorizedSignatureName}
+                  onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
+                  placeholder="Jane Smith"
+                  required
+                />
+              </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Saving..." : "Save Winner Details"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? "Saving..." : "Save Winner Details"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
