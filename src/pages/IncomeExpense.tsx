@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,22 +21,25 @@ import {
   DollarSign, 
   Target, 
   BarChart3, 
-  ArrowUpRight, 
-  ArrowDownRight, 
   Filter, 
   Calendar,
-  Gamepad2,
   Receipt,
   Users,
   Trophy,
   Banknote,
-  HeartHandshake
+  HeartHandshake,
+  ArrowUpRight,
+  ArrowDownRight,
+  PieChart,
+  Activity
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { ExpenseModal } from "@/components/ExpenseModal";
 import { FinancialCharts } from "@/components/FinancialCharts";
 import { GameComparisonTable } from "@/components/GameComparisonTable";
 import { DetailedFinancialTable } from "@/components/DetailedFinancialTable";
+import { FinancialOverview } from "@/components/FinancialOverview";
+import { WinnerInformation } from "@/components/WinnerInformation";
 
 // Define types
 type Game = Tables<"games">;
@@ -234,6 +236,33 @@ export default function IncomeExpense() {
     }).format(amount);
   };
 
+  // Get latest winner information
+  const getLatestWinner = () => {
+    let latestWinner = null;
+    let latestDate = "";
+    
+    summary.filteredGames.forEach(game => {
+      game.weeks.forEach(week => {
+        if (week.winner_name && week.end_date > latestDate) {
+          latestDate = week.end_date;
+          latestWinner = {
+            name: week.winner_name,
+            slot: week.slot_chosen,
+            card: week.card_selected,
+            amount: week.weekly_payout,
+            present: week.winner_present,
+            date: week.end_date,
+            gameName: game.name
+          };
+        }
+      });
+    });
+    
+    return latestWinner;
+  };
+
+  const latestWinner = getLatestWinner();
+
   // Enhanced KPI Card Component
   const KPICard = ({ 
     title, 
@@ -374,15 +403,15 @@ export default function IncomeExpense() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F7F8FC] via-white to-[#F7F8FC]/50">
-      <div className="container mx-auto p-8 space-y-8">
+      <div className="container mx-auto p-6 space-y-6">
         {/* Professional Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pb-6 border-b border-[#1F4E4A]/10">
           <div className="space-y-3">
             <h1 className="text-4xl font-bold text-[#1F4E4A] font-inter tracking-tight">
-              Financial Analytics
+              Financial Analytics & Reporting
             </h1>
             <p className="text-lg text-[#132E2C]/70 font-medium">
-              Comprehensive insights and performance metrics for your Queen of Hearts fundraising
+              Comprehensive financial insights and performance analytics for Queen of Hearts fundraising
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -413,15 +442,15 @@ export default function IncomeExpense() {
           </div>
         </div>
 
-        {/* Professional Filters */}
+        {/* Advanced Filters */}
         <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <Filter className="h-5 w-5 text-[#1F4E4A]" />
               <div>
-                <CardTitle className="text-[#1F4E4A] font-inter">Analysis Filters</CardTitle>
+                <CardTitle className="text-[#1F4E4A] font-inter">Analysis Configuration</CardTitle>
                 <CardDescription className="text-[#132E2C]/60">
-                  Customize your financial analysis scope and parameters
+                  Configure your financial analysis parameters and time ranges
                 </CardDescription>
               </div>
             </div>
@@ -430,7 +459,7 @@ export default function IncomeExpense() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <Gamepad2 className="h-4 w-4" />
+                  <Trophy className="h-4 w-4" />
                   Game Selection
                 </Label>
                 <Select value={selectedGame} onValueChange={setSelectedGame}>
@@ -492,145 +521,22 @@ export default function IncomeExpense() {
           </CardContent>
         </Card>
 
-        {/* Enhanced KPI Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <KPICard
-            title="Total Revenue"
-            value={summary.totalSales}
-            icon={DollarSign}
-            variant="revenue"
-            trend={8.5}
-            subtitle={`${summary.totalTicketsSold.toLocaleString()} tickets sold`}
-            percentage={(summary.totalSales / (summary.totalSales || 1)) * 100}
-          />
-          <KPICard
-            title="Total Payouts"
-            value={summary.totalPayouts}
-            icon={Trophy}
-            variant="default"
-            trend={-2.3}
-            subtitle="Winner distributions"
-            percentage={(summary.totalPayouts / summary.totalSales) * 100}
-          />
-          <KPICard
-            title="Organization Profit"
-            value={summary.organizationNetProfit}
-            icon={TrendingUp}
-            variant="profit"
-            trend={15.2}
-            subtitle="After all expenses"
-            percentage={(summary.organizationNetProfit / summary.organizationTotalPortion) * 100}
-          />
-          <KPICard
-            title="Active Games"
-            value={summary.filteredGames.length}
-            icon={Gamepad2}
-            variant="default"
-            subtitle="Total tracked games"
-          />
-        </div>
+        {/* Financial Overview Section */}
+        <FinancialOverview summary={summary} formatCurrency={formatCurrency} />
 
-        {/* Three-Column Financial Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Revenue Overview */}
-          <Card className="bg-gradient-to-br from-[#A1E96C]/10 to-[#A1E96C]/5 border-[#A1E96C]/30">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-[#1F4E4A] font-inter flex items-center gap-2">
-                <Banknote className="h-5 w-5" />
-                Revenue Analysis
-              </CardTitle>
-              <CardDescription>Total income and ticket sales performance</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Tickets Sold</span>
-                  <span className="font-bold text-[#1F4E4A]">{summary.totalTicketsSold.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Total Revenue</span>
-                  <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.totalSales)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Avg. per Ticket</span>
-                  <span className="font-bold text-[#1F4E4A]">
-                    {formatCurrency(summary.totalTicketsSold > 0 ? summary.totalSales / summary.totalTicketsSold : 0)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Winner Information Section */}
+        {latestWinner && (
+          <WinnerInformation winner={latestWinner} formatCurrency={formatCurrency} />
+        )}
 
-          {/* Payout Analysis */}
-          <Card className="bg-white border-[#1F4E4A]/10">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-[#1F4E4A] font-inter flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Payout Distribution
-              </CardTitle>
-              <CardDescription>Winner payments and jackpot management</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-[#F7F8FC] rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Jackpot Portion</span>
-                  <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.jackpotTotalPortion)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-[#F7F8FC] rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Total Payouts</span>
-                  <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.totalPayouts)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-[#A1E96C]/10 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Payout Efficiency</span>
-                  <span className="font-bold text-[#1F4E4A]">
-                    {summary.jackpotTotalPortion > 0 ? 
-                      ((summary.totalPayouts / summary.jackpotTotalPortion) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Organization Finances */}
-          <Card className="bg-gradient-to-br from-[#1F4E4A]/10 to-[#132E2C]/5 border-[#1F4E4A]/30">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-[#1F4E4A] font-inter flex items-center gap-2">
-                <HeartHandshake className="h-5 w-5" />
-                Organization Impact
-              </CardTitle>
-              <CardDescription>Expenses, donations, and net profit</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Organization Share</span>
-                  <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.organizationTotalPortion)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Total Donations</span>
-                  <span className="font-bold text-green-600">{formatCurrency(summary.totalDonations)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/60 rounded-lg">
-                  <span className="text-sm font-medium text-[#132E2C]">Total Expenses</span>
-                  <span className="font-bold text-red-600">{formatCurrency(summary.totalExpenses)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-[#A1E96C]/20 rounded-lg border border-[#A1E96C]/30">
-                  <span className="font-semibold text-[#132E2C]">Net Profit</span>
-                  <span className="font-bold text-[#1F4E4A] text-lg">{formatCurrency(summary.organizationNetProfit)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Enhanced Analytics Tabs */}
+        {/* Analytics Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 bg-[#F7F8FC] p-1 rounded-xl h-12">
             <TabsTrigger 
               value="overview" 
               className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
             >
-              <BarChart3 className="h-4 w-4 mr-2" />
+              <PieChart className="h-4 w-4 mr-2" />
               Overview
             </TabsTrigger>
             <TabsTrigger 
@@ -638,14 +544,14 @@ export default function IncomeExpense() {
               className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
             >
               <Target className="h-4 w-4 mr-2" />
-              Comparison
+              Game Analysis
             </TabsTrigger>
             <TabsTrigger 
               value="analytics" 
               className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-semibold transition-all"
             >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Analytics
+              <Activity className="h-4 w-4 mr-2" />
+              Performance
             </TabsTrigger>
             <TabsTrigger 
               value="details" 
