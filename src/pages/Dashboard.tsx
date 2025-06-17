@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -19,27 +18,29 @@ import { WinnerForm } from "@/components/WinnerForm";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { ExpenseModal } from "@/components/ExpenseModal";
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
-
 const Dashboard = () => {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [showGameForm, setShowGameForm] = useState(false);
   const [showWeekForm, setShowWeekForm] = useState<string | null>(null);
-  const [showTicketSalesForm, setShowTicketSalesForm] = useState<string | null>(null);
-  const [showWinnerForm, setShowWinnerForm] = useState<string | null>(null);
-  const [showPayoutSlip, setShowPayoutSlip] = useState(false);
-  const [showExpenseForm, setShowExpenseForm] = useState<string | null>(null);
-  const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
   const [weekFormData, setWeekFormData] = useState({ startDate: '', endDate: '' });
+  const [expenseModalOpen, setExpenseModalOpen] = useState<{open: boolean, gameId: string, gameName: string}>({
+    open: false,
+    gameId: '',
+    gameName: ''
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Format currency helper function
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
 
   // Fetch games
   const { data: games, isLoading } = useQuery({
@@ -233,18 +234,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleGameFormComplete = () => {
-    queryClient.invalidateQueries({ queryKey: ['games'] });
-    queryClient.invalidateQueries({ queryKey: ['weeks'] });
-    queryClient.invalidateQueries({ queryKey: ['ticket_sales'] });
-    queryClient.invalidateQueries({ queryKey: ['expenses'] });
-  };
-
-  const handleOpenPayoutSlip = (winnerData: any) => {
-    setPayoutSlipData(winnerData);
-    setShowPayoutSlip(true);
-  };
-
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -264,12 +253,7 @@ const Dashboard = () => {
             <DialogHeader>
               <DialogTitle>Create New Game</DialogTitle>
             </DialogHeader>
-            <GameForm 
-              open={showGameForm}
-              onOpenChange={setShowGameForm}
-              games={games || []}
-              onComplete={handleGameFormComplete}
-            />
+            <GameForm />
           </DialogContent>
         </Dialog>
       </div>
@@ -399,28 +383,16 @@ const Dashboard = () => {
                               <CollapsibleContent>
                                 <CardContent className="space-y-4">
                                   <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <h4 className="font-medium">Ticket Sales</h4>
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => setShowTicketSalesForm(week.id)}
-                                      >
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add Ticket Sales
-                                      </Button>
-                                    </div>
+                                    <h4 className="font-medium">Ticket Sales</h4>
                                     {weekTicketSales.length > 0 ? (
                                       <div className="space-y-1">
                                         {weekTicketSales.map((sale) => (
-                                          <div key={sale.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                            <div className="flex items-center space-x-3">
-                                              <span className="text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</span>
-                                              <span className="text-sm">{sale.tickets_sold} tickets</span>
-                                              <span className="text-sm">${sale.ticket_price} each</span>
-                                            </div>
-                                            <span className="font-medium">{formatCurrency(sale.amount_collected)}</span>
-                                          </div>
+                                          <TicketSalesRow 
+                                            key={sale.id} 
+                                            ticketSale={sale} 
+                                            gameId={game.id}
+                                            weekId={week.id}
+                                          />
                                         ))}
                                       </div>
                                     ) : (
@@ -439,42 +411,20 @@ const Dashboard = () => {
                                           <div><strong>Present:</strong> {week.winner_present ? 'Yes' : 'No'}</div>
                                           <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
                                         </div>
-                                        <Button 
-                                          variant="outline" 
-                                          size="sm" 
-                                          className="mt-2"
-                                          onClick={() => {
-                                            const winnerData = {
-                                              winnerName: week.winner_name!,
-                                              slotChosen: week.slot_chosen!,
-                                              cardSelected: week.card_selected!,
-                                              payoutAmount: week.weekly_payout,
-                                              date: week.end_date,
-                                              gameNumber: game.game_number,
-                                              gameName: game.name,
-                                              weekNumber: week.week_number,
-                                              weekId: week.id,
-                                              weekStartDate: week.start_date,
-                                              weekEndDate: week.end_date,
-                                            };
-                                            handleOpenPayoutSlip(winnerData);
-                                          }}
-                                        >
-                                          Print Payout Slip
-                                        </Button>
+                                        <PayoutSlipModal 
+                                          weekData={week} 
+                                          gameData={game}
+                                        />
                                       </div>
                                     </div>
                                   )}
 
                                   <div className="flex space-x-2">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
+                                    <WinnerForm 
+                                      gameId={game.id}
+                                      weekId={week.id}
                                       disabled={!!week.winner_name}
-                                      onClick={() => setShowWinnerForm(week.id)}
-                                    >
-                                      {week.winner_name ? 'Winner Recorded' : 'Enter Winner Details'}
-                                    </Button>
+                                    />
                                   </div>
                                 </CardContent>
                               </CollapsibleContent>
@@ -490,10 +440,14 @@ const Dashboard = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => setShowExpenseForm(game.id)}
+                          onClick={() => setExpenseModalOpen({
+                            open: true,
+                            gameId: game.id,
+                            gameName: game.name
+                          })}
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          Add Expense/Donation
+                          Add Expense
                         </Button>
                       </div>
                       {gameExpenses.length > 0 ? (
@@ -525,93 +479,11 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* Ticket Sales Modal */}
-      {showTicketSalesForm && (
-        <Dialog open={!!showTicketSalesForm} onOpenChange={() => setShowTicketSalesForm(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Ticket Sales</DialogTitle>
-            </DialogHeader>
-            <TicketSalesRow
-              gameId={games?.find(g => getWeeksForGame(g.id).some(w => w.id === showTicketSalesForm))?.id || ''}
-              weekId={showTicketSalesForm}
-              gameData={{
-                ticket_price: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showTicketSalesForm))?.ticket_price || 2,
-                organization_percentage: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showTicketSalesForm))?.organization_percentage || 40,
-                jackpot_percentage: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showTicketSalesForm))?.jackpot_percentage || 60,
-                minimum_starting_jackpot: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showTicketSalesForm))?.minimum_starting_jackpot || 500,
-                carryover_jackpot: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showTicketSalesForm))?.carryover_jackpot || 0,
-              }}
-              previousEndingJackpot={0}
-              previousJackpotContributions={0}
-              onSuccess={() => {
-                queryClient.invalidateQueries({ queryKey: ['ticket_sales'] });
-                queryClient.invalidateQueries({ queryKey: ['weeks'] });
-                queryClient.invalidateQueries({ queryKey: ['games'] });
-                setShowTicketSalesForm(null);
-              }}
-              onCancel={() => setShowTicketSalesForm(null)}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Winner Form Modal */}
-      {showWinnerForm && (
-        <Dialog open={!!showWinnerForm} onOpenChange={() => setShowWinnerForm(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Enter Winner Details</DialogTitle>
-            </DialogHeader>
-            <WinnerForm
-              open={!!showWinnerForm}
-              onOpenChange={() => setShowWinnerForm(null)}
-              gameId={games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.id || ''}
-              weekId={showWinnerForm}
-              gameData={{
-                ticket_price: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.ticket_price || 2,
-                organization_percentage: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.organization_percentage || 40,
-                jackpot_percentage: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.jackpot_percentage || 60,
-                minimum_starting_jackpot: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.minimum_starting_jackpot || 500,
-                carryover_jackpot: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.carryover_jackpot || 0,
-                total_payouts: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.total_payouts || 0,
-                card_payouts: games?.find(g => getWeeksForGame(g.id).some(w => w.id === showWinnerForm))?.card_payouts,
-              }}
-              currentJackpotTotal={0}
-              jackpotContributions={0}
-              onComplete={() => {
-                queryClient.invalidateQueries({ queryKey: ['weeks'] });
-                queryClient.invalidateQueries({ queryKey: ['games'] });
-                setShowWinnerForm(null);
-              }}
-              onOpenPayoutSlip={handleOpenPayoutSlip}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Expense Modal */}
-      {showExpenseForm && (
-        <Dialog open={!!showExpenseForm} onOpenChange={() => setShowExpenseForm(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Expense/Donation</DialogTitle>
-            </DialogHeader>
-            <ExpenseModal
-              open={!!showExpenseForm}
-              onOpenChange={() => setShowExpenseForm(null)}
-              gameId={showExpenseForm}
-              gameName={games?.find(g => g.id === showExpenseForm)?.name || ''}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Payout Slip Modal */}
-      <PayoutSlipModal
-        open={showPayoutSlip}
-        onOpenChange={setShowPayoutSlip}
-        winnerData={payoutSlipData}
+      <ExpenseModal 
+        open={expenseModalOpen.open}
+        onOpenChange={(open) => setExpenseModalOpen(prev => ({...prev, open}))}
+        gameId={expenseModalOpen.gameId}
+        gameName={expenseModalOpen.gameName}
       />
     </div>
   );
