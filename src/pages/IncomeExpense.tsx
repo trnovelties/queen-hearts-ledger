@@ -479,31 +479,21 @@ export default function IncomeExpense() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Start Date
-                </Label>
-                <DatePickerWithInput
-                  date={startDate}
-                  setDate={setStartDate}
-                  placeholder="Select start date"
-                  className="w-full"
-                />
-              </div>
+              <DatePickerWithInput
+                date={startDate}
+                setDate={setStartDate}
+                label="Start Date"
+                placeholder="Select start date"
+                className="w-full"
+              />
 
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  End Date
-                </Label>
-                <DatePickerWithInput
-                  date={endDate}
-                  setDate={setEndDate}
-                  placeholder="Select end date"
-                  className="w-full"
-                />
-              </div>
+              <DatePickerWithInput
+                date={endDate}
+                setDate={setEndDate}
+                label="End Date"
+                placeholder="Select end date"
+                className="w-full"
+              />
 
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-[#132E2C] flex items-center gap-2">
