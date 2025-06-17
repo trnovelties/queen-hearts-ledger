@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
+
 export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export default function Dashboard() {
     memo: '',
     gameId: ''
   });
+
   useEffect(() => {
     fetchGames();
 
@@ -109,6 +111,7 @@ export default function Dashboard() {
       supabase.removeChannel(expensesSubscription);
     };
   }, []);
+
   const fetchGames = async () => {
     try {
       setLoading(true);
@@ -175,6 +178,7 @@ export default function Dashboard() {
   const currentGames = games.filter(game => !game.end_date);
   const archivedGames = games.filter(game => game.end_date);
   const displayGames = activeTab === 'current' ? currentGames : archivedGames;
+
   const createWeek = async () => {
     if (!currentGameId) return;
     try {
@@ -209,6 +213,7 @@ export default function Dashboard() {
       });
     }
   };
+
   const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
     if (!currentGameId) return;
     try {
@@ -484,17 +489,21 @@ export default function Dashboard() {
     // Then update the database
     updateDailyEntry(weekId, dayIndex, ticketsSold);
   };
+
   const toggleGame = (gameId: string) => {
     setExpandedGame(expandedGame === gameId ? null : gameId);
     setExpandedWeek(null);
     setExpandedExpenses(null);
   };
+
   const toggleWeek = (weekId: string) => {
     setExpandedWeek(expandedWeek === weekId ? null : weekId);
   };
+
   const toggleExpenses = (gameId: string) => {
     setExpandedExpenses(expandedExpenses === gameId ? null : gameId);
   };
+
   const openWeekForm = (gameId: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
@@ -508,108 +517,207 @@ export default function Dashboard() {
     setCurrentGameId(gameId);
     setWeekFormOpen(true);
   };
+
   const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
     setDeleteItemId(id);
     setDeleteType(type);
     setDeleteDialogOpen(true);
   };
+
   const confirmDelete = async () => {
+    if (!deleteItemId) {
+      toast({
+        title: "Error",
+        description: "No item selected for deletion.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      console.log(`Attempting to delete ${deleteType} with ID: ${deleteItemId}`);
+
       if (deleteType === 'game') {
-        // First delete related entries in ticket_sales
-        const {
-          data: weeks
-        } = await supabase.from('weeks').select('id').eq('game_id', deleteItemId);
+        // Get all weeks for this game
+        const { data: weeks, error: weeksError } = await supabase
+          .from('weeks')
+          .select('id')
+          .eq('game_id', deleteItemId);
+          
+        if (weeksError) {
+          console.error('Error fetching weeks:', weeksError);
+          throw weeksError;
+        }
+
+        console.log(`Found ${weeks?.length || 0} weeks for game ${deleteItemId}`);
+
         if (weeks && weeks.length > 0) {
           const weekIds = weeks.map(week => week.id);
 
           // Delete ticket sales for these weeks
-          await supabase.from('ticket_sales').delete().in('week_id', weekIds);
+          const { error: ticketSalesError } = await supabase
+            .from('ticket_sales')
+            .delete()
+            .in('week_id', weekIds);
 
-          // Delete expenses for this game
-          await supabase.from('expenses').delete().eq('game_id', deleteItemId);
+          if (ticketSalesError) {
+            console.error('Error deleting ticket sales:', ticketSalesError);
+            throw ticketSalesError;
+          }
+
+          console.log('Deleted ticket sales');
 
           // Delete the weeks
-          await supabase.from('weeks').delete().in('id', weekIds);
+          const { error: deleteWeeksError } = await supabase
+            .from('weeks')
+            .delete()
+            .in('id', weekIds);
+
+          if (deleteWeeksError) {
+            console.error('Error deleting weeks:', deleteWeeksError);
+            throw deleteWeeksError;
+          }
+
+          console.log('Deleted weeks');
         }
 
+        // Delete expenses for this game
+        const { error: expensesError } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('game_id', deleteItemId);
+
+        if (expensesError) {
+          console.error('Error deleting expenses:', expensesError);
+          throw expensesError;
+        }
+
+        console.log('Deleted expenses');
+
         // Finally delete the game
-        await supabase.from('games').delete().eq('id', deleteItemId);
+        const { error: gameError } = await supabase
+          .from('games')
+          .delete()
+          .eq('id', deleteItemId);
+
+        if (gameError) {
+          console.error('Error deleting game:', gameError);
+          throw gameError;
+        }
+
+        console.log('Deleted game');
+
         toast({
           title: "Game Deleted",
-          description: "Game and all associated data have been deleted."
+          description: "Game and all associated data have been deleted successfully."
         });
+
       } else if (deleteType === 'week') {
         // First delete related entries in ticket_sales
-        await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId);
+        const { error: ticketSalesError } = await supabase
+          .from('ticket_sales')
+          .delete()
+          .eq('week_id', deleteItemId);
+
+        if (ticketSalesError) throw ticketSalesError;
 
         // Then delete the week
-        await supabase.from('weeks').delete().eq('id', deleteItemId);
+        const { error: weekError } = await supabase
+          .from('weeks')
+          .delete()
+          .eq('id', deleteItemId);
+
+        if (weekError) throw weekError;
+
         toast({
           title: "Week Deleted",
           description: "Week and all associated entries have been deleted."
         });
+
       } else if (deleteType === 'entry') {
         // Get the entry details before deletion
-        const {
-          data: entry
-        } = await supabase.from('ticket_sales').select('*').eq('id', deleteItemId).single();
+        const { data: entry } = await supabase
+          .from('ticket_sales')
+          .select('*')
+          .eq('id', deleteItemId)
+          .single();
+
         if (entry) {
-          const {
-            game_id,
-            week_id,
-            amount_collected,
-            tickets_sold
-          } = entry;
+          const { game_id, week_id, amount_collected, tickets_sold } = entry;
 
           // Get the week and game
-          const {
-            data: week
-          } = await supabase.from('weeks').select('*').eq('id', week_id).single();
-          const {
-            data: game
-          } = await supabase.from('games').select('*').eq('id', game_id).single();
+          const { data: week } = await supabase
+            .from('weeks')
+            .select('*')
+            .eq('id', week_id)
+            .single();
+          const { data: game } = await supabase
+            .from('games')
+            .select('*')
+            .eq('id', game_id)
+            .single();
 
           // Delete the entry
-          await supabase.from('ticket_sales').delete().eq('id', deleteItemId);
+          const { error } = await supabase
+            .from('ticket_sales')
+            .delete()
+            .eq('id', deleteItemId);
+
+          if (error) throw error;
+
           if (week && game) {
             // Update the week
-            await supabase.from('weeks').update({
-              weekly_sales: week.weekly_sales - amount_collected,
-              weekly_tickets_sold: week.weekly_tickets_sold - tickets_sold
-            }).eq('id', week_id);
+            await supabase
+              .from('weeks')
+              .update({
+                weekly_sales: week.weekly_sales - amount_collected,
+                weekly_tickets_sold: week.weekly_tickets_sold - tickets_sold
+              })
+              .eq('id', week_id);
 
             // Update the game
             const organizationTotal = amount_collected * (game.organization_percentage / 100);
-            await supabase.from('games').update({
-              total_sales: game.total_sales - amount_collected,
-              organization_net_profit: game.organization_net_profit - organizationTotal
-            }).eq('id', game_id);
+            await supabase
+              .from('games')
+              .update({
+                total_sales: game.total_sales - amount_collected,
+                organization_net_profit: game.organization_net_profit - organizationTotal
+              })
+              .eq('id', game_id);
           }
+
           toast({
             title: "Entry Deleted",
             description: "Daily entry has been deleted and totals updated."
           });
         }
+
       } else if (deleteType === 'expense') {
         // Get the expense details before deletion
-        const {
-          data: expense
-        } = await supabase.from('expenses').select('*').eq('id', deleteItemId).single();
+        const { data: expense } = await supabase
+          .from('expenses')
+          .select('*')
+          .eq('id', deleteItemId)
+          .single();
+
         if (expense) {
-          const {
-            game_id,
-            amount,
-            is_donation
-          } = expense;
+          const { game_id, amount, is_donation } = expense;
 
           // Get the game
-          const {
-            data: game
-          } = await supabase.from('games').select('*').eq('id', game_id).single();
+          const { data: game } = await supabase
+            .from('games')
+            .select('*')
+            .eq('id', game_id)
+            .single();
 
           // Delete the expense
-          await supabase.from('expenses').delete().eq('id', deleteItemId);
+          const { error } = await supabase
+            .from('expenses')
+            .delete()
+            .eq('id', deleteItemId);
+
+          if (error) throw error;
+
           if (game) {
             // Update the game totals
             const updatedValues = {
@@ -617,8 +725,13 @@ export default function Dashboard() {
               total_donations: is_donation ? game.total_donations - amount : game.total_donations,
               organization_net_profit: game.organization_net_profit + amount // Adding because we're removing an expense/donation
             };
-            await supabase.from('games').update(updatedValues).eq('id', game_id);
+
+            await supabase
+              .from('games')
+              .update(updatedValues)
+              .eq('id', game_id);
           }
+
           toast({
             title: is_donation ? "Donation Deleted" : "Expense Deleted",
             description: `The ${is_donation ? "donation" : "expense"} has been deleted and totals updated.`
@@ -627,33 +740,40 @@ export default function Dashboard() {
       }
 
       // Refresh data
-      fetchGames();
+      await fetchGames();
+
     } catch (error: any) {
       console.error('Error deleting:', error);
       toast({
-        title: "Error",
-        description: `Failed to delete: ${error.message}`,
+        title: "Delete Failed",
+        description: `Failed to delete ${deleteType}: ${error.message}`,
         variant: "destructive"
       });
     } finally {
       setDeleteDialogOpen(false);
+      setDeleteItemId(null);
     }
   };
+
   const openExpenseModal = (gameId: string, gameName: string) => {
     setCurrentGameId(gameId);
     setCurrentGameName(gameName);
     setExpenseModalOpen(true);
   };
+
   const handleOpenPayoutSlip = (winnerData: any) => {
     setPayoutSlipData(winnerData);
     setPayoutSlipOpen(true);
   };
+
   const handleWinnerComplete = () => {
     fetchGames();
   };
+
   const handleGameComplete = () => {
     fetchGames();
   };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -661,6 +781,7 @@ export default function Dashboard() {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
   const generateGamePdfReport = async (game: any) => {
     try {
       toast({
@@ -940,6 +1061,7 @@ export default function Dashboard() {
       });
     }
   };
+
   const handleDailyDonation = async (date: string, amount: number) => {
     if (!currentGameId || amount <= 0) return;
     try {
@@ -975,6 +1097,7 @@ export default function Dashboard() {
       });
     }
   };
+
   const handleDailyExpense = async () => {
     if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0) return;
     try {
@@ -1017,6 +1140,7 @@ export default function Dashboard() {
       });
     }
   };
+
   const openDailyExpenseModal = (date: string, gameId: string) => {
     setDailyExpenseForm({
       date: date,
@@ -1026,11 +1150,13 @@ export default function Dashboard() {
     });
     setDailyExpenseModalOpen(true);
   };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>;
   }
+
   return <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
@@ -1427,7 +1553,7 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this {deleteType}?
+              Are you sure you want to delete this {deleteType}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           
@@ -1436,7 +1562,7 @@ export default function Dashboard() {
               Cancel
             </Button>
             <Button onClick={confirmDelete} type="submit" variant="destructive">
-              Confirm
+              Delete {deleteType}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1454,7 +1580,7 @@ export default function Dashboard() {
       {/* Game Form */}
       <GameForm open={gameFormOpen} onOpenChange={setGameFormOpen} games={games} onComplete={handleGameComplete} />
       
-      {/* NEW: Daily Expense Modal */}
+      {/* Daily Expense Modal */}
       <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
