@@ -1,6 +1,7 @@
+
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User } from "lucide-react";
+import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -90,9 +91,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="min-h-screen flex w-full">
         <Sidebar className="border-r border-border/40">
           <SidebarHeader className="pt-6 pb-4 px-4">
-            <h2 className="text-xl font-semibold text-white pl-2">
-              {profile?.organization_name || "Queen of Hearts"}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white pl-2">
+                {profile?.organization_name || "Queen of Hearts"}
+              </h2>
+              <SidebarTrigger>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SidebarTrigger>
+            </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
@@ -154,12 +162,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border/40 flex items-center px-6 justify-between bg-white">
             <div className="flex items-center">
-              <SidebarTrigger>
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </SidebarTrigger>
-              <h1 className="ml-4 text-xl font-semibold text-primary">
+              <h1 className="text-xl font-semibold text-primary">
                 {location.pathname === "/dashboard" && "Dashboard"}
                 {location.pathname === "/income-expense" && "Income vs Expense"}
                 {location.pathname === "/admin" && "Admin Panel"}
