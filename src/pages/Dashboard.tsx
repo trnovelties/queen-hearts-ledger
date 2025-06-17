@@ -1,459 +1,358 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { formatCurrency } from '@/lib/utils';
-import GameForm from '@/components/GameForm';
-import TicketSalesRow from '@/components/TicketSalesRow';
-import WinnerForm from '@/components/WinnerForm';
-import PayoutSlipModal from '@/components/PayoutSlipModal';
-import ExpenseModal from '@/components/ExpenseModal';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { ChevronDown, ChevronUp, Plus, TrendingUp, DollarSign, Users, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { GameForm } from "@/components/GameForm";
+import { TicketSalesRow } from "@/components/TicketSalesRow";
+import { WinnerForm } from "@/components/WinnerForm";
+import { PayoutSlipModal } from "@/components/PayoutSlipModal";
+import { ExpenseModal } from "@/components/ExpenseModal";
+import { Tables } from "@/integrations/supabase/types";
+import { formatCurrency } from "@/lib/utils";
 
-const Dashboard = () => {
-  const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
-  const [showGameForm, setShowGameForm] = useState(false);
-  const [showWeekForm, setShowWeekForm] = useState<string | null>(null);
-  const [weekFormData, setWeekFormData] = useState({ startDate: '', endDate: '' });
+// Define types for data structure
+type Game = Tables<"games">;
+type Week = Tables<"weeks">;
+type TicketSale = Tables<"ticket_sales">;
+
+// Define aggregate data types
+interface GameSummary extends Game {
+  weeks: Week[];
+  ticket_sales: TicketSale[];
+}
+
+export default function Dashboard() {
+  const [open, setOpen] = useState(false);
+  const [games, setGames] = useState<GameSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [gameId, setGameId] = useState<string | null>(null);
+  const [isWinnerFormOpen, setIsWinnerFormOpen] = useState(false);
+  const [isPayoutSlipModalOpen, setIsPayoutSlipModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // Fetch games
-  const { data: games, isLoading } = useQuery({
-    queryKey: ['games'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('games')
-        .select('*')
-        .order('game_number', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+  useEffect(() => {
+    async function fetchGames() {
+      if (!user) return;
 
-  // Fetch weeks for each game
-  const { data: weeks } = useQuery({
-    queryKey: ['weeks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('weeks')
-        .select('*')
-        .order('week_number', { ascending: true });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('games')
+          .select('*')
+          .order('game_number', { ascending: false });
 
-  // Fetch ticket sales
-  const { data: ticketSales } = useQuery({
-    queryKey: ['ticket_sales'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ticket_sales')
-        .select('*')
-        .order('date', { ascending: true });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+        if (error) throw error;
 
-  // Fetch expenses
-  const { data: expenses } = useQuery({
-    queryKey: ['expenses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: true });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+        if (data) {
+          const gamesWithDetails: GameSummary[] = [];
 
-  // Week deletion mutation
-  const deleteWeekMutation = useMutation({
-    mutationFn: async (weekId: string) => {
-      // First delete all ticket sales for this week
-      const { error: ticketSalesError } = await supabase
-        .from('ticket_sales')
-        .delete()
-        .eq('week_id', weekId);
+          for (const game of data) {
+            const { data: weeksData, error: weeksError } = await supabase
+              .from('weeks')
+              .select('*')
+              .eq('game_id', game.id)
+              .order('week_number', { ascending: true });
 
-      if (ticketSalesError) throw ticketSalesError;
+            if (weeksError) throw weeksError;
 
-      // Then delete the week
-      const { error: weekError } = await supabase
-        .from('weeks')
-        .delete()
-        .eq('id', weekId);
+            const { data: salesData, error: salesError } = await supabase
+              .from('ticket_sales')
+              .select('*')
+              .eq('game_id', game.id)
+              .order('date', { ascending: true });
 
-      if (weekError) throw weekError;
+            if (salesError) throw salesError;
 
-      return weekId;
-    },
-    onSuccess: (deletedWeekId) => {
-      // Refresh all data
-      queryClient.invalidateQueries({ queryKey: ['games'] });
-      queryClient.invalidateQueries({ queryKey: ['weeks'] });
-      queryClient.invalidateQueries({ queryKey: ['ticket_sales'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      
-      // Remove from expanded weeks
-      setExpandedWeeks(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(deletedWeekId);
-        return newSet;
-      });
-      
-      toast({
-        title: "Success",
-        description: "Week deleted successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete week: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
+            gamesWithDetails.push({
+              ...game,
+              weeks: weeksData || [],
+              ticket_sales: salesData || [],
+            });
+          }
 
-  // Create week mutation
-  const createWeekMutation = useMutation({
-    mutationFn: async ({ gameId, weekData }: { gameId: string; weekData: any }) => {
-      const gameWeeks = weeks?.filter(w => w.game_id === gameId) || [];
-      const nextWeekNumber = gameWeeks.length + 1;
-
-      const { data, error } = await supabase
-        .from('weeks')
-        .insert({
-          game_id: gameId,
-          week_number: nextWeekNumber,
-          start_date: weekData.startDate,
-          end_date: weekData.endDate,
-          weekly_sales: 0,
-          weekly_tickets_sold: 0,
-          weekly_payout: 0,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weeks'] });
-      setShowWeekForm(null);
-      setWeekFormData({ startDate: '', endDate: '' });
-      toast({
-        title: "Success",
-        description: "Week created successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create week: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const toggleGameExpansion = (gameId: string) => {
-    setExpandedGames(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(gameId)) {
-        newSet.delete(gameId);
-      } else {
-        newSet.add(gameId);
+          setGames(gamesWithDetails);
+        }
+      } catch (error: any) {
+        console.error('Error fetching games:', error);
+        toast({
+          title: "Error Loading Data",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      return newSet;
-    });
-  };
-
-  const toggleWeekExpansion = (weekId: string) => {
-    setExpandedWeeks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(weekId)) {
-        newSet.delete(weekId);
-      } else {
-        newSet.add(weekId);
-      }
-      return newSet;
-    });
-  };
-
-  const getWeeksForGame = (gameId: string) => {
-    return weeks?.filter(week => week.game_id === gameId) || [];
-  };
-
-  const getTicketSalesForWeek = (weekId: string) => {
-    return ticketSales?.filter(sale => sale.week_id === weekId) || [];
-  };
-
-  const getExpensesForGame = (gameId: string) => {
-    return expenses?.filter(expense => expense.game_id === gameId) || [];
-  };
-
-  const handleCreateWeek = (gameId: string) => {
-    createWeekMutation.mutate({ gameId, weekData: weekFormData });
-  };
-
-  const handleDeleteWeek = (weekId: string) => {
-    if (window.confirm('Are you sure you want to delete this week? This will also delete all ticket sales for this week.')) {
-      deleteWeekMutation.mutate(weekId);
     }
+
+    fetchGames();
+  }, [user, toast]);
+
+  const handleGameCreated = (newGame: Game) => {
+    setGames([newGame, ...games]);
+    toast({
+      title: "Game Created",
+      description: `Successfully created game ${newGame.name}.`,
+    });
   };
 
-  if (isLoading) {
-    return <div className="p-6">Loading...</div>;
-  }
+  const handleGameUpdated = (updatedGame: Game) => {
+    setGames(games.map(game => game.id === updatedGame.id ? updatedGame : game));
+    toast({
+      title: "Game Updated",
+      description: `Successfully updated game ${updatedGame.name}.`,
+    });
+  };
+
+  const handleGameDeleted = (id: string) => {
+    setGames(games.filter(game => game.id !== id));
+    toast({
+      title: "Game Deleted",
+      description: "Successfully deleted the game.",
+    });
+  };
+
+  const handleSalesUpdated = (gameId: string, updatedSales: TicketSale[]) => {
+    setGames(games.map(game => {
+      if (game.id === gameId) {
+        return { ...game, ticket_sales: updatedSales };
+      }
+      return game;
+    }));
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedGameId(expandedGameId === id ? null : id);
+  };
+
+  const handleOpenWinnerForm = (game: Game) => {
+    setSelectedGame(game);
+    setIsWinnerFormOpen(true);
+  };
+
+  const handleCloseWinnerForm = () => {
+    setSelectedGame(null);
+    setIsWinnerFormOpen(false);
+  };
+
+  const handleOpenPayoutSlipModal = (game: Game) => {
+    setSelectedGame(game);
+    setIsPayoutSlipModalOpen(true);
+  };
+
+  const handleClosePayoutSlipModal = () => {
+    setSelectedGame(null);
+    setIsPayoutSlipModalOpen(false);
+  };
+
+  const handleOpenExpenseModal = (game: Game) => {
+    setSelectedGame(game);
+    setIsExpenseModalOpen(true);
+  };
+
+  const handleCloseExpenseModal = () => {
+    setSelectedGame(null);
+    setIsExpenseModalOpen(false);
+  };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Queen of Hearts Manager</h1>
-        <Dialog open={showGameForm} onOpenChange={setShowGameForm}>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Dashboard</h2>
+        <Button onClick={() => navigate("/IncomeExpense")} className="bg-[#1F4E4A]">View Income vs Expense</Button>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Game
+            <Button className="bg-[#1F4E4A]">
+              <Plus className="h-4 w-4 mr-2" /> Add Game
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Game</DialogTitle>
-            </DialogHeader>
-            <GameForm onClose={() => setShowGameForm(false)} />
+            <GameForm onCreate={handleGameCreated} />
           </DialogContent>
         </Dialog>
       </div>
-
-      <div className="space-y-4">
-        {games?.map((game) => {
-          const gameWeeks = getWeeksForGame(game.id);
-          const gameExpenses = getExpensesForGame(game.id);
-          const isExpanded = expandedGames.has(game.id);
-
-          return (
-            <Card key={game.id} className="border shadow-sm">
-              <Collapsible open={isExpanded} onOpenChange={() => toggleGameExpansion(game.id)}>
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-gray-50">
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        <span>{game.name}</span>
+      <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Games</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{games.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Games</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{games.filter(game => !game.end_date).length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Completed Games</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{games.filter(game => game.end_date).length}</div>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-4">
+        {loading ? (
+          <div className="text-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1F4E4A] mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading games...</p>
+          </div>
+        ) : (
+          games.map((game) => (
+            <Collapsible key={game.id} open={expandedGameId === game.id} onOpenChange={() => toggleExpand(game.id)}>
+              <CollapsibleTrigger className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center py-4 border-b">
+                <div className="flex items-center">
+                  <CardTitle className="text-lg font-semibold">{game.name}</CardTitle>
+                  {game.end_date ? (
+                    <Badge className="ml-2">Completed</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="ml-2">Active</Badge>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {game.start_date && `Start Date: ${format(new Date(game.start_date), 'MMM d, yyyy')}`}
+                </div>
+                <div className="justify-self-end">
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 peer-data-[state=open]:rotate-180" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <Card className="mt-2">
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Total Sales</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-xl font-bold">{formatCurrency(game.total_sales)}</div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Total Payouts</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-xl font-bold">{formatCurrency(game.total_payouts)}</div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Organization Net Profit</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-xl font-bold">{formatCurrency(game.organization_net_profit)}</div>
+                          </CardContent>
+                        </Card>
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span>Start: {format(new Date(game.start_date), 'MMM dd, yyyy')}</span>
-                        {game.end_date && <span>End: {format(new Date(game.end_date), 'MMM dd, yyyy')}</span>}
-                        <span>Sales: {formatCurrency(game.total_sales)}</span>
-                        <span>Net: {formatCurrency(game.organization_net_profit)}</span>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">Weeks</h3>
-                      <Dialog 
-                        open={showWeekForm === game.id} 
-                        onOpenChange={(open) => setShowWeekForm(open ? game.id : null)}
-                      >
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Week
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Week</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="startDate">Start Date</Label>
-                              <Input
-                                id="startDate"
-                                type="date"
-                                value={weekFormData.startDate}
-                                onChange={(e) => setWeekFormData(prev => ({
-                                  ...prev,
-                                  startDate: e.target.value
-                                }))}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="endDate">End Date</Label>
-                              <Input
-                                id="endDate"
-                                type="date"
-                                value={weekFormData.endDate}
-                                onChange={(e) => setWeekFormData(prev => ({
-                                  ...prev,
-                                  endDate: e.target.value
-                                }))}
-                              />
-                            </div>
-                            <Button 
-                              onClick={() => handleCreateWeek(game.id)}
-                              disabled={!weekFormData.startDate || !weekFormData.endDate}
-                            >
-                              Create Week
+                      <div className="flex justify-end space-x-2">
+                        <Button size="sm" onClick={() => handleOpenWinnerForm(game)} className="bg-[#1F4E4A]">
+                          <Users className="h-4 w-4 mr-2" /> Add Winner
+                        </Button>
+                        <Button size="sm" onClick={() => handleOpenPayoutSlipModal(game)} className="bg-[#1F4E4A]">
+                          <DollarSign className="h-4 w-4 mr-2" /> Payout Slip
+                        </Button>
+                        <Button size="sm" onClick={() => handleOpenExpenseModal(game)} className="bg-[#1F4E4A]">
+                          <TrendingUp className="h-4 w-4 mr-2" /> Add Expense
+                        </Button>
+                        <Dialog open={gameId === game.id} onOpenChange={(isOpen) => {
+                          setGameId(isOpen ? game.id : null);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="secondary">
+                              <Calendar className="h-4 w-4 mr-2" /> Edit Game
                             </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-
-                    <div className="space-y-2">
-                      {gameWeeks.map((week) => {
-                        const weekTicketSales = getTicketSalesForWeek(week.id);
-                        const isWeekExpanded = expandedWeeks.has(week.id);
-
-                        return (
-                          <Card key={week.id} className="border-l-4 border-l-blue-500">
-                            <Collapsible open={isWeekExpanded} onOpenChange={() => toggleWeekExpansion(week.id)}>
-                              <CollapsibleTrigger asChild>
-                                <CardHeader className="cursor-pointer hover:bg-gray-50 py-3">
-                                  <CardTitle className="flex items-center justify-between text-base">
-                                    <div className="flex items-center space-x-2">
-                                      {isWeekExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                      <span>Week {week.week_number}</span>
-                                      <span className="text-sm text-gray-600">
-                                        {format(new Date(week.start_date), 'MMM dd')} - {format(new Date(week.end_date), 'MMM dd, yyyy')}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center space-x-4">
-                                      <div className="flex items-center space-x-3 text-xs text-gray-600">
-                                        <span>Tickets: {week.weekly_tickets_sold}</span>
-                                        <span>Sales: {formatCurrency(week.weekly_sales)}</span>
-                                        <span>Payout: {formatCurrency(week.weekly_payout)}</span>
-                                        {week.winner_name && <span>Winner: {week.winner_name}</span>}
-                                        {week.card_selected && <span>Card: {week.card_selected}</span>}
-                                      </div>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteWeek(week.id);
-                                        }}
-                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </CardTitle>
-                                </CardHeader>
-                              </CollapsibleTrigger>
-
-                              <CollapsibleContent>
-                                <CardContent className="space-y-4">
-                                  <div className="space-y-2">
-                                    <h4 className="font-medium">Ticket Sales</h4>
-                                    {weekTicketSales.length > 0 ? (
-                                      <div className="space-y-1">
-                                        {weekTicketSales.map((sale) => (
-                                          <TicketSalesRow 
-                                            key={sale.id} 
-                                            sale={sale} 
-                                            gameId={game.id}
-                                            weekId={week.id}
-                                          />
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-gray-500 text-sm">No ticket sales recorded</p>
-                                    )}
-                                  </div>
-
-                                  {week.winner_name && (
-                                    <div className="space-y-2">
-                                      <h4 className="font-medium">Winner Information</h4>
-                                      <div className="bg-green-50 p-3 rounded-md">
-                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                          <div><strong>Winner:</strong> {week.winner_name}</div>
-                                          <div><strong>Slot:</strong> {week.slot_chosen}</div>
-                                          <div><strong>Card:</strong> {week.card_selected}</div>
-                                          <div><strong>Present:</strong> {week.winner_present ? 'Yes' : 'No'}</div>
-                                          <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
-                                        </div>
-                                        <PayoutSlipModal 
-                                          week={week} 
-                                          game={game}
-                                        />
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  <div className="flex space-x-2">
-                                    <WinnerForm 
-                                      gameId={game.id}
-                                      weekId={week.id}
-                                      weekNumber={week.week_number}
-                                      disabled={!!week.winner_name}
-                                    />
-                                  </div>
-                                </CardContent>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          </Card>
-                        );
-                      })}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-medium">Expenses & Donations</h4>
-                        <ExpenseModal gameId={game.id} />
+                          </DialogTrigger>
+                          <DialogContent>
+                            <GameForm game={game} onUpdate={handleGameUpdated} onDelete={handleGameDeleted} />
+                          </DialogContent>
+                        </Dialog>
                       </div>
-                      {gameExpenses.length > 0 ? (
-                        <div className="space-y-1">
-                          {gameExpenses.map((expense) => (
-                            <div key={expense.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                              <div className="flex items-center space-x-3">
-                                <span className="text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</span>
-                                <span className="text-sm">{expense.memo}</span>
-                                <span className={`text-xs px-2 py-1 rounded ${
-                                  expense.is_donation ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {expense.is_donation ? 'Donation' : 'Expense'}
-                                </span>
-                              </div>
-                              <span className="font-medium">{formatCurrency(expense.amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm">No expenses recorded</p>
-                      )}
+                      <div>
+                        <h3 className="text-lg font-medium">Ticket Sales</h3>
+                        {game.ticket_sales.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Tickets Sold
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount Collected
+                                  </th>
+                                  {/* Add more headers as needed */}
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {game.ticket_sales.map((sale) => (
+                                  <TicketSalesRow key={sale.id} sale={sale} onSalesUpdated={(updatedSales) => handleSalesUpdated(game.id, updatedSales)} />
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground">No ticket sales recorded for this game.</p>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          );
-        })}
+                </Card>
+              </CollapsibleContent>
+            </Collapsible>
+          ))
+        )}
       </div>
+
+      {selectedGame && (
+        <WinnerForm
+          open={isWinnerFormOpen}
+          onOpenChange={setIsWinnerFormOpen}
+          game={selectedGame}
+          onClose={handleCloseWinnerForm}
+        />
+      )}
+
+      {selectedGame && (
+        <PayoutSlipModal
+          open={isPayoutSlipModalOpen}
+          onOpenChange={setIsPayoutSlipModalOpen}
+          game={selectedGame}
+          onClose={handleClosePayoutSlipModal}
+        />
+      )}
+
+      {selectedGame && (
+        <ExpenseModal
+          open={isExpenseModalOpen}
+          onOpenChange={setIsExpenseModalOpen}
+          gameId={selectedGame.id}
+          gameName={selectedGame.name}
+          onClose={handleCloseExpenseModal}
+        />
+      )}
     </div>
   );
-};
-
-export default Dashboard;
+}
