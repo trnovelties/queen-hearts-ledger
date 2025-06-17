@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -539,50 +538,31 @@ export default function Dashboard() {
       console.log(`Attempting to delete ${deleteType} with ID: ${deleteItemId}`);
 
       if (deleteType === 'game') {
-        // Delete in proper order to avoid foreign key constraints
+        // For game deletion, we need to delete in the correct order to avoid foreign key violations
         
-        // First, get all weeks for this game
-        const { data: weeks, error: weeksError } = await supabase
-          .from('weeks')
-          .select('id')
+        // Step 1: Delete all ticket_sales for this game
+        const { error: ticketSalesError } = await supabase
+          .from('ticket_sales')
+          .delete()
           .eq('game_id', deleteItemId);
-          
-        if (weeksError) {
-          console.error('Error fetching weeks:', weeksError);
-          throw new Error(`Failed to fetch weeks: ${weeksError.message}`);
+
+        if (ticketSalesError) {
+          console.error('Error deleting ticket sales:', ticketSalesError);
+          throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
         }
 
-        console.log(`Found ${weeks?.length || 0} weeks for game ${deleteItemId}`);
-
-        // Delete ticket sales for all weeks in this game
-        if (weeks && weeks.length > 0) {
-          const weekIds = weeks.map(week => week.id);
-          
-          const { error: ticketSalesError } = await supabase
-            .from('ticket_sales')
-            .delete()
-            .in('week_id', weekIds);
-
-          if (ticketSalesError) {
-            console.error('Error deleting ticket sales:', ticketSalesError);
-            throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
-          }
-          console.log('Successfully deleted ticket sales');
-        }
-
-        // Delete all weeks for this game
-        const { error: deleteWeeksError } = await supabase
+        // Step 2: Delete all weeks for this game
+        const { error: weeksError } = await supabase
           .from('weeks')
           .delete()
           .eq('game_id', deleteItemId);
 
-        if (deleteWeeksError) {
-          console.error('Error deleting weeks:', deleteWeeksError);
-          throw new Error(`Failed to delete weeks: ${deleteWeeksError.message}`);
+        if (weeksError) {
+          console.error('Error deleting weeks:', weeksError);
+          throw new Error(`Failed to delete weeks: ${weeksError.message}`);
         }
-        console.log('Successfully deleted weeks');
 
-        // Delete all expenses for this game
+        // Step 3: Delete all expenses for this game
         const { error: expensesError } = await supabase
           .from('expenses')
           .delete()
@@ -592,9 +572,8 @@ export default function Dashboard() {
           console.error('Error deleting expenses:', expensesError);
           throw new Error(`Failed to delete expenses: ${expensesError.message}`);
         }
-        console.log('Successfully deleted expenses');
 
-        // Finally delete the game itself
+        // Step 4: Finally delete the game itself
         const { error: gameError } = await supabase
           .from('games')
           .delete()
@@ -604,9 +583,8 @@ export default function Dashboard() {
           console.error('Error deleting game:', gameError);
           throw new Error(`Failed to delete game: ${gameError.message}`);
         }
-        console.log('Successfully deleted game');
 
-        // Close any expanded sections for this game
+        // Reset expanded states for the deleted game
         if (expandedGame === deleteItemId) {
           setExpandedGame(null);
         }
@@ -614,13 +592,16 @@ export default function Dashboard() {
           setExpandedExpenses(null);
         }
 
+        // Update local state immediately to remove the game from the UI
+        setGames(prevGames => prevGames.filter(game => game.id !== deleteItemId));
+
         toast({
           title: "Game Deleted",
           description: "Game and all associated data have been deleted successfully."
         });
 
       } else if (deleteType === 'week') {
-        // First delete related entries in ticket_sales
+        // Delete ticket sales first, then the week
         const { error: ticketSalesError } = await supabase
           .from('ticket_sales')
           .delete()
@@ -630,7 +611,6 @@ export default function Dashboard() {
           throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
         }
 
-        // Then delete the week
         const { error: weekError } = await supabase
           .from('weeks')
           .delete()
@@ -640,7 +620,6 @@ export default function Dashboard() {
           throw new Error(`Failed to delete week: ${weekError.message}`);
         }
 
-        // Close expanded week if it's the one being deleted
         if (expandedWeek === deleteItemId) {
           setExpandedWeek(null);
         }
@@ -649,6 +628,9 @@ export default function Dashboard() {
           title: "Week Deleted",
           description: "Week and all associated entries have been deleted."
         });
+
+        // Refresh data to update game totals
+        fetchGames();
 
       } else if (deleteType === 'entry') {
         // Get the entry details before deletion for recalculation
@@ -777,7 +759,7 @@ export default function Dashboard() {
         }
       }
 
-      // Force refresh data after any deletion
+      // Always refresh the games data after any deletion to ensure UI is in sync
       console.log('Refreshing game data after deletion...');
       await fetchGames();
 
