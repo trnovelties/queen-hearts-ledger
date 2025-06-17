@@ -71,7 +71,7 @@ export function PayoutSlipModal({
       }
       
       const canvas = await html2canvas(slipRef.current, {
-        scale: 2, // Improve quality
+        scale: 2,
         backgroundColor: 'white',
         logging: false
       });
@@ -108,9 +108,9 @@ export function PayoutSlipModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[80vw] h-[80vh] max-w-none max-h-none overflow-hidden flex flex-col">
+      <DialogContent className="w-[90vw] h-[90vh] max-w-4xl max-h-none overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Payout Slip</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-[#1F4E4A]">Winner Payout Slip</DialogTitle>
         </DialogHeader>
         
         <div className="flex flex-col h-full overflow-hidden">
@@ -121,7 +121,9 @@ export function PayoutSlipModal({
           ) : (
             <>
               <div className="mb-4 flex-shrink-0">
-                <Label htmlFor="authorizedSignatureName" className="mb-2 block">Authorized Signature Name</Label>
+                <Label htmlFor="authorizedSignatureName" className="mb-2 block text-sm font-medium">
+                  Authorized Signature Name
+                </Label>
                 <Input
                   id="authorizedSignatureName"
                   placeholder="Enter name of authorized person signing"
@@ -134,66 +136,119 @@ export function PayoutSlipModal({
               <div className="flex justify-end mb-4 flex-shrink-0">
                 <Button 
                   onClick={handleGeneratePDF} 
-                  className="bg-[#1F4E4A] text-[#EDFFDF] hover:bg-[#1F4E4A]/90"
+                  className="bg-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90 font-medium"
                 >
-                  <Printer className="h-4 w-4 mr-2 text-[#EDFFDF]" /> Print Payout Slip
+                  <Printer className="h-4 w-4 mr-2" /> Print Payout Slip
                 </Button>
               </div>
               
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto bg-gray-50 p-4 rounded-lg">
                 <div 
                   ref={slipRef} 
-                  className="bg-white p-6 border rounded-md shadow-sm mx-auto max-w-2xl"
+                  className="bg-white p-8 border-2 border-gray-300 rounded-lg shadow-lg mx-auto max-w-3xl min-h-[600px]"
                 >
-                  <div className="text-center mb-6">
-                    <h2 className="text-xl font-bold mb-1">Queen of Hearts</h2>
-                    <h3 className="text-lg font-semibold mb-3">Winner Payout Slip</h3>
-                    <div className="text-base font-medium">{profile?.organization_name || 'Organization'}</div>
+                  {/* Header Section */}
+                  <div className="text-center mb-8 border-b-2 border-[#1F4E4A] pb-6">
+                    <div className="mb-4">
+                      <h1 className="text-3xl font-bold text-[#1F4E4A] mb-2">QUEEN OF HEARTS</h1>
+                      <h2 className="text-xl font-semibold text-gray-700">Winner Payout Slip</h2>
+                    </div>
+                    <div className="bg-[#F7F8FC] px-4 py-2 rounded-lg inline-block">
+                      <span className="text-lg font-semibold text-[#1F4E4A]">
+                        {profile?.organization_name || 'Organization Name'}
+                      </span>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
-                    <div>
-                      <div className="font-semibold text-gray-600">Game:</div>
-                      <div>{winnerData.gameName}</div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-600">Week:</div>
-                      <div>
-                        Week {winnerData.weekNumber} ({format(new Date(winnerData.weekStartDate), 'MMM d, yyyy')} - {format(new Date(winnerData.weekEndDate), 'MMM d, yyyy')})
+                  {/* Game Information Section */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-bold text-[#1F4E4A] mb-4 border-b border-gray-300 pb-2">
+                      GAME INFORMATION
+                    </h3>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Game:</span>
+                          <span className="font-medium">{winnerData.gameName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Week:</span>
+                          <span className="font-medium">Week {winnerData.weekNumber}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Week Period:</span>
+                          <span className="font-medium">
+                            {format(new Date(winnerData.weekStartDate), 'MMM d')} - {format(new Date(winnerData.weekEndDate), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Drawing Date:</span>
+                          <span className="font-medium">{format(new Date(winnerData.date), 'MMMM d, yyyy')}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
-                    <div>
-                      <div className="font-semibold text-gray-600">Date of Drawing:</div>
-                      <div>{format(new Date(winnerData.date), 'MMMM d, yyyy')}</div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-600">Winner:</div>
-                      <div className="font-semibold">{winnerData.winnerName}</div>
+                  {/* Winner Information Section */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-bold text-[#1F4E4A] mb-4 border-b border-gray-300 pb-2">
+                      WINNER DETAILS
+                    </h3>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Winner Name:</span>
+                          <span className="font-bold text-lg">{winnerData.winnerName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Slot Chosen:</span>
+                          <span className="font-medium text-lg">#{winnerData.slotChosen}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-gray-600">Card Exposed:</span>
+                          <span className="font-bold text-lg text-red-600">{winnerData.cardSelected}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 text-sm">
-                    <div>
-                      <div className="font-semibold text-gray-600">Slot Chosen:</div>
-                      <div>{winnerData.slotChosen}</div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-600">Card Exposed:</div>
-                      <div>{winnerData.cardSelected}</div>
+                  {/* Payout Amount Section */}
+                  <div className="mb-8">
+                    <div className="bg-[#A1E96C] rounded-lg p-6 text-center border-2 border-[#1F4E4A]">
+                      <h3 className="text-lg font-bold text-[#1F4E4A] mb-2">AMOUNT WON</h3>
+                      <div className="text-4xl font-bold text-[#1F4E4A]">
+                        {formatCurrency(winnerData.payoutAmount)}
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="mb-8 border-t border-b py-3 text-center">
-                    <div className="font-semibold text-gray-600 text-sm">Amount Won:</div>
-                    <div className="text-xl font-bold">{formatCurrency(winnerData.payoutAmount)}</div>
-                  </div>
-                  
-                  <div className="mt-12 pt-2 border-t border-gray-400">
-                    <div className="font-semibold text-gray-600 text-center text-sm">
-                      {authorizedName ? authorizedName : 'Authorized Signature'}
+                  {/* Signature Section */}
+                  <div className="mt-12 pt-8 border-t-2 border-gray-300">
+                    <div className="grid grid-cols-2 gap-12">
+                      <div className="text-center">
+                        <div className="border-b-2 border-gray-400 pb-1 mb-2 h-12 flex items-end justify-center">
+                          <span className="text-sm text-gray-500">Winner Signature</span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-600">
+                          {winnerData.winnerName}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="border-b-2 border-gray-400 pb-1 mb-2 h-12 flex items-end justify-center">
+                          <span className="text-sm text-gray-500">Authorized Signature</span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-600">
+                          {authorizedName || 'Authorized Representative'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center mt-6 text-xs text-gray-500">
+                      Generated on {format(new Date(), 'MMMM d, yyyy \'at\' h:mm a')}
                     </div>
                   </div>
                 </div>
