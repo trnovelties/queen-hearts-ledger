@@ -535,12 +535,25 @@ export default function Dashboard() {
     }
 
     try {
-      console.log(`Attempting to delete ${deleteType} with ID: ${deleteItemId}`);
+      console.log(`Starting deletion of ${deleteType} with ID: ${deleteItemId}`);
 
       if (deleteType === 'game') {
-        // For game deletion, we need to delete in the correct order to avoid foreign key violations
-        
-        // Step 1: Delete all ticket_sales for this game
+        // First, check if the game exists
+        const { data: gameCheck, error: gameCheckError } = await supabase
+          .from('games')
+          .select('id, name')
+          .eq('id', deleteItemId)
+          .single();
+
+        if (gameCheckError) {
+          console.error('Game not found:', gameCheckError);
+          throw new Error(`Game not found: ${gameCheckError.message}`);
+        }
+
+        console.log('Game found:', gameCheck);
+
+        // Delete all ticket_sales for this game first
+        console.log('Deleting ticket sales...');
         const { error: ticketSalesError } = await supabase
           .from('ticket_sales')
           .delete()
@@ -550,8 +563,10 @@ export default function Dashboard() {
           console.error('Error deleting ticket sales:', ticketSalesError);
           throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
         }
+        console.log('Ticket sales deleted successfully');
 
-        // Step 2: Delete all weeks for this game
+        // Delete all weeks for this game
+        console.log('Deleting weeks...');
         const { error: weeksError } = await supabase
           .from('weeks')
           .delete()
@@ -561,8 +576,10 @@ export default function Dashboard() {
           console.error('Error deleting weeks:', weeksError);
           throw new Error(`Failed to delete weeks: ${weeksError.message}`);
         }
+        console.log('Weeks deleted successfully');
 
-        // Step 3: Delete all expenses for this game
+        // Delete all expenses for this game
+        console.log('Deleting expenses...');
         const { error: expensesError } = await supabase
           .from('expenses')
           .delete()
@@ -572,8 +589,10 @@ export default function Dashboard() {
           console.error('Error deleting expenses:', expensesError);
           throw new Error(`Failed to delete expenses: ${expensesError.message}`);
         }
+        console.log('Expenses deleted successfully');
 
-        // Step 4: Finally delete the game itself
+        // Finally delete the game itself
+        console.log('Deleting game...');
         const { error: gameError } = await supabase
           .from('games')
           .delete()
@@ -583,8 +602,16 @@ export default function Dashboard() {
           console.error('Error deleting game:', gameError);
           throw new Error(`Failed to delete game: ${gameError.message}`);
         }
+        console.log('Game deleted successfully');
 
-        // Reset expanded states for the deleted game
+        // Update local state immediately
+        setGames(prevGames => {
+          const updatedGames = prevGames.filter(game => game.id !== deleteItemId);
+          console.log('Updated local games state, remaining games:', updatedGames.length);
+          return updatedGames;
+        });
+
+        // Reset expanded states
         if (expandedGame === deleteItemId) {
           setExpandedGame(null);
         }
@@ -592,12 +619,9 @@ export default function Dashboard() {
           setExpandedExpenses(null);
         }
 
-        // Update local state immediately to remove the game from the UI
-        setGames(prevGames => prevGames.filter(game => game.id !== deleteItemId));
-
         toast({
           title: "Game Deleted",
-          description: "Game and all associated data have been deleted successfully."
+          description: `Game "${gameCheck.name}" and all associated data have been deleted successfully.`
         });
 
       } else if (deleteType === 'week') {
@@ -759,9 +783,11 @@ export default function Dashboard() {
         }
       }
 
-      // Always refresh the games data after any deletion to ensure UI is in sync
-      console.log('Refreshing game data after deletion...');
-      await fetchGames();
+      // Force a complete refresh of data after any deletion
+      console.log('Forcing data refresh...');
+      setTimeout(() => {
+        fetchGames();
+      }, 500);
 
     } catch (error: any) {
       console.error('Error during deletion:', error);
