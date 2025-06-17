@@ -28,6 +28,7 @@ const Dashboard = () => {
   const [showTicketForm, setShowTicketForm] = useState<string | null>(null);
   const [showExpenseModal, setShowExpenseModal] = useState<string | null>(null);
   const [showPayoutSlip, setShowPayoutSlip] = useState<string | null>(null);
+  const [showWinnerForm, setShowWinnerForm] = useState<{gameId: string, weekId: string} | null>(null);
   const [weekFormData, setWeekFormData] = useState({ startDate: '', endDate: '' });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -240,12 +241,10 @@ const Dashboard = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Queen of Hearts Manager</h1>
-        <GameForm 
-          open={showGameForm}
-          onOpenChange={setShowGameForm}
-          games={games || []}
-          onComplete={refreshData}
-        />
+        <Button onClick={() => setShowGameForm(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Game
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -448,12 +447,15 @@ const Dashboard = () => {
                                   )}
 
                                   <div className="flex space-x-2">
-                                    <WinnerForm 
-                                      gameId={game.id}
-                                      weekId={week.id}
-                                      disabled={!!week.winner_name}
-                                      onSuccess={refreshData}
-                                    />
+                                    {!week.winner_name && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowWinnerForm({ gameId: game.id, weekId: week.id })}
+                                      >
+                                        Enter Winner Details
+                                      </Button>
+                                    )}
                                   </div>
                                 </CardContent>
                               </CollapsibleContent>
@@ -503,6 +505,46 @@ const Dashboard = () => {
           );
         })}
       </div>
+
+      {/* Game Form Modal */}
+      <GameForm 
+        open={showGameForm}
+        onOpenChange={setShowGameForm}
+        games={games || []}
+        onComplete={refreshData}
+      />
+
+      {/* Winner Form Modal */}
+      {showWinnerForm && (
+        <WinnerForm
+          open={!!showWinnerForm}
+          onOpenChange={(open) => setShowWinnerForm(open ? showWinnerForm : null)}
+          gameId={showWinnerForm.gameId}
+          weekId={showWinnerForm.weekId}
+          gameData={(() => {
+            const game = games?.find(g => g.id === showWinnerForm.gameId);
+            return game ? {
+              ticket_price: game.ticket_price,
+              organization_percentage: game.organization_percentage,
+              jackpot_percentage: game.jackpot_percentage,
+              minimum_starting_jackpot: game.minimum_starting_jackpot || 500,
+              carryover_jackpot: game.carryover_jackpot,
+              total_payouts: game.total_payouts,
+              card_payouts: game.card_payouts
+            } : undefined;
+          })()}
+          currentJackpotTotal={0}
+          jackpotContributions={0}
+          onComplete={() => {
+            setShowWinnerForm(null);
+            refreshData();
+          }}
+          onOpenPayoutSlip={(winnerData) => {
+            // Handle payout slip opening
+            console.log('Opening payout slip for:', winnerData);
+          }}
+        />
+      )}
 
       {/* Expense Modal */}
       {showExpenseModal && games && (
