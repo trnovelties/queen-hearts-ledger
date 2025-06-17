@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { CardPayoutConfig } from "@/components/CardPayoutConfig";
+import { OrganizationRules } from "@/components/OrganizationRules";
 
 export default function Admin() {
   const { toast } = useToast();
@@ -148,17 +148,17 @@ export default function Admin() {
   };
   
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Organization Settings</h1>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
       
-      <Tabs defaultValue="game-settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="game-settings">Game Settings</TabsTrigger>
-          <TabsTrigger value="card-distributions">Card Distributions</TabsTrigger>
+      <Tabs defaultValue="settings" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="settings">Game Settings</TabsTrigger>
+          <TabsTrigger value="distributions">Card Distributions</TabsTrigger>
+          <TabsTrigger value="rules">Organization Rules</TabsTrigger>
         </TabsList>
         
-        {/* Game Settings Tab */}
-        <TabsContent value="game-settings" className="space-y-4">
+        <TabsContent value="settings" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Default Game Settings</CardTitle>
@@ -289,9 +289,12 @@ export default function Admin() {
           </Card>
         </TabsContent>
         
-        {/* Card Distributions Tab */}
-        <TabsContent value="card-distributions" className="space-y-4">
+        <TabsContent value="distributions" className="space-y-6">
           <CardPayoutConfig />
+        </TabsContent>
+
+        <TabsContent value="rules" className="space-y-6">
+          <OrganizationRules />
         </TabsContent>
       </Tabs>
     </div>
