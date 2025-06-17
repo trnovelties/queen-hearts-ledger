@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,6 @@ import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
 import { Plus, Calendar, Users, DollarSign, Trophy, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { GameForm } from "@/components/GameForm";
-import { TicketSalesRow } from "@/components/TicketSalesRow";
-import { WinnerForm } from "@/components/WinnerForm";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { ExpenseModal } from "@/components/ExpenseModal";
 
@@ -22,8 +21,10 @@ const Dashboard = () => {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [showGameForm, setShowGameForm] = useState(false);
-  const [showWeekForm, setShowWeekForm] = useState<string | null>(null);
-  const [weekFormData, setWeekFormData] = useState({ startDate: '', endDate: '' });
+  const [showWinnerForm, setShowWinnerForm] = useState<string | null>(null);
+  const [showPayoutSlip, setShowPayoutSlip] = useState(false);
+  const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
+  const [showTicketSalesForm, setShowTicketSalesForm] = useState<string | null>(null);
   const [expenseModalOpen, setExpenseModalOpen] = useState<{open: boolean, gameId: string, gameName: string}>({
     open: false,
     gameId: '',
@@ -98,96 +99,6 @@ const Dashboard = () => {
     },
   });
 
-  // Week deletion mutation
-  const deleteWeekMutation = useMutation({
-    mutationFn: async (weekId: string) => {
-      // First delete all ticket sales for this week
-      const { error: ticketSalesError } = await supabase
-        .from('ticket_sales')
-        .delete()
-        .eq('week_id', weekId);
-
-      if (ticketSalesError) throw ticketSalesError;
-
-      // Then delete the week
-      const { error: weekError } = await supabase
-        .from('weeks')
-        .delete()
-        .eq('id', weekId);
-
-      if (weekError) throw weekError;
-
-      return weekId;
-    },
-    onSuccess: (deletedWeekId) => {
-      // Refresh all data
-      queryClient.invalidateQueries({ queryKey: ['games'] });
-      queryClient.invalidateQueries({ queryKey: ['weeks'] });
-      queryClient.invalidateQueries({ queryKey: ['ticket_sales'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      
-      // Remove from expanded weeks
-      setExpandedWeeks(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(deletedWeekId);
-        return newSet;
-      });
-      
-      toast({
-        title: "Success",
-        description: "Week deleted successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete week: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Create week mutation
-  const createWeekMutation = useMutation({
-    mutationFn: async ({ gameId, weekData }: { gameId: string; weekData: any }) => {
-      const gameWeeks = weeks?.filter(w => w.game_id === gameId) || [];
-      const nextWeekNumber = gameWeeks.length + 1;
-
-      const { data, error } = await supabase
-        .from('weeks')
-        .insert({
-          game_id: gameId,
-          week_number: nextWeekNumber,
-          start_date: weekData.startDate,
-          end_date: weekData.endDate,
-          weekly_sales: 0,
-          weekly_tickets_sold: 0,
-          weekly_payout: 0,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weeks'] });
-      setShowWeekForm(null);
-      setWeekFormData({ startDate: '', endDate: '' });
-      toast({
-        title: "Success",
-        description: "Week created successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create week: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-
   const toggleGameExpansion = (gameId: string) => {
     setExpandedGames(prev => {
       const newSet = new Set(prev);
@@ -224,14 +135,14 @@ const Dashboard = () => {
     return expenses?.filter(expense => expense.game_id === gameId) || [];
   };
 
-  const handleCreateWeek = (gameId: string) => {
-    createWeekMutation.mutate({ gameId, weekData: weekFormData });
+  const handleGameFormComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['games'] });
+    setShowGameForm(false);
   };
 
-  const handleDeleteWeek = (weekId: string) => {
-    if (window.confirm('Are you sure you want to delete this week? This will also delete all ticket sales for this week.')) {
-      deleteWeekMutation.mutate(weekId);
-    }
+  const handleOpenPayoutSlip = (winnerData: any) => {
+    setPayoutSlipData(winnerData);
+    setShowPayoutSlip(true);
   };
 
   if (isLoading) {
@@ -242,20 +153,10 @@ const Dashboard = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Queen of Hearts Manager</h1>
-        <Dialog open={showGameForm} onOpenChange={setShowGameForm}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Game
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Game</DialogTitle>
-            </DialogHeader>
-            <GameForm />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setShowGameForm(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Game
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -288,54 +189,20 @@ const Dashboard = () => {
                   <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold">Weeks</h3>
-                      <Dialog 
-                        open={showWeekForm === game.id} 
-                        onOpenChange={(open) => setShowWeekForm(open ? game.id : null)}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          // Create week logic here
+                          toast({
+                            title: "Feature Coming Soon",
+                            description: "Week creation will be available soon",
+                          });
+                        }}
                       >
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Week
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Week</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="startDate">Start Date</Label>
-                              <Input
-                                id="startDate"
-                                type="date"
-                                value={weekFormData.startDate}
-                                onChange={(e) => setWeekFormData(prev => ({
-                                  ...prev,
-                                  startDate: e.target.value
-                                }))}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="endDate">End Date</Label>
-                              <Input
-                                id="endDate"
-                                type="date"
-                                value={weekFormData.endDate}
-                                onChange={(e) => setWeekFormData(prev => ({
-                                  ...prev,
-                                  endDate: e.target.value
-                                }))}
-                              />
-                            </div>
-                            <Button 
-                              onClick={() => handleCreateWeek(game.id)}
-                              disabled={!weekFormData.startDate || !weekFormData.endDate}
-                            >
-                              Create Week
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Week
+                      </Button>
                     </div>
 
                     <div className="space-y-2">
@@ -369,7 +236,13 @@ const Dashboard = () => {
                                         size="sm"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleDeleteWeek(week.id);
+                                          if (window.confirm('Are you sure you want to delete this week?')) {
+                                            // Delete week logic here
+                                            toast({
+                                              title: "Feature Coming Soon",
+                                              description: "Week deletion will be available soon",
+                                            });
+                                          }
                                         }}
                                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                       >
@@ -387,17 +260,32 @@ const Dashboard = () => {
                                     {weekTicketSales.length > 0 ? (
                                       <div className="space-y-1">
                                         {weekTicketSales.map((sale) => (
-                                          <TicketSalesRow 
-                                            key={sale.id} 
-                                            ticketSale={sale} 
-                                            gameId={game.id}
-                                            weekId={week.id}
-                                          />
+                                          <div key={sale.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                            <div className="flex items-center space-x-3">
+                                              <span className="text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</span>
+                                              <span className="text-sm">Tickets: {sale.tickets_sold}</span>
+                                              <span className="text-sm">Price: {formatCurrency(sale.ticket_price)}</span>
+                                            </div>
+                                            <span className="font-medium">{formatCurrency(sale.amount_collected)}</span>
+                                          </div>
                                         ))}
                                       </div>
                                     ) : (
                                       <p className="text-gray-500 text-sm">No ticket sales recorded</p>
                                     )}
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => {
+                                        toast({
+                                          title: "Feature Coming Soon",
+                                          description: "Ticket sales entry will be available soon",
+                                        });
+                                      }}
+                                    >
+                                      <Plus className="mr-2 h-4 w-4" />
+                                      Add Ticket Sales
+                                    </Button>
                                   </div>
 
                                   {week.winner_name && (
@@ -411,20 +299,44 @@ const Dashboard = () => {
                                           <div><strong>Present:</strong> {week.winner_present ? 'Yes' : 'No'}</div>
                                           <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
                                         </div>
-                                        <PayoutSlipModal 
-                                          weekData={week} 
-                                          gameData={game}
-                                        />
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="mt-2"
+                                          onClick={() => handleOpenPayoutSlip({
+                                            winnerName: week.winner_name,
+                                            slotChosen: week.slot_chosen,
+                                            cardSelected: week.card_selected,
+                                            payoutAmount: week.weekly_payout,
+                                            date: week.end_date,
+                                            gameNumber: game.game_number,
+                                            gameName: game.name,
+                                            weekNumber: week.week_number,
+                                            weekId: week.id,
+                                            weekStartDate: week.start_date,
+                                            weekEndDate: week.end_date,
+                                          })}
+                                        >
+                                          Print Payout Slip
+                                        </Button>
                                       </div>
                                     </div>
                                   )}
 
                                   <div className="flex space-x-2">
-                                    <WinnerForm 
-                                      gameId={game.id}
-                                      weekId={week.id}
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => {
+                                        toast({
+                                          title: "Feature Coming Soon",
+                                          description: "Winner form will be available soon",
+                                        });
+                                      }}
                                       disabled={!!week.winner_name}
-                                    />
+                                    >
+                                      {week.winner_name ? 'Winner Recorded' : 'Record Winner'}
+                                    </Button>
                                   </div>
                                 </CardContent>
                               </CollapsibleContent>
@@ -478,6 +390,19 @@ const Dashboard = () => {
           );
         })}
       </div>
+
+      <GameForm 
+        open={showGameForm}
+        onOpenChange={setShowGameForm}
+        games={games || []}
+        onComplete={handleGameFormComplete}
+      />
+
+      <PayoutSlipModal 
+        open={showPayoutSlip}
+        onOpenChange={setShowPayoutSlip}
+        winnerData={payoutSlipData}
+      />
 
       <ExpenseModal 
         open={expenseModalOpen.open}
