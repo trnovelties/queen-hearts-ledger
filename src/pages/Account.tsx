@@ -9,8 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User, Building } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Upload, Building } from "lucide-react";
 
 export default function Account() {
   const { toast } = useToast();
@@ -121,16 +120,16 @@ export default function Account() {
       if (error) throw error;
 
       toast({
-        title: "Profile updated",
-        description: "Your account information has been saved successfully.",
+        title: "Organization updated",
+        description: "Your organization information has been saved successfully.",
       });
       
       setLogoFile(null);
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('Error updating organization:', error);
       toast({
         title: "Update failed",
-        description: error?.message || "Failed to update profile.",
+        description: error?.message || "Failed to update organization.",
         variant: "destructive",
       });
     } finally {
@@ -141,150 +140,114 @@ export default function Account() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Account Settings</h1>
+        <h1 className="text-2xl font-bold">Organization Settings</h1>
         <p className="text-muted-foreground">Manage your organization profile and settings</p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="profile" className="flex items-center space-x-2">
-            <User className="h-4 w-4" />
-            <span>Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="organization" className="flex items-center space-x-2">
-            <Building className="h-4 w-4" />
-            <span>Organization</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your personal account details
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Building className="h-5 w-5" />
+            <span>Organization Information</span>
+          </CardTitle>
+          <CardDescription>
+            Configure your organization's information and branding for the Queen of Hearts game
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="organizationName">Organization Name *</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={profile?.email || ""}
-                  disabled
-                  className="bg-muted"
+                  id="organizationName"
+                  placeholder="Enter your organization name"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  required
                 />
-                <p className="text-sm text-muted-foreground">
-                  Email cannot be changed. Contact support if you need to update this.
-                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Input
-                  id="role"
-                  value={profile?.role || ""}
-                  disabled
-                  className="bg-muted capitalize"
+                <Label htmlFor="about">About Organization</Label>
+                <Textarea
+                  id="about"
+                  placeholder="Tell us about your organization..."
+                  value={about}
+                  onChange={(e) => setAbout(e.target.value)}
+                  rows={4}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="organization">
-          <Card>
-            <CardHeader>
-              <CardTitle>Organization Settings</CardTitle>
-              <CardDescription>
-                Configure your organization's information and branding
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="organizationName">Organization Name</Label>
-                    <Input
-                      id="organizationName"
-                      placeholder="Enter your organization name"
-                      value={organizationName}
-                      onChange={(e) => setOrganizationName(e.target.value)}
-                      required
-                    />
+              <div className="space-y-4">
+                <Label>Organization Logo</Label>
+                <div className="flex items-center space-x-6">
+                  <div className="flex-shrink-0">
+                    {logoPreview ? (
+                      <Avatar className="h-20 w-20 border-2 border-border">
+                        <AvatarImage 
+                          src={logoPreview} 
+                          alt="Organization logo" 
+                          className="object-cover" 
+                        />
+                        <AvatarFallback className="text-2xl">
+                          {organizationName?.charAt(0) || "♥"}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Avatar className="h-20 w-20 border-2 border-dashed border-border">
+                        <AvatarFallback className="text-2xl">
+                          {organizationName?.charAt(0) || "♥"}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="about">About Organization</Label>
-                    <Textarea
-                      id="about"
-                      placeholder="Tell us about your organization..."
-                      value={about}
-                      onChange={(e) => setAbout(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Organization Logo</Label>
-                    <div className="flex items-center space-x-6">
-                      <div className="flex-shrink-0">
-                        {logoPreview ? (
-                          <Avatar className="h-20 w-20 border-2 border-border">
-                            <AvatarImage 
-                              src={logoPreview} 
-                              alt="Organization logo" 
-                              className="object-cover" 
-                            />
-                            <AvatarFallback className="text-2xl">
-                              {organizationName?.charAt(0) || "♥"}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : (
-                          <Avatar className="h-20 w-20 border-2 border-dashed border-border">
-                            <AvatarFallback className="text-2xl">
-                              {organizationName?.charAt(0) || "♥"}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleLogoChange}
-                            className="hidden"
-                            id="logo-upload"
-                          />
-                          <Label
-                            htmlFor="logo-upload"
-                            className="inline-flex items-center space-x-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                          >
-                            <Upload className="h-4 w-4" />
-                            <span>Upload Logo</span>
-                          </Label>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Upload a square image (PNG, JPG) up to 5MB
-                        </p>
-                      </div>
+                  
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        className="hidden"
+                        id="logo-upload"
+                      />
+                      <Label
+                        htmlFor="logo-upload"
+                        className="inline-flex items-center space-x-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>Upload Logo</span>
+                      </Label>
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      Upload a square image (PNG, JPG) up to 5MB for your organization
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Saving..." : "Save Changes"}
-                  </Button>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <h4 className="font-medium">Account Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium">Email:</span> {profile?.email || "Not available"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Role:</span> {profile?.role || "Not available"}
+                  </div>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Saving..." : "Save Organization Settings"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
