@@ -1,4 +1,3 @@
-
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { AdminViewIcon } from "./icons/AdminViewIcon";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -155,7 +155,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                       onClick={() => navigate("/admin-view")}
                       className={location.pathname === "/admin-view" ? "bg-sidebar-primary" : ""}
                     >
-                      <User className="mr-2 h-4 w-4" />
+                      <AdminViewIcon className="mr-2 h-4 w-4" />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
