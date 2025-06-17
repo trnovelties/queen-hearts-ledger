@@ -240,32 +240,59 @@ export default function IncomeExpense() {
     }).format(amount);
   };
 
-  // Get latest winner information
-  const getLatestWinner = () => {
-    let latestWinner = null;
-    let latestDate = "";
+  // Get winner information based on selected game
+  const getWinnerInformation = () => {
+    const winners = [];
     
-    summary.filteredGames.forEach(game => {
-      game.weeks.forEach(week => {
-        if (week.winner_name && week.end_date > latestDate) {
-          latestDate = week.end_date;
-          latestWinner = {
-            name: week.winner_name,
-            slot: week.slot_chosen,
-            card: week.card_selected,
-            amount: week.weekly_payout,
-            present: week.winner_present,
-            date: week.end_date,
-            gameName: game.name
-          };
-        }
+    if (selectedGame === "all") {
+      // Show all winners from all games
+      summary.filteredGames.forEach(game => {
+        game.weeks.forEach(week => {
+          if (week.winner_name) {
+            winners.push({
+              name: week.winner_name,
+              slot: week.slot_chosen,
+              card: week.card_selected,
+              amount: week.weekly_payout,
+              present: week.winner_present,
+              date: week.end_date,
+              gameName: game.name,
+              gameNumber: game.game_number,
+              weekNumber: week.week_number
+            });
+          }
+        });
       });
-    });
+      // Sort by date descending (most recent first)
+      winners.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } else {
+      // Show only winners from selected game
+      const selectedGameData = summary.filteredGames.find(game => game.id === selectedGame);
+      if (selectedGameData) {
+        selectedGameData.weeks.forEach(week => {
+          if (week.winner_name) {
+            winners.push({
+              name: week.winner_name,
+              slot: week.slot_chosen,
+              card: week.card_selected,
+              amount: week.weekly_payout,
+              present: week.winner_present,
+              date: week.end_date,
+              gameName: selectedGameData.name,
+              gameNumber: selectedGameData.game_number,
+              weekNumber: week.week_number
+            });
+          }
+        });
+        // Sort by week number descending (most recent first)
+        winners.sort((a, b) => b.weekNumber - a.weekNumber);
+      }
+    }
     
-    return latestWinner;
+    return winners;
   };
 
-  const latestWinner = getLatestWinner();
+  const winners = getWinnerInformation();
 
   // Enhanced KPI Card Component
   const KPICard = ({ 
@@ -529,8 +556,8 @@ export default function IncomeExpense() {
         <FinancialOverview summary={summary} formatCurrency={formatCurrency} />
 
         {/* Winner Information Section */}
-        {latestWinner && (
-          <WinnerInformation winner={latestWinner} formatCurrency={formatCurrency} />
+        {winners.length > 0 && (
+          <WinnerInformation winners={winners} formatCurrency={formatCurrency} />
         )}
 
         {/* Analytics Tabs */}
