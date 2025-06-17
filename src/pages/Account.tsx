@@ -1,417 +1,622 @@
 
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, Building, Camera, Check, X, Crown, User, Mail, Shield } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Loader2, Upload, Plus, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+
+type User = {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+};
 
 export default function Account() {
+  const { user, profile, isAdmin, updateProfile, uploadLogo } = useAuth();
   const { toast } = useToast();
-  const { profile } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [organizationName, setOrganizationName] = useState("");
-  const [about, setAbout] = useState("");
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    organization_name: '',
+    about: ''
+  });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
+  // User management state (for admins)
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "organizer",
+  });
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserRole, setEditUserRole] = useState("organizer");
+  
+  // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
-      setOrganizationName(profile.organization_name || "");
-      setAbout(profile.about || "");
-      setLogoPreview(profile.logo_url || null);
+      setFormData({
+        organization_name: profile.organization_name || '',
+        about: profile.about || ''
+      });
+      if (profile.logo_url) {
+        setLogoPreview(profile.logo_url);
+      }
     }
   }, [profile]);
-
-  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      processFile(file);
+  
+  // Fetch users if admin
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin]);
+  
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      if (data) {
+        setUsers(data as User[]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingUsers(false);
     }
   };
-
-  const processFile = (file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      let logoUrl = profile?.logo_url || null;
+      
+      if (logoFile) {
+        const uploadedUrl = await uploadLogo(logoFile);
+        if (uploadedUrl) {
+          logoUrl = uploadedUrl;
+        }
+      }
+      
+      await updateProfile({
+        organization_name: formData.organization_name,
+        about: formData.about,
+        logo_url: logoUrl
+      });
+      
       toast({
-        title: "File too large",
-        description: "Please select an image smaller than 5MB.",
+        title: "Profile Updated",
+        description: "Your organization profile has been updated successfully."
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Update Failed",
+        description: "There was an error updating your profile.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // User management functions
+  const handleAddUser = async () => {
+    // Validate form
+    if (!newUser.email) {
+      toast({
+        title: "Error",
+        description: "Email is required",
         variant: "destructive",
       });
       return;
     }
     
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setLogoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      if (file.type.startsWith('image/')) {
-        processFile(file);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please select an image file.",
-          variant: "destructive",
-        });
-      }
+    if (!newUser.password) {
+      toast({
+        title: "Error",
+        description: "Password is required",
+        variant: "destructive",
+      });
+      return;
     }
-  };
-
-  const uploadLogo = async (file: File): Promise<string | null> => {
+    
+    if (newUser.password !== newUser.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile?.id}-${Date.now()}.${fileExt}`;
+      // Create the user in Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: {
+            role: newUser.role
+          }
+        }
+      });
       
-      // Check if bucket exists, if not create it
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const brandImageBucket = buckets?.find(bucket => bucket.name === 'brand_image');
+      if (error) throw error;
       
-      if (!brandImageBucket) {
-        const { error: bucketError } = await supabase.storage.createBucket('brand_image', {
-          public: true,
-          allowedMimeTypes: ['image/*'],
-          fileSizeLimit: 5242880 // 5MB
+      if (data.user) {
+        // Update the role in the users table
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ role: newUser.role })
+          .eq('id', data.user.id);
+          
+        if (updateError) throw updateError;
+        
+        await fetchUsers(); // Refresh user list
+        
+        toast({
+          title: "User Created",
+          description: `${newUser.email} has been added as ${newUser.role}.`,
         });
         
-        if (bucketError) {
-          console.error('Error creating bucket:', bucketError);
-          throw bucketError;
-        }
-      }
-      
-      const { data, error } = await supabase.storage
-        .from('brand_image')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
+        // Reset form
+        setNewUser({
+          email: "",
+          password: "",
+          confirmPassword: "",
+          role: "organizer",
         });
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('brand_image')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading logo:', error);
-      return null;
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profile?.id) return;
-
-    setLoading(true);
-    try {
-      let logoUrl = profile.logo_url;
-      
-      // Upload new logo if file is selected
-      if (logoFile) {
-        const uploadedUrl = await uploadLogo(logoFile);
-        if (uploadedUrl) {
-          logoUrl = uploadedUrl;
-        } else {
-          throw new Error("Failed to upload logo");
-        }
+        
+        setNewUserDialogOpen(false);
       }
-
-      const { error } = await supabase.rpc('update_user_profile', {
-        p_user_id: profile.id,
-        p_organization_name: organizationName,
-        p_about: about,
-        p_logo_url: logoUrl
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success!",
-        description: "Your organization settings have been saved successfully.",
-      });
-      
-      setLogoFile(null);
     } catch (error: any) {
-      console.error('Error updating organization:', error);
+      console.error('Error creating user:', error);
       toast({
-        title: "Update failed",
-        description: error?.message || "Failed to update organization settings.",
+        title: "Error",
+        description: error.message || "Failed to create user.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
-  const clearLogo = () => {
-    setLogoFile(null);
-    setLogoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditUserRole(user.role);
+    setEditUserDialogOpen(true);
+  };
+  
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Update user role
+      const { error } = await supabase
+        .from('users')
+        .update({ role: editUserRole })
+        .eq('id', editingUser.id);
+        
+      if (error) throw error;
+      
+      await fetchUsers(); // Refresh user list
+      
+      toast({
+        title: "User Updated",
+        description: `${editingUser.email}'s role has been updated to ${editUserRole}.`,
+      });
+      
+      setEditUserDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/30 to-background">
-      {/* Header Section */}
-      <div className="bg-white border-b border-border/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Crown className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Organization Settings</h1>
-              <p className="text-muted-foreground mt-1">Manage your Queen of Hearts organization profile</p>
-            </div>
-          </div>
+  
+  const handleDeleteUser = async (userId: string) => {
+    // Check if this is the last admin
+    const adminUsers = users.filter(u => u.role === "admin");
+    const isLastAdmin = adminUsers.length === 1 && adminUsers[0].id === userId;
+    
+    if (isLastAdmin) {
+      toast({
+        title: "Error",
+        description: "Cannot delete the last admin user",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Don't allow deleting yourself
+    if (userId === user?.id) {
+      toast({
+        title: "Error",
+        description: "You cannot delete your own account",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (confirm("Are you sure you want to delete this user?")) {
+      setIsLoading(true);
+      
+      try {
+        // Delete the user from Supabase Auth
+        const { error } = await supabase.auth.admin.deleteUser(userId);
+          
+        if (error) throw error;
+        
+        await fetchUsers(); // Refresh user list
+        
+        toast({
+          title: "User Deleted",
+          description: "User has been removed.",
+        });
+      } catch (error: any) {
+        console.error('Error deleting user:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete user.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+  
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-xl font-medium">Please log in to view your account</h2>
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Profile Card */}
-          <div className="lg:col-span-1">
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6 text-center">
-                <div className="space-y-4">
-                  <div className="mx-auto w-24 h-24">
-                    {logoPreview ? (
-                      <Avatar className="w-24 h-24 border-4 border-primary/20 shadow-lg">
-                        <AvatarImage 
-                          src={logoPreview} 
-                          alt="Organization logo" 
-                          className="object-cover" 
-                        />
-                        <AvatarFallback className="text-xl bg-primary/10 text-primary">
-                          {organizationName?.charAt(0) || "♥"}
+    );
+  }
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Account Settings</h1>
+      </div>
+      
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="profile">Organization Profile</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" />User Management</TabsTrigger>}
+        </TabsList>
+        
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization Information</CardTitle>
+              <CardDescription>Update your organization profile information</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="flex flex-col md:flex-row gap-8">
+                  <div className="flex flex-col items-center space-y-4">
+                    <Avatar className="h-32 w-32">
+                      {logoPreview ? (
+                        <AvatarImage src={logoPreview} alt="Organization Logo" />
+                      ) : (
+                        <AvatarFallback className="text-2xl bg-primary/10">
+                          {formData.organization_name?.charAt(0) || user?.email?.charAt(0) || '?'}
                         </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <div className="w-24 h-24 border-4 border-dashed border-primary/30 rounded-full flex items-center justify-center bg-primary/5">
-                        <Building className="h-8 w-8 text-primary/60" />
+                      )}
+                    </Avatar>
+                    
+                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                      <Label htmlFor="logo" className="text-center">Logo</Label>
+                      <div className="flex justify-center">
+                        <Button
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => document.getElementById('logo')?.click()}
+                          className="flex gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Logo
+                        </Button>
+                        <Input 
+                          id="logo" 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleFileChange}
+                          className="hidden" 
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-lg text-foreground">
-                      {organizationName || "Your Organization"}
-                    </h3>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                      <Shield className="w-3 h-3 mr-1" />
-                      {profile?.role || "Member"}
-                    </Badge>
-                  </div>
-
-                  <div className="pt-4 space-y-3 text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-2">
-                      <Mail className="w-4 h-4" />
-                      <span className="truncate">{profile?.email}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <User className="w-4 h-4" />
-                      <span>Account Active</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader className="border-b border-border/60 bg-gradient-to-r from-primary/5 to-secondary/5">
-                <CardTitle className="flex items-center space-x-2 text-xl">
-                  <Building className="h-5 w-5" />
-                  <span>Organization Information</span>
-                </CardTitle>
-                <CardDescription className="text-base">
-                  Configure your organization's profile for the Queen of Hearts game management
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  {/* Organization Details */}
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="organizationName" className="text-sm font-medium">
-                          Organization Name *
-                        </Label>
-                        <Input
-                          id="organizationName"
-                          placeholder="Enter your organization name"
-                          value={organizationName}
-                          onChange={(e) => setOrganizationName(e.target.value)}
-                          required
-                          className="h-11"
-                        />
-                      </div>
-                    </div>
-
+                  <div className="flex-1 space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="about" className="text-sm font-medium">
-                        About Organization
-                      </Label>
-                      <Textarea
-                        id="about"
-                        placeholder="Tell us about your organization and its mission..."
-                        value={about}
-                        onChange={(e) => setAbout(e.target.value)}
-                        rows={4}
-                        className="resize-none"
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={user?.email || ''} 
+                        disabled 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="organization_name">Organization Name</Label>
+                      <Input 
+                        id="organization_name" 
+                        name="organization_name"
+                        value={formData.organization_name} 
+                        onChange={handleInputChange} 
+                        placeholder="Enter your organization name" 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="about">About</Label>
+                      <Textarea 
+                        id="about" 
+                        name="about"
+                        value={formData.about} 
+                        onChange={handleInputChange} 
+                        placeholder="Tell us about your organization" 
+                        rows={4} 
                       />
                     </div>
                   </div>
-
-                  {/* Logo Upload Section */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">Organization Logo</Label>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {isAdmin && (
+          <TabsContent value="users">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>
+                    Manage users who can access this application.
+                  </CardDescription>
+                </div>
+                
+                <Dialog open={newUserDialogOpen} onOpenChange={setNewUserDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" /> Add User
+                    </Button>
+                  </DialogTrigger>
+                  
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New User</DialogTitle>
+                      <DialogDescription>
+                        Create a new user account with the specified role.
+                      </DialogDescription>
+                    </DialogHeader>
                     
-                    <div 
-                      className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 ${
-                        isDragOver 
-                          ? 'border-primary bg-primary/5 scale-[1.02]' 
-                          : 'border-border hover:border-primary/50 hover:bg-primary/2'
-                      }`}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                    >
-                      <div className="flex flex-col items-center text-center space-y-4">
-                        {logoPreview ? (
-                          <div className="relative">
-                            <Avatar className="w-20 h-20 border-2 border-primary/20 shadow-md">
-                              <AvatarImage 
-                                src={logoPreview} 
-                                alt="Organization logo preview" 
-                                className="object-cover" 
-                              />
-                              <AvatarFallback>
-                                {organizationName?.charAt(0) || "♥"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-                              onClick={clearLogo}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="w-20 h-20 border-2 border-dashed border-primary/30 rounded-full flex items-center justify-center bg-primary/5">
-                            <Camera className="w-8 h-8 text-primary/60" />
-                          </div>
-                        )}
-                        
-                        <div className="space-y-2">
-                          <p className="font-medium text-foreground">
-                            {logoPreview ? 'Logo uploaded successfully!' : 'Drop your logo here or click to browse'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            PNG, JPG up to 5MB • Recommended: 200x200px square image
-                          </p>
-                        </div>
-
-                        <Input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoChange}
-                          className="hidden"
-                          id="logo-upload"
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input 
+                          id="email" 
+                          type="email"
+                          placeholder="user@organization.org"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                         />
-                        
-                        <div className="flex space-x-3">
-                          <Label
-                            htmlFor="logo-upload"
-                            className="inline-flex items-center space-x-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            <Upload className="w-4 h-4" />
-                            <span>{logoPreview ? 'Change Logo' : 'Upload Logo'}</span>
-                          </Label>
-                          
-                          {logoPreview && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={clearLogo}
-                              className="flex items-center space-x-2"
-                            >
-                              <X className="w-4 h-4" />
-                              <span>Remove</span>
-                            </Button>
-                          )}
-                        </div>
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input 
+                          id="password" 
+                          type="password"
+                          value={newUser.password}
+                          onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Input 
+                          id="confirmPassword" 
+                          type="password"
+                          value={newUser.confirmPassword}
+                          onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="role">Role</Label>
+                        <select
+                          id="role"
+                          value={newUser.role}
+                          onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="organizer">Organizer</option>
+                        </select>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="pt-6 border-t border-border/60">
-                    <div className="flex justify-end">
-                      <Button 
-                        type="submit" 
-                        disabled={loading}
-                        className="px-8 py-2 h-11 font-medium"
-                      >
-                        {loading ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Saving...</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Check className="w-4 h-4" />
-                            <span>Save Organization Settings</span>
-                          </div>
-                        )}
+                    
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setNewUserDialogOpen(false)}>
+                        Cancel
                       </Button>
-                    </div>
+                      <Button onClick={handleAddUser} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Create User
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              
+              <CardContent>
+                {loadingUsers ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                </form>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Email</th>
+                          <th className="text-left p-2">Role</th>
+                          <th className="text-left p-2">Created On</th>
+                          <th className="text-right p-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="text-center p-8 text-muted-foreground">
+                              No users found.
+                            </td>
+                          </tr>
+                        ) : (
+                          users.map((user) => (
+                            <tr key={user.id} className="border-b hover:bg-muted/50">
+                              <td className="p-2">{user.email}</td>
+                              <td className="p-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  user.role === "admin" ? "bg-primary/20 text-primary" : "bg-secondary/20 text-secondary-foreground"
+                                }`}>
+                                  {user.role}
+                                </span>
+                              </td>
+                              <td className="p-2">{new Date(user.created_at).toLocaleDateString()}</td>
+                              <td className="p-2 text-right space-x-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
+                                  Edit
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </div>
+            
+            {/* Edit User Dialog */}
+            <Dialog open={editUserDialogOpen} onOpenChange={setEditUserDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit User</DialogTitle>
+                  <DialogDescription>
+                    Update the role for {editingUser?.email}
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="editRole">Role</Label>
+                    <select
+                      id="editRole"
+                      value={editUserRole}
+                      onChange={(e) => setEditUserRole(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="organizer">Organizer</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditUserDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleUpdateUser} disabled={isLoading}>
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Update User
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

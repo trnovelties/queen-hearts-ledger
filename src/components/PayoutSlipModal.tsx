@@ -82,11 +82,11 @@ export function PayoutSlipModal({
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`distribution-slip-${winnerData.winnerName.replace(/\s+/g, '-')}.pdf`);
+      pdf.save(`payout-slip-${winnerData.winnerName.replace(/\s+/g, '-')}.pdf`);
       
       toast({
         title: "PDF Generated",
-        description: "The distribution slip has been generated and downloaded."
+        description: "The payout slip has been generated and downloaded."
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -110,7 +110,7 @@ export function PayoutSlipModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] h-[90vh] max-w-4xl max-h-none overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-xl font-bold text-[#1F4E4A]">Winner Distribution Slip</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-[#1F4E4A]">Winner Payout Slip</DialogTitle>
         </DialogHeader>
         
         <div className="flex flex-col h-full overflow-hidden">
@@ -138,7 +138,7 @@ export function PayoutSlipModal({
                     onClick={handleGeneratePDF} 
                     className="bg-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90 font-medium px-6 py-2 h-10"
                   >
-                    <Printer className="h-4 w-4 mr-2" /> Print Distribution Slip
+                    <Printer className="h-4 w-4 mr-2" /> Print Payout Slip
                   </Button>
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function PayoutSlipModal({
                   <div className="text-center mb-8 border-b-2 border-[#1F4E4A] pb-6">
                     <div className="mb-4">
                       <h1 className="text-3xl font-bold text-[#1F4E4A] mb-2">QUEEN OF HEARTS</h1>
-                      <h2 className="text-xl font-semibold text-gray-700">Winner Distribution Slip</h2>
+                      <h2 className="text-xl font-semibold text-gray-700">Winner Payout Slip</h2>
                     </div>
                     <div className="bg-[#F7F8FC] px-4 py-2 rounded-lg inline-block">
                       <span className="text-lg font-semibold text-[#1F4E4A]">
@@ -217,7 +217,7 @@ export function PayoutSlipModal({
                     </div>
                   </div>
                   
-                  {/* Distribution Amount Section */}
+                  {/* Payout Amount Section */}
                   <div className="mb-8">
                     <div className="bg-[#A1E96C] rounded-lg p-6 text-center border-2 border-[#1F4E4A]">
                       <h3 className="text-lg font-bold text-[#1F4E4A] mb-2">AMOUNT WON</h3>
