@@ -9,12 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User, Building, FileText } from "lucide-react";
+import { Upload, User, Building } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Account() {
   const { toast } = useToast();
-  const { profile, refreshProfile } = useAuth();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [organizationName, setOrganizationName] = useState("");
   const [about, setAbout] = useState("");
@@ -120,8 +120,6 @@ export default function Account() {
 
       if (error) throw error;
 
-      await refreshProfile();
-      
       toast({
         title: "Profile updated",
         description: "Your account information has been saved successfully.",
