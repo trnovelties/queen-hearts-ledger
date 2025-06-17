@@ -136,9 +136,24 @@ export default function Dashboard() {
       return;
     }
 
+    // Get the highest game number to increment
+    const { data: existingGames } = await supabase
+      .from('games')
+      .select('game_number')
+      .order('game_number', { ascending: false })
+      .limit(1);
+
+    const nextGameNumber = existingGames && existingGames.length > 0 
+      ? existingGames[0].game_number + 1 
+      : 1;
+
     const { data, error } = await supabase
       .from('games')
-      .insert([{ name: newGameName }])
+      .insert([{ 
+        name: newGameName,
+        game_number: nextGameNumber,
+        start_date: new Date().toISOString().split('T')[0]
+      }])
       .select();
 
     if (error) {
@@ -169,9 +184,29 @@ export default function Dashboard() {
       return;
     }
 
+    // Get the highest week number for this game to increment
+    const { data: existingWeeks } = await supabase
+      .from('weeks')
+      .select('week_number')
+      .eq('game_id', selectedGameId)
+      .order('week_number', { ascending: false })
+      .limit(1);
+
+    const nextWeekNumber = existingWeeks && existingWeeks.length > 0 
+      ? existingWeeks[0].week_number + 1 
+      : 1;
+
+    const startDate = new Date().toISOString().split('T')[0];
+    const endDate = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
     const { data, error } = await supabase
       .from('weeks')
-      .insert([{ name: newWeekName, game_id: selectedGameId }])
+      .insert([{ 
+        game_id: selectedGameId,
+        week_number: nextWeekNumber,
+        start_date: startDate,
+        end_date: endDate
+      }])
       .select();
 
     if (error) {
@@ -202,13 +237,40 @@ export default function Dashboard() {
       return;
     }
 
+    const quantity = parseInt(newTicketSale.quantity);
+    const price = parseFloat(newTicketSale.price);
+    const amountCollected = quantity * price;
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Get the game_id from the week
+    const { data: weekData } = await supabase
+      .from('weeks')
+      .select('game_id')
+      .eq('id', newTicketSale.weekId)
+      .single();
+
+    if (!weekData) {
+      toast({
+        title: "Error",
+        description: "Could not find week information",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const { data, error } = await supabase
       .from('ticket_sales')
       .insert([{
+        game_id: weekData.game_id,
         week_id: newTicketSale.weekId,
-        quantity: parseInt(newTicketSale.quantity),
-        price: parseFloat(newTicketSale.price),
-        notes: newTicketSale.notes
+        date: currentDate,
+        tickets_sold: quantity,
+        ticket_price: price,
+        amount_collected: amountCollected,
+        cumulative_collected: amountCollected, // This should be calculated properly
+        organization_total: amountCollected * 0.4, // Assuming 40% organization split
+        jackpot_total: amountCollected * 0.6, // Assuming 60% jackpot split
+        ending_jackpot_total: amountCollected * 0.6 // This should be calculated properly
       }])
       .select();
 
@@ -245,12 +307,15 @@ export default function Dashboard() {
       return;
     }
 
+    const currentDate = new Date().toISOString().split('T')[0];
+
     const { data, error } = await supabase
       .from('expenses')
       .insert([{
         game_id: newExpense.gameId,
+        date: currentDate,
         amount: parseFloat(newExpense.amount),
-        description: newExpense.description
+        memo: newExpense.description
       }])
       .select();
 
@@ -356,21 +421,20 @@ export default function Dashboard() {
         }
         console.log('Game deleted successfully');
 
-        // Reset expanded states immediately
+        // Update local state immediately
+        setGames(prevGames => {
+          const updatedGames = prevGames.filter(game => game.id !== deleteItemId);
+          console.log('Updated local games state, remaining games:', updatedGames.length);
+          return updatedGames;
+        });
+
+        // Reset expanded states
         if (expandedGame === deleteItemId) {
           setExpandedGame(null);
         }
         if (expandedExpenses === deleteItemId) {
           setExpandedExpenses(null);
         }
-
-        // Clear all related state
-        setWeeks({});
-        setTicketSales({});
-        setExpenses({});
-
-        // Immediately refresh the games list
-        await fetchGames();
 
         toast({
           title: "Game Deleted",
@@ -393,7 +457,7 @@ export default function Dashboard() {
           .from('weeks')
           .delete()
           .eq('id', deleteItemId)
-          .select('game_id, name')
+          .select('game_id, week_number')
           .single();
 
         if (weekError) {
@@ -405,7 +469,7 @@ export default function Dashboard() {
 
         toast({
           title: "Week Deleted",
-          description: `Week "${weekData.name}" and all associated ticket sales have been deleted.`
+          description: `Week ${weekData.week_number} and all associated ticket sales have been deleted.`
         });
       } else if (deleteType === 'entry') {
         const { data: entryData, error: entryError } = await supabase
@@ -447,6 +511,12 @@ export default function Dashboard() {
         });
       }
 
+      // Force a complete refresh of data after any deletion
+      console.log('Forcing data refresh...');
+      setTimeout(() => {
+        fetchGames();
+      }, 500);
+
     } catch (error: any) {
       console.error('Error during deletion:', error);
       toast({
@@ -470,7 +540,7 @@ export default function Dashboard() {
     gameWeeks.forEach(week => {
       const weekTicketSales = ticketSales[week.id] || [];
       weekTicketSales.forEach(sale => {
-        totalRevenue += sale.quantity * sale.price;
+        totalRevenue += sale.tickets_sold * sale.ticket_price;
       });
     });
 
@@ -494,12 +564,12 @@ export default function Dashboard() {
     const weekTicketSales = ticketSales[weekId] || [];
     
     weekTicketSales.forEach(sale => {
-      totalRevenue += sale.quantity * sale.price;
+      totalRevenue += sale.tickets_sold * sale.ticket_price;
     });
 
     return {
       totalRevenue,
-      totalTickets: weekTicketSales.reduce((sum, sale) => sum + sale.quantity, 0)
+      totalTickets: weekTicketSales.reduce((sum, sale) => sum + sale.tickets_sold, 0)
     };
   };
 
@@ -585,7 +655,7 @@ export default function Dashboard() {
                           <Card key={week.id}>
                             <CardHeader>
                               <div className="flex justify-between items-center">
-                                <CardTitle className="text-lg">{week.name}</CardTitle>
+                                <CardTitle className="text-lg">Week {week.week_number}</CardTitle>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -616,11 +686,11 @@ export default function Dashboard() {
                                   {ticketSales[week.id].map(sale => (
                                     <div key={sale.id} className="flex justify-between items-center p-2 bg-muted rounded">
                                       <div>
-                                        <p className="font-medium">{sale.quantity} tickets @ {formatCurrency(sale.price)}</p>
-                                        {sale.notes && <p className="text-sm text-muted-foreground">{sale.notes}</p>}
+                                        <p className="font-medium">{sale.tickets_sold} tickets @ {formatCurrency(sale.ticket_price)}</p>
+                                        <p className="text-sm text-muted-foreground">{sale.date}</p>
                                       </div>
                                       <div className="flex items-center space-x-2">
-                                        <p className="font-medium">{formatCurrency(sale.quantity * sale.price)}</p>
+                                        <p className="font-medium">{formatCurrency(sale.tickets_sold * sale.ticket_price)}</p>
                                         <Button 
                                           variant="ghost" 
                                           size="sm" 
@@ -691,7 +761,8 @@ export default function Dashboard() {
                           {expenses[game.id].map(expense => (
                             <div key={expense.id} className="flex justify-between items-center p-2 bg-muted rounded">
                               <div>
-                                <p className="font-medium">{expense.description}</p>
+                                <p className="font-medium">{expense.memo}</p>
+                                <p className="text-sm text-muted-foreground">{expense.date}</p>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <p className="font-medium text-red-500">{formatCurrency(expense.amount)}</p>
@@ -819,7 +890,7 @@ export default function Dashboard() {
                 {games.map(game => (
                   <optgroup key={game.id} label={game.name}>
                     {(weeks[game.id] || []).map(week => (
-                      <option key={week.id} value={week.id}>{week.name}</option>
+                      <option key={week.id} value={week.id}>Week {week.week_number}</option>
                     ))}
                   </optgroup>
                 ))}
