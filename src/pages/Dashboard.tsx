@@ -11,11 +11,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
-import GameForm from '@/components/GameForm';
-import TicketSalesRow from '@/components/TicketSalesRow';
-import WinnerForm from '@/components/WinnerForm';
-import PayoutSlipModal from '@/components/PayoutSlipModal';
-import ExpenseModal from '@/components/ExpenseModal';
+import { GameForm } from '@/components/GameForm';
+import { TicketSalesRow } from '@/components/TicketSalesRow';
+import { WinnerForm } from '@/components/WinnerForm';
+import { PayoutSlipModal } from '@/components/PayoutSlipModal';
+import { ExpenseModal } from '@/components/ExpenseModal';
 
 const Dashboard = () => {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
