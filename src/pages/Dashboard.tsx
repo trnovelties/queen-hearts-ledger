@@ -1327,9 +1327,7 @@ export default function Dashboard() {
                                 weekEndDate: week.end_date
                               };
                               handleOpenPayoutSlip(winnerData);
-                            }} size="sm" className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] border border-[#A1E96C]">
-                                              Print Payout Slip
-                                            </Button>
+                            }} size="sm" className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] border border-[#A1E96C]">Print Distribution Slip</Button>
                                           </div>
                                         </div>}
                                     </div>
