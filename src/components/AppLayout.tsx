@@ -127,7 +127,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                     onClick={() => navigate("/dashboard")}
                     className={location.pathname === "/dashboard" ? "bg-sidebar-primary" : ""}
                   >
-                    <BarChart2 className="mr-2 h-4 w-4" />
+                    <BarChart2 className="mr-2 h-6 w-6" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -136,7 +136,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                     onClick={() => navigate("/income-expense")}
                     className={location.pathname === "/income-expense" ? "bg-sidebar-primary" : ""}
                   >
-                    <PieChart className="mr-2 h-4 w-4" />
+                    <PieChart className="mr-2 h-6 w-6" />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -145,7 +145,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                     onClick={() => navigate("/admin")}
                     className={location.pathname === "/admin" ? "bg-sidebar-primary" : ""}
                   >
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="mr-2 h-6 w-6" />
                     <span>Admin Panel</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -155,7 +155,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                       onClick={() => navigate("/admin-view")}
                       className={location.pathname === "/admin-view" ? "bg-sidebar-primary" : ""}
                     >
-                      <AdminViewIcon className="mr-2 h-4 w-4" />
+                      <AdminViewIcon className="mr-2 h-6 w-6" />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -165,7 +165,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                     onClick={() => navigate("/account")}
                     className={location.pathname === "/account" ? "bg-sidebar-primary" : ""}
                   >
-                    <User className="mr-2 h-4 w-4" />
+                    <User className="mr-2 h-6 w-6" />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -179,7 +179,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
             variant="ghost" 
             className="w-full justify-start text-sidebar-foreground hover:text-white hover:bg-sidebar-primary"
           >
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2 h-6 w-6" />
             Logout
           </Button>
         </SidebarFooter>
