@@ -1,8 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Edit, Printer, Check, X, Crown } from "lucide-react";
+import { Trophy, Check, X, Crown } from "lucide-react";
 import { format } from "date-fns";
 
 interface Winner {
@@ -84,36 +83,18 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
                 </div>
               </div>
               
-              <div className="flex items-center gap-4 pt-4">
-                <Button 
-                  className="bg-[#A1E96C] hover:bg-[#8FD659] text-[#1F4E4A] font-semibold border-2 border-[#A1E96C]"
-                  size="sm"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Winner Details
-                </Button>
-                
-                <Button 
-                  className="bg-[#A1E96C] hover:bg-[#8FD659] text-[#1F4E4A] font-semibold border-2 border-[#A1E96C]"
-                  size="sm"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print Distribution Slip
-                </Button>
-                
-                <div className="ml-auto flex items-center gap-3">
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
+                  {winner.gameName}
+                </Badge>
+                {winner.weekNumber && (
                   <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                    {winner.gameName}
+                    Week {winner.weekNumber}
                   </Badge>
-                  {winner.weekNumber && (
-                    <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                      Week {winner.weekNumber}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                    {format(new Date(winner.date), 'MMM d, yyyy')}
-                  </Badge>
-                </div>
+                )}
+                <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
+                  {format(new Date(winner.date), 'MMM d, yyyy')}
+                </Badge>
               </div>
             </div>
           ))}
