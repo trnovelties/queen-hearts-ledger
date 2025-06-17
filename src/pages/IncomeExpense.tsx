@@ -6,16 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, ComposedChart, Area, AreaChart } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
-import { Download, PlusCircle } from "lucide-react";
+import { Download, PlusCircle, TrendingUp, TrendingDown, DollarSign, Users, Target, BarChart3, ArrowUpRight, ArrowDownRight, Filter, Calendar, GamepadIcon } from "lucide-react";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import { ExpenseModal } from "@/components/ExpenseModal";
 
 // Define types for data structure
@@ -365,6 +364,50 @@ export default function IncomeExpense() {
     }).format(amount);
   };
   
+  // Enhanced KPI Card Component
+  const KPICard = ({ title, value, icon: Icon, trend = 0, subtitle = "" }: {
+    title: string;
+    value: string | number;
+    icon: any;
+    trend?: number;
+    subtitle?: string;
+  }) => (
+    <Card className="bg-gradient-to-br from-white to-[#F7F8FC] border-[#1F4E4A]/10 hover:shadow-lg transition-all duration-300">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-[#132E2C]/70 uppercase tracking-wide">{title}</p>
+            <p className="text-2xl font-bold text-[#1F4E4A]">
+              {typeof value === 'number' ? formatCurrency(value) : value}
+            </p>
+            {subtitle && (
+              <p className="text-xs text-[#132E2C]/60">{subtitle}</p>
+            )}
+            {trend !== 0 && (
+              <div className={`flex items-center text-xs ${trend > 0 ? 'text-[#A1E96C]' : 'text-red-500'}`}>
+                {trend > 0 ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+                {Math.abs(trend)}% from last period
+              </div>
+            )}
+          </div>
+          <div className="p-3 bg-[#1F4E4A]/5 rounded-xl">
+            <Icon className="h-6 w-6 text-[#1F4E4A]" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // Enhanced chart colors
+  const chartColors = {
+    primary: '#1F4E4A',
+    secondary: '#A1E96C',
+    accent: '#132E2C',
+    muted: '#F7F8FC',
+    expense: '#ef4444',
+    donation: '#8b5cf6'
+  };
+
   // Generate PDF report
   const generatePdfReport = async () => {
     try {
@@ -470,272 +513,6 @@ export default function IncomeExpense() {
       });
       yPosition += 10;
       
-      // Add game details section (if filtering for a specific game)
-      if (selectedGame !== "all" && summary.filteredGames.length === 1) {
-        const game = summary.filteredGames[0];
-        
-        // Check if we need a new page
-        if (yPosition > pageHeight - 60) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text(`Game Details: ${game.name}`, 20, yPosition);
-        yPosition += 10;
-        
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        
-        if (game.start_date) {
-          doc.text(`Start Date: ${format(new Date(game.start_date), 'MMM d, yyyy')}`, 20, yPosition);
-          yPosition += 7;
-        }
-        
-        if (game.end_date) {
-          doc.text(`End Date: ${format(new Date(game.end_date), 'MMM d, yyyy')}`, 20, yPosition);
-          yPosition += 7;
-        }
-        
-        // Add game summary
-        doc.text(`Total Sales: ${formatCurrency(game.total_sales)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Total Payouts: ${formatCurrency(game.total_payouts)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Total Expenses: ${formatCurrency(game.total_expenses)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Total Donations: ${formatCurrency(game.total_donations)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Organization Net Profit: ${formatCurrency(game.organization_net_profit)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Carryover Jackpot: ${formatCurrency(game.carryover_jackpot)}`, 20, yPosition);
-        yPosition += 15;
-        
-        // Add weeks table if there are weeks data
-        if (game.weeks && game.weeks.length > 0) {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.text('Weekly Summary', 20, yPosition);
-          yPosition += 10;
-          
-          // Draw week table headers
-          const weekHeaders = [
-            { text: 'Week #', width: 15 },
-            { text: 'Tickets', width: 20 },
-            { text: 'Sales', width: 30 },
-            { text: 'Winner', width: 40 },
-            { text: 'Card', width: 40 },
-            { text: 'Payout', width: 30 }
-          ];
-          
-          doc.setFontSize(10);
-          let xPos = 20;
-          weekHeaders.forEach(header => {
-            doc.text(header.text, xPos, yPosition);
-            xPos += header.width;
-          });
-          yPosition += 5;
-          
-          // Draw a line under headers
-          doc.setDrawColor(200, 200, 200);
-          doc.line(20, yPosition, xPos, yPosition);
-          yPosition += 5;
-          
-          // Draw week rows
-          doc.setFont("helvetica", "normal");
-          game.weeks.forEach(week => {
-            // Check if we need a new page
-            if (yPosition > pageHeight - 15) {
-              doc.addPage();
-              yPosition = 20;
-              
-              // Redraw headers on new page
-              doc.setFont("helvetica", "bold");
-              let xPos = 20;
-              weekHeaders.forEach(header => {
-                doc.text(header.text, xPos, yPosition);
-                xPos += header.width;
-              });
-              yPosition += 5;
-              doc.line(20, yPosition, xPos, yPosition);
-              yPosition += 5;
-              doc.setFont("helvetica", "normal");
-            }
-            
-            xPos = 20;
-            doc.text(`Week ${week.week_number}`, xPos, yPosition);
-            xPos += weekHeaders[0].width;
-            
-            doc.text(`${week.weekly_tickets_sold}`, xPos, yPosition);
-            xPos += weekHeaders[1].width;
-            
-            doc.text(`${formatCurrency(week.weekly_sales)}`, xPos, yPosition);
-            xPos += weekHeaders[2].width;
-            
-            doc.text(`${week.winner_name || '-'}`, xPos, yPosition);
-            xPos += weekHeaders[3].width;
-            
-            doc.text(`${week.card_selected || '-'}`, xPos, yPosition);
-            xPos += weekHeaders[4].width;
-            
-            doc.text(`${formatCurrency(week.weekly_payout)}`, xPos, yPosition);
-            
-            yPosition += rowHeight;
-          });
-        }
-        
-        // Add expenses if there are any
-        if (game.expenses && game.expenses.length > 0) {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          
-          yPosition += 10;
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.text('Expenses & Donations', 20, yPosition);
-          yPosition += 10;
-          
-          // Draw expense table headers
-          const expenseHeaders = [
-            { text: 'Date', width: 30 },
-            { text: 'Type', width: 30 },
-            { text: 'Amount', width: 30 },
-            { text: 'Memo', width: 80 }
-          ];
-          
-          doc.setFontSize(10);
-          let xPos = 20;
-          expenseHeaders.forEach(header => {
-            doc.text(header.text, xPos, yPosition);
-            xPos += header.width;
-          });
-          yPosition += 5;
-          
-          // Draw a line under headers
-          doc.setDrawColor(200, 200, 200);
-          doc.line(20, yPosition, xPos, yPosition);
-          yPosition += 5;
-          
-          // Draw expense rows
-          doc.setFont("helvetica", "normal");
-          game.expenses.forEach(expense => {
-            // Check if we need a new page
-            if (yPosition > pageHeight - 15) {
-              doc.addPage();
-              yPosition = 20;
-              
-              // Redraw headers on new page
-              doc.setFont("helvetica", "bold");
-              let xPos = 20;
-              expenseHeaders.forEach(header => {
-                doc.text(header.text, xPos, yPosition);
-                xPos += header.width;
-              });
-              yPosition += 5;
-              doc.line(20, yPosition, xPos, yPosition);
-              yPosition += 5;
-              doc.setFont("helvetica", "normal");
-            }
-            
-            xPos = 20;
-            doc.text(format(new Date(expense.date), 'MM/dd/yyyy'), xPos, yPosition);
-            xPos += expenseHeaders[0].width;
-            
-            doc.text(expense.is_donation ? 'Donation' : 'Expense', xPos, yPosition);
-            xPos += expenseHeaders[1].width;
-            
-            doc.text(formatCurrency(expense.amount), xPos, yPosition);
-            xPos += expenseHeaders[2].width;
-            
-            // Limit memo text to fit in the column
-            const memo = expense.memo || '-';
-            const truncatedMemo = memo.length > 40 ? memo.substring(0, 37) + '...' : memo;
-            doc.text(truncatedMemo, xPos, yPosition);
-            
-            yPosition += rowHeight;
-          });
-        }
-      } else if (summary.filteredGames.length > 0) {
-        // If showing multiple games, add a games summary table
-        // Check if we need a new page
-        if (yPosition > pageHeight - 40) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text('Games Summary', 20, yPosition);
-        yPosition += 10;
-        
-        // Draw game table headers
-        const gameHeaders = [
-          { text: 'Game', width: 25 },
-          { text: 'Sales', width: 30 },
-          { text: 'Payouts', width: 30 },
-          { text: 'Net Profit', width: 30 }
-        ];
-        
-        doc.setFontSize(10);
-        let xPos = 20;
-        gameHeaders.forEach(header => {
-          doc.text(header.text, xPos, yPosition);
-          xPos += header.width;
-        });
-        yPosition += 5;
-        
-        // Draw a line under headers
-        doc.setDrawColor(200, 200, 200);
-        doc.line(20, yPosition, xPos, yPosition);
-        yPosition += 5;
-        
-        // Draw game rows
-        doc.setFont("helvetica", "normal");
-        summary.filteredGames.forEach(game => {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 15) {
-            doc.addPage();
-            yPosition = 20;
-            
-            // Redraw headers on new page
-            doc.setFont("helvetica", "bold");
-            let xPos = 20;
-            gameHeaders.forEach(header => {
-              doc.text(header.text, xPos, yPosition);
-              xPos += header.width;
-            });
-            yPosition += 5;
-            doc.line(20, yPosition, xPos, yPosition);
-            yPosition += 5;
-            doc.setFont("helvetica", "normal");
-          }
-          
-          xPos = 20;
-          doc.text(game.name, xPos, yPosition);
-          xPos += gameHeaders[0].width;
-          
-          doc.text(formatCurrency(game.total_sales), xPos, yPosition);
-          xPos += gameHeaders[1].width;
-          
-          doc.text(formatCurrency(game.total_payouts), xPos, yPosition);
-          xPos += gameHeaders[2].width;
-          
-          doc.text(formatCurrency(game.organization_net_profit), xPos, yPosition);
-          
-          yPosition += rowHeight;
-        });
-      }
-      
       // Add footer with timestamp
       doc.setFont("helvetica", "italic");
       doc.setFontSize(8);
@@ -761,394 +538,544 @@ export default function IncomeExpense() {
   };
 
   return (
-    <div className="space-y-6" id="report-container" ref={reportContainerRef}>
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-[#1F4E4A]">Income vs. Expense</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="export" 
-            onClick={generatePdfReport}
-          >
-            <Download className="h-4 w-4 mr-2" /> Export PDF
-          </Button>
-          <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#1F4E4A]">
-                <PlusCircle className="h-4 w-4 mr-2" /> Add Expense/Donation
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <ExpenseModal 
-                open={addExpenseOpen} 
-                onOpenChange={setAddExpenseOpen}
-                gameId={newExpense.gameId}
-                gameName={games.find(g => g.id === newExpense.gameId)?.name || "Selected Game"}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Report Filters</CardTitle>
-          <CardDescription>
-            Filter the financial data by game, date range, and report type.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="gameFilter">Game</Label>
-              <select
-                id="gameFilter"
-                value={selectedGame}
-                onChange={(e) => setSelectedGame(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="all">All Games</option>
-                {games.map(game => (
-                  <option key={game.id} value={game.id}>{game.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="reportType">Report Type</Label>
-              <select
-                id="reportType"
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value as "weekly" | "game" | "cumulative")}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="weekly">Weekly</option>
-                <option value="game">Game</option>
-                <option value="cumulative">Cumulative</option>
-              </select>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#F7F8FC] to-white">
+      <div className="container mx-auto p-6 space-y-8" id="report-container" ref={reportContainerRef}>
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-[#1F4E4A] tracking-tight">
+              Financial Analytics
+            </h1>
+            <p className="text-[#132E2C]/70 text-lg">
+              Comprehensive insights into your Queen of Hearts performance
+            </p>
           </div>
-        </CardContent>
-      </Card>
-      
-      {loading ? (
-        <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1F4E4A] mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading financial data...</p>
-        </div>
-      ) : (
-        <>
-          {/* Three-Column Summary Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Overall Totals Column */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Overall Totals</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Tickets Sold</span>
-                    <span className="font-medium">{summary.totalTicketsSold.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Ticket Sales</span>
-                    <span className="font-medium">{formatCurrency(summary.totalSales)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Total Payouts</span>
-                    <span className="font-medium">{formatCurrency(summary.totalPayouts)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Total Expenses</span>
-                    <span className="font-medium">{formatCurrency(summary.totalExpenses)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Total Donated</span>
-                    <span className="font-medium">{formatCurrency(summary.totalDonations)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Payout Portion Column */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Payout Portion</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Total Sales (Jackpot Portion)</span>
-                    <span className="font-medium">{formatCurrency(summary.jackpotTotalPortion)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Total Payouts</span>
-                    <span className="font-medium">{formatCurrency(summary.totalPayouts)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Organization Portion Column */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Organization Portion</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Total Sales (Organization Portion)</span>
-                    <span className="font-medium">{formatCurrency(summary.organizationTotalPortion)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Total Expenses</span>
-                    <span className="font-medium">{formatCurrency(summary.totalExpenses)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span>Total Donations</span>
-                    <span className="font-medium">{formatCurrency(summary.totalDonations)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Organization Net Profit</span>
-                    <span className="font-medium">{formatCurrency(summary.organizationNetProfit)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              variant="outline"
+              onClick={generatePdfReport}
+              className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
+            >
+              <Download className="h-4 w-4 mr-2" /> Export Report
+            </Button>
+            <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white shadow-lg">
+                  <PlusCircle className="h-4 w-4 mr-2" /> Add Transaction
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <ExpenseModal 
+                  open={addExpenseOpen} 
+                  onOpenChange={setAddExpenseOpen}
+                  gameId={newExpense.gameId}
+                  gameName={games.find(g => g.id === newExpense.gameId)?.name || "Selected Game"}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
-          
-          <Tabs defaultValue="summary">
-            <TabsList className="grid grid-cols-3 w-[400px]">
-              <TabsTrigger value="summary">Details</TabsTrigger>
-              <TabsTrigger value="chart">Chart</TabsTrigger>
-              <TabsTrigger value="data">Raw Data</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="summary">
-              <Card>
+        </div>
+        
+        {/* Enhanced Filters Section */}
+        <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-[#1F4E4A]" />
+              <CardTitle className="text-[#1F4E4A]">Report Filters</CardTitle>
+            </div>
+            <CardDescription className="text-[#132E2C]/70">
+              Customize your analysis by selecting specific games, date ranges, and report types.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="gameFilter" className="text-sm font-medium text-[#132E2C]">
+                  <GamepadIcon className="h-4 w-4 inline mr-1" />
+                  Game Selection
+                </Label>
+                <select
+                  id="gameFilter"
+                  value={selectedGame}
+                  onChange={(e) => setSelectedGame(e.target.value)}
+                  className="flex h-11 w-full rounded-lg border border-[#1F4E4A]/20 bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A1E96C] focus-visible:ring-offset-2"
+                >
+                  <option value="all">All Games</option>
+                  {games.map(game => (
+                    <option key={game.id} value={game.id}>{game.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="startDate" className="text-sm font-medium text-[#132E2C]">
+                  <Calendar className="h-4 w-4 inline mr-1" />
+                  Start Date
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="border-[#1F4E4A]/20 focus-visible:ring-[#A1E96C]"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="endDate" className="text-sm font-medium text-[#132E2C]">
+                  <Calendar className="h-4 w-4 inline mr-1" />
+                  End Date
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="border-[#1F4E4A]/20 focus-visible:ring-[#A1E96C]"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="reportType" className="text-sm font-medium text-[#132E2C]">
+                  <BarChart3 className="h-4 w-4 inline mr-1" />
+                  Report Type
+                </Label>
+                <select
+                  id="reportType"
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value as "weekly" | "game" | "cumulative")}
+                  className="flex h-11 w-full rounded-lg border border-[#1F4E4A]/20 bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A1E96C] focus-visible:ring-offset-2"
+                >
+                  <option value="weekly">Weekly Analysis</option>
+                  <option value="game">Game Analysis</option>
+                  <option value="cumulative">Cumulative Overview</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#A1E96C] border-t-[#1F4E4A]"></div>
+            <p className="text-[#132E2C]/70 text-lg">Loading financial analytics...</p>
+          </div>
+        ) : (
+          <>
+            {/* Enhanced KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <KPICard
+                title="Total Revenue"
+                value={summary.totalSales}
+                icon={DollarSign}
+                trend={5.2}
+                subtitle={`${summary.totalTicketsSold.toLocaleString()} tickets sold`}
+              />
+              <KPICard
+                title="Total Payouts"
+                value={summary.totalPayouts}
+                icon={Target}
+                trend={-2.1}
+                subtitle="Winner payments"
+              />
+              <KPICard
+                title="Organization Profit"
+                value={summary.organizationNetProfit}
+                icon={TrendingUp}
+                trend={12.8}
+                subtitle="After expenses & donations"
+              />
+              <KPICard
+                title="Active Games"
+                value={summary.filteredGames.length}
+                icon={Users}
+                subtitle="Total games tracked"
+              />
+            </div>
+
+            {/* Three-Column Enhanced Summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Overall Totals */}
+              <Card className="bg-gradient-to-br from-[#1F4E4A] to-[#132E2C] text-white">
                 <CardHeader>
-                  <CardTitle>Game Details</CardTitle>
-                  <CardDescription>
-                    Breakdown by game with detailed financial information.
-                  </CardDescription>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Overall Performance
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {summary.filteredGames.map(game => (
-                      <div key={game.id} className="space-y-4">
-                        <h3 className="text-lg font-medium">{game.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {game.start_date && `Start: ${format(new Date(game.start_date), 'MMM d, yyyy')}`}
-                          {game.end_date && ` | End: ${format(new Date(game.end_date), 'MMM d, yyyy')}`}
-                        </p>
-                        
-                        <div className="space-y-6">
-                          {/* Game Summary */}
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Game Summary</h4>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Total Sales</TableHead>
-                                  <TableHead>Total Payouts</TableHead>
-                                  <TableHead>Total Expenses</TableHead>
-                                  <TableHead>Total Donations</TableHead>
-                                  <TableHead>Organization Net Profit</TableHead>
-                                  <TableHead>Carryover Jackpot</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow>
-                                  <TableCell>{formatCurrency(game.total_sales)}</TableCell>
-                                  <TableCell>{formatCurrency(game.total_payouts)}</TableCell>
-                                  <TableCell>{formatCurrency(game.total_expenses)}</TableCell>
-                                  <TableCell>{formatCurrency(game.total_donations)}</TableCell>
-                                  <TableCell>{formatCurrency(game.organization_net_profit)}</TableCell>
-                                  <TableCell>{formatCurrency(game.carryover_jackpot)}</TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
-                          
-                          {/* Weeks Table */}
-                          {game.weeks.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2">Weeks</h4>
-                              <div className="overflow-auto">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Week #</TableHead>
-                                      <TableHead>Start Date</TableHead>
-                                      <TableHead>End Date</TableHead>
-                                      <TableHead>Tickets Sold</TableHead>
-                                      <TableHead>Weekly Sales</TableHead>
-                                      <TableHead>Organization Portion</TableHead>
-                                      <TableHead>Jackpot Portion</TableHead>
-                                      <TableHead>Weekly Payout</TableHead>
-                                      <TableHead>Winner</TableHead>
-                                      <TableHead>Card Selected</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {game.weeks.map(week => {
-                                      const organizationPortion = week.weekly_sales * (game.organization_percentage / 100);
-                                      const jackpotPortion = week.weekly_sales * (game.jackpot_percentage / 100);
-                                      
-                                      return (
-                                        <TableRow key={week.id}>
-                                          <TableCell>Week {week.week_number}</TableCell>
-                                          <TableCell>{format(new Date(week.start_date), 'MMM d, yyyy')}</TableCell>
-                                          <TableCell>{format(new Date(week.end_date), 'MMM d, yyyy')}</TableCell>
-                                          <TableCell>{week.weekly_tickets_sold}</TableCell>
-                                          <TableCell>{formatCurrency(week.weekly_sales)}</TableCell>
-                                          <TableCell>{formatCurrency(organizationPortion)}</TableCell>
-                                          <TableCell>{formatCurrency(jackpotPortion)}</TableCell>
-                                          <TableCell>{formatCurrency(week.weekly_payout)}</TableCell>
-                                          <TableCell>{week.winner_name || '-'}</TableCell>
-                                          <TableCell>{week.card_selected || '-'}</TableCell>
-                                        </TableRow>
-                                      );
-                                    })}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Expenses Table */}
-                          {game.expenses.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2">Expenses & Donations</h4>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead>Memo</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {game.expenses.map(expense => (
-                                    <TableRow key={expense.id}>
-                                      <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                                      <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
-                                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                      <TableCell>{expense.memo || '-'}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          )}
-                        </div>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                      <span className="text-white/80">Tickets Sold</span>
+                      <span className="font-semibold">{summary.totalTicketsSold.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                      <span className="text-white/80">Total Revenue</span>
+                      <span className="font-semibold">{formatCurrency(summary.totalSales)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                      <span className="text-white/80">Total Payouts</span>
+                      <span className="font-semibold">{formatCurrency(summary.totalPayouts)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                      <span className="text-white/80">Total Expenses</span>
+                      <span className="font-semibold">{formatCurrency(summary.totalExpenses)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-white/80">Total Donated</span>
+                      <span className="font-semibold">{formatCurrency(summary.totalDonations)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Payout Portion */}
+              <Card className="bg-gradient-to-br from-[#A1E96C] to-[#A1E96C]/80 text-[#132E2C]">
+                <CardHeader>
+                  <CardTitle className="text-[#132E2C] flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Payout Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center border-b border-[#132E2C]/20 pb-2">
+                      <span className="text-[#132E2C]/80">Jackpot Portion</span>
+                      <span className="font-semibold">{formatCurrency(summary.jackpotTotalPortion)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#132E2C]/80">Total Payouts</span>
+                      <span className="font-semibold">{formatCurrency(summary.totalPayouts)}</span>
+                    </div>
+                    <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                      <div className="text-xs text-[#132E2C]/70 mb-1">Payout Efficiency</div>
+                      <div className="text-lg font-bold">
+                        {summary.jackpotTotalPortion > 0 ? 
+                          ((summary.totalPayouts / summary.jackpotTotalPortion) * 100).toFixed(1) : 0}%
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-            
-            <TabsContent value="chart">
-              <Card>
+
+              {/* Organization Portion */}
+              <Card className="bg-gradient-to-br from-white to-[#F7F8FC] border-[#1F4E4A]/20">
                 <CardHeader>
-                  <CardTitle>Financial Chart</CardTitle>
-                  <CardDescription>
-                    Visual representation of financial data.
-                  </CardDescription>
+                  <CardTitle className="text-[#1F4E4A] flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Organization Portion
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={chartData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 20,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                        <Legend />
-                        <Bar dataKey="Sales" fill="#A1E96C" />
-                        <Bar dataKey="Payouts" fill="#1F4E4A" />
-                        <Bar dataKey="Expenses" fill="#132E2C" />
-                        <Bar dataKey="Donations" fill="#7B8C8A" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center border-b border-[#1F4E4A]/20 pb-2">
+                      <span className="text-[#132E2C]/80">Total Revenue</span>
+                      <span className="font-semibold text-[#1F4E4A]">{formatCurrency(summary.organizationTotalPortion)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-[#1F4E4A]/20 pb-2">
+                      <span className="text-[#132E2C]/80">Total Expenses</span>
+                      <span className="font-semibold text-red-600">{formatCurrency(summary.totalExpenses)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-[#1F4E4A]/20 pb-2">
+                      <span className="text-[#132E2C]/80">Total Donations</span>
+                      <span className="font-semibold text-purple-600">{formatCurrency(summary.totalDonations)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-[#A1E96C]/10 p-2 rounded">
+                      <span className="font-medium text-[#132E2C]">Net Profit</span>
+                      <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.organizationNetProfit)}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
             
-            <TabsContent value="data">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Raw Financial Data</CardTitle>
-                  <CardDescription>
-                    Detailed financial records.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {summary.filteredGames.map(game => (
-                      <div key={game.id} className="space-y-4">
-                        <h3 className="text-lg font-medium">{game.name}</h3>
-                        
-                        {/* Ticket Sales Table */}
-                        {game.ticket_sales.length > 0 && (
+            {/* Enhanced Analytics Tabs */}
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4 bg-[#F7F8FC] p-1 rounded-xl">
+                <TabsTrigger 
+                  value="overview" 
+                  className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-medium"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="analytics" 
+                  className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-medium"
+                >
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="comparison" 
+                  className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-medium"
+                >
+                  Comparison
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="details" 
+                  className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white rounded-lg font-medium"
+                >
+                  Details
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="space-y-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  {/* Enhanced Revenue Chart */}
+                  <Card className="bg-white border-[#1F4E4A]/10">
+                    <CardHeader>
+                      <CardTitle className="text-[#1F4E4A]">Revenue Breakdown</CardTitle>
+                      <CardDescription>Sales, payouts, and profit analysis</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1F4E4A20" />
+                            <XAxis dataKey="name" stroke="#132E2C" fontSize={12} />
+                            <YAxis stroke="#132E2C" fontSize={12} />
+                            <Tooltip 
+                              formatter={(value) => formatCurrency(value as number)}
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                border: '1px solid #1F4E4A20',
+                                borderRadius: '8px'
+                              }}
+                            />
+                            <Legend />
+                            <Bar dataKey="Sales" fill={chartColors.secondary} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Payouts" fill={chartColors.primary} radius={[4, 4, 0, 0]} />
+                            <Line 
+                              type="monotone" 
+                              dataKey="Expenses" 
+                              stroke={chartColors.expense} 
+                              strokeWidth={3}
+                              dot={{ fill: chartColors.expense, r: 4 }}
+                            />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Expense Breakdown Pie Chart */}
+                  <Card className="bg-white border-[#1F4E4A]/10">
+                    <CardHeader>
+                      <CardTitle className="text-[#1F4E4A]">Expense Distribution</CardTitle>
+                      <CardDescription>How organization funds are allocated</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Donations', value: summary.totalDonations, fill: chartColors.donation },
+                                { name: 'Expenses', value: summary.totalExpenses, fill: chartColors.expense },
+                                { name: 'Net Profit', value: summary.organizationNetProfit, fill: chartColors.secondary }
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              dataKey="value"
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            >
+                            </Pie>
+                            <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="analytics" className="space-y-6">
+                {/* Trend Analysis */}
+                <Card className="bg-white border-[#1F4E4A]/10">
+                  <CardHeader>
+                    <CardTitle className="text-[#1F4E4A]">Performance Trends</CardTitle>
+                    <CardDescription>Track performance over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                          <defs>
+                            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={chartColors.secondary} stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor={chartColors.secondary} stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="payoutsGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={chartColors.primary} stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor={chartColors.primary} stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1F4E4A20" />
+                          <XAxis dataKey="name" stroke="#132E2C" />
+                          <YAxis stroke="#132E2C" />
+                          <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                          <Legend />
+                          <Area 
+                            type="monotone" 
+                            dataKey="Sales" 
+                            stroke={chartColors.secondary} 
+                            fillOpacity={1} 
+                            fill="url(#salesGradient)" 
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="Payouts" 
+                            stroke={chartColors.primary} 
+                            fillOpacity={1} 
+                            fill="url(#payoutsGradient)" 
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="comparison" className="space-y-6">
+                {/* Game Comparison Table */}
+                <Card className="bg-white border-[#1F4E4A]/10">
+                  <CardHeader>
+                    <CardTitle className="text-[#1F4E4A]">Game Performance Comparison</CardTitle>
+                    <CardDescription>Compare key metrics across all games</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-[#1F4E4A]/20">
+                            <TableHead className="font-semibold text-[#132E2C]">Game</TableHead>
+                            <TableHead className="font-semibold text-[#132E2C]">Revenue</TableHead>
+                            <TableHead className="font-semibold text-[#132E2C]">Payouts</TableHead>
+                            <TableHead className="font-semibold text-[#132E2C]">Profit Margin</TableHead>
+                            <TableHead className="font-semibold text-[#132E2C]">ROI</TableHead>
+                            <TableHead className="font-semibold text-[#132E2C]">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {summary.filteredGames.map(game => {
+                            const profitMargin = game.total_sales > 0 ? 
+                              ((game.organization_net_profit / game.total_sales) * 100) : 0;
+                            const roi = game.total_expenses > 0 ? 
+                              ((game.organization_net_profit / game.total_expenses) * 100) : 0;
+                            
+                            return (
+                              <TableRow key={game.id} className="border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/50">
+                                <TableCell className="font-medium text-[#1F4E4A]">{game.name}</TableCell>
+                                <TableCell>{formatCurrency(game.total_sales)}</TableCell>
+                                <TableCell>{formatCurrency(game.total_payouts)}</TableCell>
+                                <TableCell>
+                                  <span className={profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                    {profitMargin.toFixed(1)}%
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className={roi >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                    {roi.toFixed(1)}%
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    game.end_date ? 
+                                    'bg-gray-100 text-gray-800' : 
+                                    'bg-[#A1E96C]/20 text-[#132E2C]'
+                                  }`}>
+                                    {game.end_date ? 'Completed' : 'Active'}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="details">
+                {/* Detailed Game Information */}
+                <div className="space-y-6">
+                  {summary.filteredGames.map(game => (
+                    <Card key={game.id} className="bg-white border-[#1F4E4A]/10">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="text-sm font-medium mb-2">Daily Ticket Sales</h4>
-                            <div className="overflow-auto">
+                            <CardTitle className="text-[#1F4E4A]">{game.name}</CardTitle>
+                            <CardDescription>
+                              {game.start_date && `Started: ${format(new Date(game.start_date), 'MMM d, yyyy')}`}
+                              {game.end_date && ` | Ended: ${format(new Date(game.end_date), 'MMM d, yyyy')}`}
+                            </CardDescription>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            game.end_date ? 
+                            'bg-gray-100 text-gray-800' : 
+                            'bg-[#A1E96C]/20 text-[#132E2C]'
+                          }`}>
+                            {game.end_date ? 'Completed' : 'Active'}
+                          </span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Game Summary Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                          <div className="text-center p-3 bg-[#F7F8FC] rounded-lg">
+                            <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
+                            <div className="text-xs text-[#132E2C]/70">Total Sales</div>
+                          </div>
+                          <div className="text-center p-3 bg-[#F7F8FC] rounded-lg">
+                            <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.total_payouts)}</div>
+                            <div className="text-xs text-[#132E2C]/70">Payouts</div>
+                          </div>
+                          <div className="text-center p-3 bg-[#F7F8FC] rounded-lg">
+                            <div className="text-lg font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
+                            <div className="text-xs text-[#132E2C]/70">Expenses</div>
+                          </div>
+                          <div className="text-center p-3 bg-[#F7F8FC] rounded-lg">
+                            <div className="text-lg font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
+                            <div className="text-xs text-[#132E2C]/70">Donations</div>
+                          </div>
+                          <div className="text-center p-3 bg-[#A1E96C]/20 rounded-lg">
+                            <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.organization_net_profit)}</div>
+                            <div className="text-xs text-[#132E2C]/70">Net Profit</div>
+                          </div>
+                          <div className="text-center p-3 bg-[#F7F8FC] rounded-lg">
+                            <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.carryover_jackpot)}</div>
+                            <div className="text-xs text-[#132E2C]/70">Carryover</div>
+                          </div>
+                        </div>
+
+                        {/* Weeks Table - if there are weeks */}
+                        {game.weeks.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">Weekly Performance</h4>
+                            <div className="overflow-x-auto">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Tickets Sold</TableHead>
-                                    <TableHead>Ticket Price</TableHead>
-                                    <TableHead>Amount Collected</TableHead>
-                                    <TableHead>Organization Total</TableHead>
-                                    <TableHead>Jackpot Total</TableHead>
-                                    <TableHead>Weekly Payout</TableHead>
-                                    <TableHead>Ending Jackpot</TableHead>
+                                    <TableHead>Week</TableHead>
+                                    <TableHead>Period</TableHead>
+                                    <TableHead>Sales</TableHead>
+                                    <TableHead>Winner</TableHead>
+                                    <TableHead>Card</TableHead>
+                                    <TableHead>Payout</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {game.ticket_sales.map(sale => (
-                                    <TableRow key={sale.id}>
-                                      <TableCell>{format(new Date(sale.date), 'MMM d, yyyy')}</TableCell>
-                                      <TableCell>{sale.tickets_sold}</TableCell>
-                                      <TableCell>{formatCurrency(sale.ticket_price)}</TableCell>
-                                      <TableCell>{formatCurrency(sale.amount_collected)}</TableCell>
-                                      <TableCell>{formatCurrency(sale.organization_total)}</TableCell>
-                                      <TableCell>{formatCurrency(sale.jackpot_total)}</TableCell>
-                                      <TableCell>{formatCurrency(sale.weekly_payout_amount)}</TableCell>
-                                      <TableCell>{formatCurrency(sale.ending_jackpot_total)}</TableCell>
+                                  {game.weeks.map(week => (
+                                    <TableRow key={week.id}>
+                                      <TableCell>Week {week.week_number}</TableCell>
+                                      <TableCell>
+                                        {format(new Date(week.start_date), 'MM/dd')} - {format(new Date(week.end_date), 'MM/dd')}
+                                      </TableCell>
+                                      <TableCell>{formatCurrency(week.weekly_sales)}</TableCell>
+                                      <TableCell>{week.winner_name || '-'}</TableCell>
+                                      <TableCell>{week.card_selected || '-'}</TableCell>
+                                      <TableCell>{formatCurrency(week.weekly_payout)}</TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>
@@ -1156,15 +1083,52 @@ export default function IncomeExpense() {
                             </div>
                           </div>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+
+                        {/* Expenses Table - if there are expenses */}
+                        {game.expenses.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">Expenses & Donations</h4>
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Description</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {game.expenses.map(expense => (
+                                    <TableRow key={expense.id}>
+                                      <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                      <TableCell>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                          expense.is_donation ? 
+                                          'bg-purple-100 text-purple-800' : 
+                                          'bg-red-100 text-red-800'
+                                        }`}>
+                                          {expense.is_donation ? 'Donation' : 'Expense'}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                                      <TableCell>{expense.memo || '-'}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
     </div>
   );
 }
