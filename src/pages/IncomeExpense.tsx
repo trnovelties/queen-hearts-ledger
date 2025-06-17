@@ -370,41 +370,256 @@ export default function IncomeExpense() {
     );
   };
 
-  // Generate PDF report
+  // Enhanced PDF generation with comprehensive structure
   const generatePdfReport = async () => {
     try {
       toast({
         title: "Generating Report",
-        description: "Please wait while we prepare your financial analysis...",
+        description: "Please wait while we prepare your comprehensive financial analysis...",
       });
       
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       let yPosition = 20;
+      const leftMargin = 20;
+      const rightMargin = pageWidth - 20;
+      const lineHeight = 7;
       
-      // Header
+      // Helper function to add new page if needed
+      const checkNewPage = (requiredSpace: number) => {
+        if (yPosition + requiredSpace > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
+      };
+      
+      // Header Section
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
+      doc.setFontSize(24);
+      doc.setTextColor(31, 78, 74); // #1F4E4A
       doc.text('Queen of Hearts Financial Report', pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 15;
       
-      // Summary section
+      // Report metadata
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      doc.text(`Generated: ${format(new Date(), 'MMM d, yyyy h:mm a')}`, 20, yPosition);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 5;
+      
+      const reportPeriod = startDate && endDate 
+        ? `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`
+        : 'All Time';
+      doc.text(`Report Period: ${reportPeriod}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 5;
+      
+      const gameScope = selectedGame === "all" ? "All Games" : games.find(g => g.id === selectedGame)?.name || "Unknown Game";
+      doc.text(`Scope: ${gameScope}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+      
+      // Executive Summary Section
+      checkNewPage(50);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(31, 78, 74);
+      doc.text('Executive Summary', leftMargin, yPosition);
       yPosition += 10;
       
-      doc.text(`Total Revenue: ${formatCurrency(summary.totalSales)}`, 20, yPosition);
-      yPosition += 7;
-      doc.text(`Total Payouts: ${formatCurrency(summary.totalPayouts)}`, 20, yPosition);
-      yPosition += 7;
-      doc.text(`Net Profit: ${formatCurrency(summary.organizationNetProfit)}`, 20, yPosition);
+      // Summary metrics in a structured layout
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
       
-      doc.save(`financial-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      const summaryData = [
+        ['Total Tickets Sold', summary.totalTicketsSold.toLocaleString()],
+        ['Total Revenue', formatCurrency(summary.totalSales)],
+        ['Total Payouts', formatCurrency(summary.totalPayouts)],
+        ['Total Expenses', formatCurrency(summary.totalExpenses)],
+        ['Total Donations', formatCurrency(summary.totalDonations)],
+        ['Organization Net Profit', formatCurrency(summary.organizationNetProfit)]
+      ];
+      
+      summaryData.forEach(([label, value]) => {
+        doc.setFont("helvetica", "bold");
+        doc.text(label + ':', leftMargin, yPosition);
+        doc.setFont("helvetica", "normal");
+        doc.text(value, leftMargin + 60, yPosition);
+        yPosition += lineHeight;
+      });
+      
+      yPosition += 10;
+      
+      // Financial Breakdown Section
+      checkNewPage(80);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(31, 78, 74);
+      doc.text('Financial Breakdown', leftMargin, yPosition);
+      yPosition += 10;
+      
+      // Three-column structure as per requirements
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(19, 46, 44);
+      
+      // Column 1: Overall Totals
+      doc.text('Overall Totals', leftMargin, yPosition);
+      yPosition += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      const overallTotals = [
+        ['Tickets Sold', summary.totalTicketsSold.toLocaleString()],
+        ['Ticket Sales', formatCurrency(summary.totalSales)],
+        ['Total Payouts', formatCurrency(summary.totalPayouts)],
+        ['Total Expenses', formatCurrency(summary.totalExpenses)],
+        ['Total Donated', formatCurrency(summary.totalDonations)]
+      ];
+      
+      overallTotals.forEach(([label, value]) => {
+        doc.text(`${label}: ${value}`, leftMargin + 5, yPosition);
+        yPosition += 5;
+      });
+      
+      // Reset position for second column
+      let column2Y = yPosition - (overallTotals.length * 5) - 8;
+      
+      // Column 2: Payout Portion Allocation
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(19, 46, 44);
+      doc.text('Payout Portion (60%)', leftMargin + 70, column2Y);
+      column2Y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      doc.text(`Total Sales: ${formatCurrency(summary.jackpotTotalPortion)}`, leftMargin + 75, column2Y);
+      column2Y += 5;
+      doc.text(`Total Payouts: ${formatCurrency(summary.totalPayouts)}`, leftMargin + 75, column2Y);
+      column2Y += 5;
+      
+      // Column 3: Organization Portion Allocation
+      let column3Y = yPosition - (overallTotals.length * 5) - 8;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(19, 46, 44);
+      doc.text('Organization Portion (40%)', leftMargin + 130, column3Y);
+      column3Y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      const orgPortionData = [
+        ['Total Sales', formatCurrency(summary.organizationTotalPortion)],
+        ['Total Expenses', formatCurrency(summary.totalExpenses)],
+        ['Total Donations', formatCurrency(summary.totalDonations)],
+        ['Net Profit', formatCurrency(summary.organizationNetProfit)]
+      ];
+      
+      orgPortionData.forEach(([label, value]) => {
+        doc.text(`${label}: ${value}`, leftMargin + 135, column3Y);
+        column3Y += 5;
+      });
+      
+      yPosition += 10;
+      
+      // Game Summary Section
+      if (summary.filteredGames.length > 0) {
+        checkNewPage(60);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(31, 78, 74);
+        doc.text('Game Summary', leftMargin, yPosition);
+        yPosition += 10;
+        
+        summary.filteredGames.forEach((game, index) => {
+          checkNewPage(30);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(19, 46, 44);
+          doc.text(`${game.name}`, leftMargin, yPosition);
+          yPosition += 8;
+          
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          
+          const gameData = [
+            ['Start Date', format(new Date(game.start_date), 'MMM d, yyyy')],
+            ['End Date', game.end_date ? format(new Date(game.end_date), 'MMM d, yyyy') : 'Ongoing'],
+            ['Total Sales', formatCurrency(game.total_sales)],
+            ['Total Payouts', formatCurrency(game.total_payouts)],
+            ['Total Expenses', formatCurrency(game.total_expenses)],
+            ['Total Donations', formatCurrency(game.total_donations)],
+            ['Net Profit', formatCurrency(game.organization_net_profit)],
+            ['Weeks Played', game.weeks.length.toString()]
+          ];
+          
+          gameData.forEach(([label, value]) => {
+            doc.text(`${label}: ${value}`, leftMargin + 10, yPosition);
+            yPosition += 5;
+          });
+          
+          yPosition += 5;
+        });
+      }
+      
+      // Winner Information Section
+      if (winners.length > 0) {
+        checkNewPage(60);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(31, 78, 74);
+        doc.text('Recent Winners', leftMargin, yPosition);
+        yPosition += 10;
+        
+        // Show last 10 winners to avoid overwhelming the PDF
+        const recentWinners = winners.slice(0, 10);
+        
+        recentWinners.forEach((winner) => {
+          checkNewPage(15);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(19, 46, 44);
+          doc.text(`${winner.name}`, leftMargin, yPosition);
+          
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(0, 0, 0);
+          doc.text(`${winner.gameName} - Week ${winner.weekNumber}`, leftMargin + 50, yPosition);
+          doc.text(`${winner.card} (Slot ${winner.slot})`, leftMargin + 110, yPosition);
+          doc.text(`${formatCurrency(winner.amount)}`, leftMargin + 160, yPosition);
+          yPosition += 6;
+        });
+        
+        if (winners.length > 10) {
+          yPosition += 5;
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`... and ${winners.length - 10} more winners`, leftMargin, yPosition);
+        }
+      }
+      
+      // Footer
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        doc.text('Queen of Hearts Financial Report', leftMargin, pageHeight - 10);
+      }
+      
+      const filename = `queen-of-hearts-financial-report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`;
+      doc.save(filename);
       
       toast({
-        title: "Report Generated",
-        description: "Your financial report has been downloaded successfully.",
+        title: "Report Generated Successfully",
+        description: `Your comprehensive financial report has been downloaded as ${filename}`,
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -454,22 +669,6 @@ export default function IncomeExpense() {
               <Download className="h-4 w-4 mr-2" />
               Export Report
             </Button>
-            <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white font-medium shadow-lg">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Transaction
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <ExpenseModal 
-                  open={addExpenseOpen} 
-                  onOpenChange={setAddExpenseOpen}
-                  gameId=""
-                  gameName="All Games"
-                />
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 
