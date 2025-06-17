@@ -149,6 +149,17 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
                     <span>Admin Panel</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {profile?.role === 'admin' && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      onClick={() => navigate("/admin-view")}
+                      className={location.pathname === "/admin-view" ? "bg-sidebar-primary" : ""}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Admin View</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/account")}
@@ -197,6 +208,7 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
               {location.pathname === "/admin" && "Admin Panel"}
+              {location.pathname === "/admin-view" && "Admin View"}
               {location.pathname === "/account" && "Account"}
             </h1>
           </div>
@@ -234,3 +246,5 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
     </div>
   );
 }
+
+export default AppLayout;
