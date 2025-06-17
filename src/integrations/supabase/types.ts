@@ -149,6 +149,33 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_rules: {
+        Row: {
+          created_at: string
+          id: string
+          organization_name: string
+          rules_content: string
+          startup_costs: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_name?: string
+          rules_content: string
+          startup_costs: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_name?: string
+          rules_content?: string
+          startup_costs?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_sales: {
         Row: {
           amount_collected: number
