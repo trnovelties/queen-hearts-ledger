@@ -90,13 +90,12 @@ export function DatePickerWithInput({
               }}
               placeholder={placeholder}
               className={cn(
-                "w-full pr-10 border-[#1F4E4A]/20 focus:ring-2 focus:ring-[#A1E96C]/50 focus:border-[#A1E96C] font-medium text-[#132E2C] placeholder:text-[#132E2C]/50",
+                "w-full border-[#1F4E4A]/20 focus:ring-2 focus:ring-[#A1E96C]/50 focus:border-[#A1E96C] font-medium text-[#132E2C] placeholder:text-[#132E2C]/50",
                 disabled && "opacity-50 cursor-not-allowed bg-gray-50"
               )}
               disabled={disabled}
               type="date"
             />
-            <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none text-[#1F4E4A]" />
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 shadow-lg border-[#1F4E4A]/20" align="start">
