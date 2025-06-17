@@ -246,5 +246,3 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
     </div>
   );
 }
-
-export default AppLayout;
