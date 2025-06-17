@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
-
 export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
@@ -61,7 +60,6 @@ export default function Dashboard() {
     memo: '',
     gameId: ''
   });
-
   useEffect(() => {
     fetchGames();
 
@@ -111,7 +109,6 @@ export default function Dashboard() {
       supabase.removeChannel(expensesSubscription);
     };
   }, []);
-
   const fetchGames = async () => {
     try {
       setLoading(true);
@@ -178,7 +175,6 @@ export default function Dashboard() {
   const currentGames = games.filter(game => !game.end_date);
   const archivedGames = games.filter(game => game.end_date);
   const displayGames = activeTab === 'current' ? currentGames : archivedGames;
-
   const createWeek = async () => {
     if (!currentGameId) return;
     try {
@@ -213,7 +209,6 @@ export default function Dashboard() {
       });
     }
   };
-
   const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
     if (!currentGameId) return;
     try {
@@ -489,21 +484,17 @@ export default function Dashboard() {
     // Then update the database
     updateDailyEntry(weekId, dayIndex, ticketsSold);
   };
-
   const toggleGame = (gameId: string) => {
     setExpandedGame(expandedGame === gameId ? null : gameId);
     setExpandedWeek(null);
     setExpandedExpenses(null);
   };
-
   const toggleWeek = (weekId: string) => {
     setExpandedWeek(expandedWeek === weekId ? null : weekId);
   };
-
   const toggleExpenses = (gameId: string) => {
     setExpandedExpenses(expandedExpenses === gameId ? null : gameId);
   };
-
   const openWeekForm = (gameId: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
@@ -517,13 +508,11 @@ export default function Dashboard() {
     setCurrentGameId(gameId);
     setWeekFormOpen(true);
   };
-
   const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
     setDeleteItemId(id);
     setDeleteType(type);
     setDeleteDialogOpen(true);
   };
-
   const confirmDelete = async () => {
     if (!deleteItemId) {
       toast({
@@ -533,32 +522,25 @@ export default function Dashboard() {
       });
       return;
     }
-
     try {
       console.log(`Starting deletion of ${deleteType} with ID: ${deleteItemId}`);
-
       if (deleteType === 'game') {
         // First, check if the game exists
-        const { data: gameCheck, error: gameCheckError } = await supabase
-          .from('games')
-          .select('id, name')
-          .eq('id', deleteItemId)
-          .single();
-
+        const {
+          data: gameCheck,
+          error: gameCheckError
+        } = await supabase.from('games').select('id, name').eq('id', deleteItemId).single();
         if (gameCheckError) {
           console.error('Game not found:', gameCheckError);
           throw new Error(`Game not found: ${gameCheckError.message}`);
         }
-
         console.log('Game found:', gameCheck);
 
         // Delete all ticket_sales for this game first
         console.log('Deleting ticket sales...');
-        const { error: ticketSalesError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('game_id', deleteItemId);
-
+        const {
+          error: ticketSalesError
+        } = await supabase.from('ticket_sales').delete().eq('game_id', deleteItemId);
         if (ticketSalesError) {
           console.error('Error deleting ticket sales:', ticketSalesError);
           throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
@@ -567,11 +549,9 @@ export default function Dashboard() {
 
         // Delete all weeks for this game
         console.log('Deleting weeks...');
-        const { error: weeksError } = await supabase
-          .from('weeks')
-          .delete()
-          .eq('game_id', deleteItemId);
-
+        const {
+          error: weeksError
+        } = await supabase.from('weeks').delete().eq('game_id', deleteItemId);
         if (weeksError) {
           console.error('Error deleting weeks:', weeksError);
           throw new Error(`Failed to delete weeks: ${weeksError.message}`);
@@ -580,11 +560,9 @@ export default function Dashboard() {
 
         // Delete all expenses for this game
         console.log('Deleting expenses...');
-        const { error: expensesError } = await supabase
-          .from('expenses')
-          .delete()
-          .eq('game_id', deleteItemId);
-
+        const {
+          error: expensesError
+        } = await supabase.from('expenses').delete().eq('game_id', deleteItemId);
         if (expensesError) {
           console.error('Error deleting expenses:', expensesError);
           throw new Error(`Failed to delete expenses: ${expensesError.message}`);
@@ -593,11 +571,9 @@ export default function Dashboard() {
 
         // Finally delete the game itself
         console.log('Deleting game...');
-        const { error: gameError } = await supabase
-          .from('games')
-          .delete()
-          .eq('id', deleteItemId);
-
+        const {
+          error: gameError
+        } = await supabase.from('games').delete().eq('id', deleteItemId);
         if (gameError) {
           console.error('Error deleting game:', gameError);
           throw new Error(`Failed to delete game: ${gameError.message}`);
@@ -618,36 +594,27 @@ export default function Dashboard() {
         if (expandedExpenses === deleteItemId) {
           setExpandedExpenses(null);
         }
-
         toast({
           title: "Game Deleted",
           description: `Game "${gameCheck.name}" and all associated data have been deleted successfully.`
         });
-
       } else if (deleteType === 'week') {
         // Delete ticket sales first, then the week
-        const { error: ticketSalesError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('week_id', deleteItemId);
-
+        const {
+          error: ticketSalesError
+        } = await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId);
         if (ticketSalesError) {
           throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
         }
-
-        const { error: weekError } = await supabase
-          .from('weeks')
-          .delete()
-          .eq('id', deleteItemId);
-
+        const {
+          error: weekError
+        } = await supabase.from('weeks').delete().eq('id', deleteItemId);
         if (weekError) {
           throw new Error(`Failed to delete week: ${weekError.message}`);
         }
-
         if (expandedWeek === deleteItemId) {
           setExpandedWeek(null);
         }
-
         toast({
           title: "Week Deleted",
           description: "Week and all associated entries have been deleted."
@@ -655,127 +622,101 @@ export default function Dashboard() {
 
         // Refresh data to update game totals
         fetchGames();
-
       } else if (deleteType === 'entry') {
         // Get the entry details before deletion for recalculation
-        const { data: entry, error: entryFetchError } = await supabase
-          .from('ticket_sales')
-          .select('*')
-          .eq('id', deleteItemId)
-          .single();
-
+        const {
+          data: entry,
+          error: entryFetchError
+        } = await supabase.from('ticket_sales').select('*').eq('id', deleteItemId).single();
         if (entryFetchError) {
           throw new Error(`Failed to fetch entry: ${entryFetchError.message}`);
         }
-
         if (entry) {
-          const { game_id, week_id, amount_collected, tickets_sold } = entry;
+          const {
+            game_id,
+            week_id,
+            amount_collected,
+            tickets_sold
+          } = entry;
 
           // Delete the entry
-          const { error } = await supabase
-            .from('ticket_sales')
-            .delete()
-            .eq('id', deleteItemId);
-
+          const {
+            error
+          } = await supabase.from('ticket_sales').delete().eq('id', deleteItemId);
           if (error) {
             throw new Error(`Failed to delete entry: ${error.message}`);
           }
 
           // Recalculate week totals
-          const { data: remainingWeekSales } = await supabase
-            .from('ticket_sales')
-            .select('*')
-            .eq('week_id', week_id);
-
+          const {
+            data: remainingWeekSales
+          } = await supabase.from('ticket_sales').select('*').eq('week_id', week_id);
           const weekTotalTickets = remainingWeekSales?.reduce((sum, sale) => sum + sale.tickets_sold, 0) || 0;
           const weekTotalSales = remainingWeekSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
-
-          await supabase
-            .from('weeks')
-            .update({
-              weekly_sales: weekTotalSales,
-              weekly_tickets_sold: weekTotalTickets
-            })
-            .eq('id', week_id);
+          await supabase.from('weeks').update({
+            weekly_sales: weekTotalSales,
+            weekly_tickets_sold: weekTotalTickets
+          }).eq('id', week_id);
 
           // Recalculate game totals
-          const { data: remainingGameSales } = await supabase
-            .from('ticket_sales')
-            .select('*')
-            .eq('game_id', game_id);
-
+          const {
+            data: remainingGameSales
+          } = await supabase.from('ticket_sales').select('*').eq('game_id', game_id);
           const gameTotalSales = remainingGameSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
           const gameTotalOrganization = remainingGameSales?.reduce((sum, sale) => sum + sale.organization_total, 0) || 0;
 
           // Get total expenses and donations
-          const { data: expenses } = await supabase
-            .from('expenses')
-            .select('*')
-            .eq('game_id', game_id);
-
+          const {
+            data: expenses
+          } = await supabase.from('expenses').select('*').eq('game_id', game_id);
           const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0) || 0;
           const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0) || 0;
           const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
-
-          await supabase
-            .from('games')
-            .update({
-              total_sales: gameTotalSales,
-              organization_net_profit: organizationNetProfit
-            })
-            .eq('id', game_id);
-
+          await supabase.from('games').update({
+            total_sales: gameTotalSales,
+            organization_net_profit: organizationNetProfit
+          }).eq('id', game_id);
           toast({
             title: "Entry Deleted",
             description: "Daily entry has been deleted and totals updated."
           });
         }
-
       } else if (deleteType === 'expense') {
         // Get the expense details before deletion
-        const { data: expense, error: expenseFetchError } = await supabase
-          .from('expenses')
-          .select('*')
-          .eq('id', deleteItemId)
-          .single();
-
+        const {
+          data: expense,
+          error: expenseFetchError
+        } = await supabase.from('expenses').select('*').eq('id', deleteItemId).single();
         if (expenseFetchError) {
           throw new Error(`Failed to fetch expense: ${expenseFetchError.message}`);
         }
-
         if (expense) {
-          const { game_id, amount, is_donation } = expense;
+          const {
+            game_id,
+            amount,
+            is_donation
+          } = expense;
 
           // Delete the expense
-          const { error } = await supabase
-            .from('expenses')
-            .delete()
-            .eq('id', deleteItemId);
-
+          const {
+            error
+          } = await supabase.from('expenses').delete().eq('id', deleteItemId);
           if (error) {
             throw new Error(`Failed to delete expense: ${error.message}`);
           }
 
           // Get the game and recalculate totals
-          const { data: game } = await supabase
-            .from('games')
-            .select('*')
-            .eq('id', game_id)
-            .single();
-
+          const {
+            data: game
+          } = await supabase.from('games').select('*').eq('id', game_id).single();
           if (game) {
             const updatedValues = {
               total_expenses: is_donation ? game.total_expenses : game.total_expenses - amount,
               total_donations: is_donation ? game.total_donations - amount : game.total_donations,
               organization_net_profit: game.organization_net_profit + amount // Adding back since we're removing an expense/donation
             };
-
-            await supabase
-              .from('games')
-              .update(updatedValues)
-              .eq('id', game_id);
+            await supabase.from('games').update(updatedValues).eq('id', game_id);
           }
-
           toast({
             title: is_donation ? "Donation Deleted" : "Expense Deleted",
             description: `The ${is_donation ? "donation" : "expense"} has been deleted and totals updated.`
@@ -788,7 +729,6 @@ export default function Dashboard() {
       setTimeout(() => {
         fetchGames();
       }, 500);
-
     } catch (error: any) {
       console.error('Error during deletion:', error);
       toast({
@@ -801,26 +741,21 @@ export default function Dashboard() {
       setDeleteItemId(null);
     }
   };
-
   const openExpenseModal = (gameId: string, gameName: string) => {
     setCurrentGameId(gameId);
     setCurrentGameName(gameName);
     setExpenseModalOpen(true);
   };
-
   const handleOpenPayoutSlip = (winnerData: any) => {
     setPayoutSlipData(winnerData);
     setPayoutSlipOpen(true);
   };
-
   const handleWinnerComplete = () => {
     fetchGames();
   };
-
   const handleGameComplete = () => {
     fetchGames();
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -828,7 +763,6 @@ export default function Dashboard() {
       minimumFractionDigits: 2
     }).format(amount);
   };
-
   const generateGamePdfReport = async (game: any) => {
     try {
       toast({
@@ -1108,7 +1042,6 @@ export default function Dashboard() {
       });
     }
   };
-
   const handleDailyDonation = async (date: string, amount: number) => {
     if (!currentGameId || amount <= 0) return;
     try {
@@ -1144,7 +1077,6 @@ export default function Dashboard() {
       });
     }
   };
-
   const handleDailyExpense = async () => {
     if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0) return;
     try {
@@ -1187,7 +1119,6 @@ export default function Dashboard() {
       });
     }
   };
-
   const openDailyExpenseModal = (date: string, gameId: string) => {
     setDailyExpenseForm({
       date: date,
@@ -1197,13 +1128,11 @@ export default function Dashboard() {
     });
     setDailyExpenseModalOpen(true);
   };
-
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>;
   }
-
   return <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
@@ -1366,7 +1295,7 @@ export default function Dashboard() {
                                               <div className="text-yellow-900 font-semibold">{week.card_selected}</div>
                                             </div>
                                             <div className="space-y-1">
-                                              <div className="font-medium text-yellow-700">Payout Amount</div>
+                                              <div className="font-medium text-yellow-700">Distribution Amount</div>
                                               <div className="text-yellow-900 font-semibold">{formatCurrency(week.weekly_payout)}</div>
                                             </div>
                                             <div className="space-y-1">
