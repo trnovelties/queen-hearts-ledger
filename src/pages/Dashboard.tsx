@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -138,7 +139,11 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('games')
-      .insert([{ name: newGameName }])
+      .insert([{ 
+        name: newGameName,
+        game_number: 1,
+        start_date: new Date().toISOString().split('T')[0]
+      }])
       .select();
 
     if (error) {
@@ -171,7 +176,12 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from('weeks')
-      .insert([{ name: newWeekName, game_id: selectedGameId }])
+      .insert([{ 
+        week_number: 1,
+        game_id: selectedGameId,
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date().toISOString().split('T')[0]
+      }])
       .select();
 
     if (error) {
@@ -206,9 +216,15 @@ export default function Dashboard() {
       .from('ticket_sales')
       .insert([{
         week_id: newTicketSale.weekId,
-        quantity: parseInt(newTicketSale.quantity),
-        price: parseFloat(newTicketSale.price),
-        notes: newTicketSale.notes
+        game_id: selectedGameId || '',
+        date: new Date().toISOString().split('T')[0],
+        tickets_sold: parseInt(newTicketSale.quantity),
+        ticket_price: parseFloat(newTicketSale.price),
+        amount_collected: parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price),
+        cumulative_collected: parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price),
+        organization_total: (parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price)) * 0.4,
+        jackpot_total: (parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price)) * 0.6,
+        ending_jackpot_total: (parseInt(newTicketSale.quantity) * parseFloat(newTicketSale.price)) * 0.6
       }])
       .select();
 
@@ -250,7 +266,8 @@ export default function Dashboard() {
       .insert([{
         game_id: newExpense.gameId,
         amount: parseFloat(newExpense.amount),
-        description: newExpense.description
+        memo: newExpense.description,
+        date: new Date().toISOString().split('T')[0]
       }])
       .select();
 
@@ -393,7 +410,7 @@ export default function Dashboard() {
           .from('weeks')
           .delete()
           .eq('id', deleteItemId)
-          .select('game_id, name')
+          .select('game_id')
           .single();
 
         if (weekError) {
@@ -405,7 +422,7 @@ export default function Dashboard() {
 
         toast({
           title: "Week Deleted",
-          description: `Week "${weekData.name}" and all associated ticket sales have been deleted.`
+          description: "Week and all associated ticket sales have been deleted."
         });
       } else if (deleteType === 'entry') {
         const { data: entryData, error: entryError } = await supabase
@@ -470,7 +487,7 @@ export default function Dashboard() {
     gameWeeks.forEach(week => {
       const weekTicketSales = ticketSales[week.id] || [];
       weekTicketSales.forEach(sale => {
-        totalRevenue += sale.quantity * sale.price;
+        totalRevenue += sale.tickets_sold * sale.ticket_price;
       });
     });
 
@@ -494,12 +511,12 @@ export default function Dashboard() {
     const weekTicketSales = ticketSales[weekId] || [];
     
     weekTicketSales.forEach(sale => {
-      totalRevenue += sale.quantity * sale.price;
+      totalRevenue += sale.tickets_sold * sale.ticket_price;
     });
 
     return {
       totalRevenue,
-      totalTickets: weekTicketSales.reduce((sum, sale) => sum + sale.quantity, 0)
+      totalTickets: weekTicketSales.reduce((sum, sale) => sum + sale.tickets_sold, 0)
     };
   };
 
@@ -585,7 +602,7 @@ export default function Dashboard() {
                           <Card key={week.id}>
                             <CardHeader>
                               <div className="flex justify-between items-center">
-                                <CardTitle className="text-lg">{week.name}</CardTitle>
+                                <CardTitle className="text-lg">Week {week.week_number}</CardTitle>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -616,11 +633,10 @@ export default function Dashboard() {
                                   {ticketSales[week.id].map(sale => (
                                     <div key={sale.id} className="flex justify-between items-center p-2 bg-muted rounded">
                                       <div>
-                                        <p className="font-medium">{sale.quantity} tickets @ {formatCurrency(sale.price)}</p>
-                                        {sale.notes && <p className="text-sm text-muted-foreground">{sale.notes}</p>}
+                                        <p className="font-medium">{sale.tickets_sold} tickets @ {formatCurrency(sale.ticket_price)}</p>
                                       </div>
                                       <div className="flex items-center space-x-2">
-                                        <p className="font-medium">{formatCurrency(sale.quantity * sale.price)}</p>
+                                        <p className="font-medium">{formatCurrency(sale.tickets_sold * sale.ticket_price)}</p>
                                         <Button 
                                           variant="ghost" 
                                           size="sm" 
@@ -691,7 +707,7 @@ export default function Dashboard() {
                           {expenses[game.id].map(expense => (
                             <div key={expense.id} className="flex justify-between items-center p-2 bg-muted rounded">
                               <div>
-                                <p className="font-medium">{expense.description}</p>
+                                <p className="font-medium">{expense.memo}</p>
                               </div>
                               <div className="flex items-center space-x-2">
                                 <p className="font-medium text-red-500">{formatCurrency(expense.amount)}</p>
@@ -819,7 +835,7 @@ export default function Dashboard() {
                 {games.map(game => (
                   <optgroup key={game.id} label={game.name}>
                     {(weeks[game.id] || []).map(week => (
-                      <option key={week.id} value={week.id}>{week.name}</option>
+                      <option key={week.id} value={week.id}>Week {week.week_number}</option>
                     ))}
                   </optgroup>
                 ))}
