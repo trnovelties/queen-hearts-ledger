@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -253,7 +254,15 @@ const Dashboard = () => {
             <DialogHeader>
               <DialogTitle>Create New Game</DialogTitle>
             </DialogHeader>
-            <GameForm />
+            <GameForm 
+              open={showGameForm}
+              onOpenChange={setShowGameForm}
+              games={games || []}
+              onComplete={() => {
+                setShowGameForm(false);
+                queryClient.invalidateQueries({ queryKey: ['games'] });
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -389,7 +398,7 @@ const Dashboard = () => {
                                         {weekTicketSales.map((sale) => (
                                           <TicketSalesRow 
                                             key={sale.id} 
-                                            ticketSale={sale} 
+                                            sale={sale}
                                             gameId={game.id}
                                             weekId={week.id}
                                           />
@@ -412,8 +421,8 @@ const Dashboard = () => {
                                           <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
                                         </div>
                                         <PayoutSlipModal 
-                                          weekData={week} 
-                                          gameData={game}
+                                          week={week}
+                                          game={game}
                                         />
                                       </div>
                                     </div>
@@ -423,7 +432,7 @@ const Dashboard = () => {
                                     <WinnerForm 
                                       gameId={game.id}
                                       weekId={week.id}
-                                      disabled={!!week.winner_name}
+                                      isDisabled={!!week.winner_name}
                                     />
                                   </div>
                                 </CardContent>
