@@ -237,7 +237,15 @@ const Dashboard = () => {
             <DialogHeader>
               <DialogTitle>Create New Game</DialogTitle>
             </DialogHeader>
-            <GameForm onClose={() => setShowGameForm(false)} />
+            <GameForm 
+              open={showGameForm} 
+              onOpenChange={setShowGameForm}
+              games={games || []}
+              onComplete={() => {
+                queryClient.invalidateQueries({ queryKey: ['games'] });
+                setShowGameForm(false);
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -371,12 +379,14 @@ const Dashboard = () => {
                                     {weekTicketSales.length > 0 ? (
                                       <div className="space-y-1">
                                         {weekTicketSales.map((sale) => (
-                                          <TicketSalesRow 
-                                            key={sale.id} 
-                                            sale={sale} 
-                                            gameId={game.id}
-                                            weekId={week.id}
-                                          />
+                                          <div key={sale.id} className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
+                                            <div className="flex items-center space-x-3">
+                                              <span>{format(new Date(sale.date), 'MMM dd')}</span>
+                                              <span>{sale.tickets_sold} tickets</span>
+                                              <span>${sale.ticket_price}</span>
+                                            </div>
+                                            <span className="font-medium">{formatCurrency(sale.amount_collected)}</span>
+                                          </div>
                                         ))}
                                       </div>
                                     ) : (
@@ -396,20 +406,35 @@ const Dashboard = () => {
                                           <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
                                         </div>
                                         <PayoutSlipModal 
-                                          week={week} 
-                                          game={game}
+                                          open={false} 
+                                          onOpenChange={() => {}}
+                                          winnerData={{
+                                            winnerName: week.winner_name,
+                                            slotChosen: week.slot_chosen || 0,
+                                            cardSelected: week.card_selected || '',
+                                            payoutAmount: week.weekly_payout,
+                                            date: week.end_date,
+                                            gameNumber: game.game_number,
+                                            gameName: game.name,
+                                            weekNumber: week.week_number,
+                                            weekId: week.id,
+                                            weekStartDate: week.start_date,
+                                            weekEndDate: week.end_date
+                                          }}
                                         />
                                       </div>
                                     </div>
                                   )}
 
                                   <div className="flex space-x-2">
-                                    <WinnerForm 
-                                      gameId={game.id}
-                                      weekId={week.id}
-                                      weekNumber={week.week_number}
-                                      disabled={!!week.winner_name}
-                                    />
+                                    <Button variant="outline" size="sm">
+                                      Add Ticket Sales
+                                    </Button>
+                                    {!week.winner_name && (
+                                      <Button variant="outline" size="sm">
+                                        Enter Winner
+                                      </Button>
+                                    )}
                                   </div>
                                 </CardContent>
                               </CollapsibleContent>
@@ -422,7 +447,12 @@ const Dashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <h4 className="font-medium">Expenses & Donations</h4>
-                        <ExpenseModal gameId={game.id} />
+                        <ExpenseModal 
+                          open={false} 
+                          onOpenChange={() => {}}
+                          gameId={game.id}
+                          gameName={game.name}
+                        />
                       </div>
                       {gameExpenses.length > 0 ? (
                         <div className="space-y-1">
