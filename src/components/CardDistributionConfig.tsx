@@ -34,7 +34,22 @@ export function CardDistributionConfig() {
         
         if (data) {
           setConfigId(data.id);
-          setCardDistributions(data.card_payouts || {});
+          // Properly handle the card_payouts data
+          if (data.card_payouts) {
+            if (typeof data.card_payouts === 'string') {
+              try {
+                setCardDistributions(JSON.parse(data.card_payouts));
+              } catch {
+                setCardDistributions(getDefaultCardDistributions());
+              }
+            } else if (typeof data.card_payouts === 'object' && data.card_payouts !== null) {
+              setCardDistributions(data.card_payouts as CardDistributions);
+            } else {
+              setCardDistributions(getDefaultCardDistributions());
+            }
+          } else {
+            setCardDistributions(getDefaultCardDistributions());
+          }
         } else {
           // Set default card distributions if no configuration exists
           setCardDistributions(getDefaultCardDistributions());
