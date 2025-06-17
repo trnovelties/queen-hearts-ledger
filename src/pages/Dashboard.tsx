@@ -540,7 +540,6 @@ const Dashboard = () => {
             refreshData();
           }}
           onOpenPayoutSlip={(winnerData) => {
-            // Handle payout slip opening
             console.log('Opening payout slip for:', winnerData);
           }}
         />
