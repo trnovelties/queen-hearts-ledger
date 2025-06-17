@@ -1,1635 +1,781 @@
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { useToast } from "@/hooks/use-toast";
+import { DatePicker } from "@/components/ui/datepicker";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, Download, Plus, Filter, ChevronDown, ChevronUp, BarChart3, LineChart as LineChartIcon, PieChart as PieChartIcon, Activity } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Tables } from "@/integrations/supabase/types";
-import { Download, PlusCircle, Filter, TrendingUp, DollarSign, Users, Calendar, ChevronDown, ChevronUp, BarChart3, PieChart as PieChartIcon, Activity, Target } from "lucide-react";
-import jsPDF from "jspdf";
-import { ExpenseModal } from "@/components/ExpenseModal";
 import { formatCurrency } from "@/lib/utils";
 
-// Define types for data structure
-type Game = Tables<"games">;
-type Week = Tables<"weeks">;
-type TicketSale = Tables<"ticket_sales">;
-type Expense = Tables<"expenses">;
-
-// Define aggregate data types
-interface GameSummary extends Game {
-  weeks: Week[];
-  ticket_sales: TicketSale[];
-  expenses: Expense[];
-}
-
-type ChartData = {
-  name: string;
-  Sales: number;
-  Payouts: number;
-  Expenses: number;
-  Donations: number;
-  NetProfit: number;
-};
-
-interface KPIData {
-  totalRevenue: number;
-  totalProfit: number;
-  profitMargin: number;
-  averageTicketSales: number;
-  totalGames: number;
-  activeGames: number;
-  revenueGrowth: number;
-  profitGrowth: number;
-}
+const COLORS = ['#1F4E4A', '#A1E96C', '#F7F8FC', '#132E2C'];
 
 export default function IncomeExpense() {
-  const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const { user } = useAuth();
-  const [games, setGames] = useState<GameSummary[]>([]);
+  const [games, setGames] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedGame, setSelectedGame] = useState<string>("all");
-  const [selectedGames, setSelectedGames] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [reportType, setReportType] = useState<"weekly" | "game" | "cumulative">("game");
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [kpiData, setKPIData] = useState<KPIData>({} as KPIData);
-  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [chartType, setChartType] = useState<"bar" | "line" | "area" | "pie">("bar");
-  const [comparisonMode, setComparisonMode] = useState(false);
-  const [sortColumn, setSortColumn] = useState<string>("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  const reportContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Color palette for charts
-  const COLORS = ['#1F4E4A', '#A1E96C', '#132E2C', '#7B8C8A', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
-  
-  // Set selected game from URL parameter
+  const [selectedGame, setSelectedGame] = useState('all');
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
+  const [reportType, setReportType] = useState('cumulative');
+  const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
+  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [selectedChartType, setSelectedChartType] = useState('bar');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    gameId: '',
+    date: new Date(),
+    amount: '',
+    memo: '',
+    type: 'expense'
+  });
+  const { toast } = useToast();
+
   useEffect(() => {
-    const gameId = searchParams.get("game");
-    if (gameId) {
-      setSelectedGame(gameId);
-    }
-  }, [searchParams]);
-  
-  // Fetch all games and related data
-  useEffect(() => {
-    async function fetchFinancialData() {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        // Fetch all games
-        const { data: gamesData, error: gamesError } = await supabase
-          .from('games')
-          .select('*')
-          .order('game_number', { ascending: false });
-        
-        if (gamesError) throw gamesError;
-        
-        if (gamesData) {
-          const gamesWithDetails: GameSummary[] = [];
-          
-          // Fetch additional data for each game
-          for (const game of gamesData) {
-            // Fetch weeks
-            const { data: weeksData, error: weeksError } = await supabase
-              .from('weeks')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('week_number', { ascending: true });
-            
-            if (weeksError) throw weeksError;
-            
-            // Fetch ticket sales
-            const { data: salesData, error: salesError } = await supabase
-              .from('ticket_sales')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('date', { ascending: true });
-            
-            if (salesError) throw salesError;
-            
-            // Fetch expenses
-            const { data: expensesData, error: expensesError } = await supabase
-              .from('expenses')
-              .select('*')
-              .eq('game_id', game.id)
-              .order('date', { ascending: true });
-            
-            if (expensesError) throw expensesError;
-            
-            gamesWithDetails.push({
-              ...game,
-              weeks: weeksData || [],
-              ticket_sales: salesData || [],
-              expenses: expensesData || [],
-            });
-          }
-          
-          setGames(gamesWithDetails);
-          
-          // Generate chart data and KPIs
-          generateChartData(gamesWithDetails);
-          calculateKPIs(gamesWithDetails);
-        }
-      } catch (error: any) {
-        console.error('Error fetching financial data:', error);
-        toast({
-          title: "Error Loading Data",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchFinancialData();
-  }, [user, toast]);
-  
-  // Generate chart data
-  const generateChartData = (gameData: GameSummary[]) => {
-    const chartDataArray = gameData.map(game => ({
-      name: game.name,
-      Sales: game.total_sales,
-      Payouts: game.total_payouts,
-      Expenses: game.total_expenses,
-      Donations: game.total_donations,
-      NetProfit: game.organization_net_profit,
-    }));
-    
-    setChartData(chartDataArray);
-  };
-  
-  // Calculate KPIs
-  const calculateKPIs = (gameData: GameSummary[]) => {
-    const totalRevenue = gameData.reduce((sum, game) => sum + game.total_sales, 0);
-    const totalProfit = gameData.reduce((sum, game) => sum + game.organization_net_profit, 0);
-    const totalGames = gameData.length;
-    const activeGames = gameData.filter(game => !game.end_date).length;
-    
-    const kpis: KPIData = {
-      totalRevenue,
-      totalProfit,
-      profitMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
-      averageTicketSales: totalGames > 0 ? totalRevenue / totalGames : 0,
-      totalGames,
-      activeGames,
-      revenueGrowth: 0, // Would need historical data for proper calculation
-      profitGrowth: 0,  // Would need historical data for proper calculation
-    };
-    
-    setKPIData(kpis);
-  };
-  
-  // Handle adding a new expense/donation
-  const handleAddExpense = async () => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      if (!newExpense.gameId || !newExpense.date || newExpense.amount <= 0) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill all required fields.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Get selected game
-      const gameIndex = games.findIndex(game => game.id === newExpense.gameId);
-      if (gameIndex === -1) return;
-      const game = games[gameIndex];
-      
-      // Insert new expense into Supabase
-      const { data: newExpenseData, error } = await supabase
+      // Fetch games with related data
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select(`
+          *,
+          weeks (*),
+          ticket_sales (*)
+        `)
+        .order('game_number', { ascending: false });
+
+      if (gamesError) throw gamesError;
+
+      // Fetch expenses
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (expensesError) throw expensesError;
+
+      setGames(gamesData || []);
+      setExpenses(expensesData || []);
+    } catch (error: any) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error Loading Data",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddExpense = async () => {
+    if (!newExpense.gameId || !newExpense.amount || parseFloat(newExpense.amount) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields with valid values.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: newExpense.gameId,
-          date: newExpense.date,
-          amount: newExpense.amount,
-          memo: newExpense.memo,
-          is_donation: newExpense.isDonation,
-        })
-        .select()
-        .single();
-      
+          date: newExpense.date.toISOString().split('T')[0],
+          amount: parseFloat(newExpense.amount),
+          memo: newExpense.memo || null,
+          is_donation: newExpense.type === 'donation',
+        });
+
       if (error) throw error;
-      
+
       // Update game totals
-      const updatedDonations = newExpense.isDonation ? 
-        game.total_donations + newExpense.amount : 
-        game.total_donations;
-      
-      const updatedExpenses = !newExpense.isDonation ? 
-        game.total_expenses + newExpense.amount : 
-        game.total_expenses;
-      
-      const updatedOrganizationNetProfit = game.organization_net_profit - newExpense.amount;
-      
-      const { error: gameUpdateError } = await supabase
-        .from('games')
-        .update({
-          total_donations: updatedDonations,
-          total_expenses: updatedExpenses,
-          organization_net_profit: updatedOrganizationNetProfit,
-        })
-        .eq('id', newExpense.gameId);
-      
-      if (gameUpdateError) throw gameUpdateError;
-      
-      // Update local state
-      const updatedGames = [...games];
-      if (newExpense.isDonation) {
-        updatedGames[gameIndex].total_donations = updatedDonations;
-      } else {
-        updatedGames[gameIndex].total_expenses = updatedExpenses;
+      const game = games.find(g => g.id === newExpense.gameId);
+      if (game) {
+        const amount = parseFloat(newExpense.amount);
+        const isDonation = newExpense.type === 'donation';
+        
+        const updatedTotals = {
+          total_expenses: isDonation ? game.total_expenses : game.total_expenses + amount,
+          total_donations: isDonation ? game.total_donations + amount : game.total_donations,
+          organization_net_profit: game.organization_net_profit - amount,
+        };
+        
+        await supabase
+          .from('games')
+          .update(updatedTotals)
+          .eq('id', newExpense.gameId);
       }
-      
-      updatedGames[gameIndex].organization_net_profit = updatedOrganizationNetProfit;
-      updatedGames[gameIndex].expenses = [...updatedGames[gameIndex].expenses, newExpenseData];
-      
-      setGames(updatedGames);
-      
-      // Update chart data
-      const updatedChartData = chartData.map(item => {
-        if (item.name === game.name) {
-          return {
-            ...item,
-            Expenses: !newExpense.isDonation ? item.Expenses + newExpense.amount : item.Expenses,
-            Donations: newExpense.isDonation ? item.Donations + newExpense.amount : item.Donations,
-          };
-        }
-        return item;
-      });
-      
-      setChartData(updatedChartData);
-      
-      setAddExpenseOpen(false);
+
       toast({
-        title: `${newExpense.isDonation ? "Donation" : "Expense"} Added`,
-        description: `Added $${newExpense.amount.toFixed(2)} ${newExpense.isDonation ? "donation" : "expense"} to ${game.name}.`,
+        title: "Success",
+        description: `${newExpense.type === 'donation' ? 'Donation' : 'Expense'} has been added successfully.`,
       });
-      
-      // Reset form
+
       setNewExpense({
-        gameId: "",
-        date: new Date().toISOString().split("T")[0],
-        amount: 0,
-        memo: "",
-        isDonation: false,
+        gameId: '',
+        date: new Date(),
+        amount: '',
+        memo: '',
+        type: 'expense',
       });
+
+      setIsAddExpenseOpen(false);
+      fetchData();
     } catch (error: any) {
       console.error('Error adding expense:', error);
       toast({
-        title: "Error Adding Record",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     }
   };
-  
-  // Calculate summary data for the selected filter
-  const calculateSummaryData = () => {
-    let filteredGames = games;
+
+  // Calculate summary statistics
+  const calculateSummary = () => {
+    const filteredGames = selectedGame === 'all' ? games : games.filter(g => g.id === selectedGame);
     
-    // Filter by selected game
-    if (selectedGame !== "all") {
-      filteredGames = games.filter(game => game.id === selectedGame);
-    }
-    
-    // Filter by multiple games if in comparison mode
-    if (comparisonMode && selectedGames.length > 0) {
-      filteredGames = games.filter(game => selectedGames.includes(game.id));
-    }
-    
-    // Filter by date range if set
-    if (startDate && endDate) {
-      filteredGames = filteredGames.map(game => {
-        const filteredSales = game.ticket_sales.filter(sale => 
-          sale.date >= startDate && sale.date <= endDate
-        );
-        
-        const filteredExpenses = game.expenses.filter(expense => 
-          expense.date >= startDate && expense.date <= endDate
-        );
-        
-        const filteredWeeks = game.weeks.filter(week => 
-          week.start_date >= startDate && week.end_date <= endDate
-        );
-        
-        return {
-          ...game,
-          ticket_sales: filteredSales,
-          expenses: filteredExpenses,
-          weeks: filteredWeeks,
-        };
-      });
-    }
-    
-    // Apply search filter
-    if (searchTerm) {
-      filteredGames = filteredGames.filter(game => 
-        game.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    // Calculate totals
-    let totalSales = 0;
-    let totalPayouts = 0;
-    let totalExpenses = 0;
-    let totalDonations = 0;
-    let organizationTotalPortion = 0;
-    let totalTicketsSold = 0;
-    
-    filteredGames.forEach(game => {
-      // If using date filters, calculate from filtered data
-      if (startDate && endDate) {
-        const sales = game.ticket_sales.reduce((sum, sale) => sum + sale.amount_collected, 0);
-        totalSales += sales;
-        totalPayouts += game.ticket_sales.reduce((sum, sale) => sum + sale.weekly_payout_amount, 0);
-        
-        const expenses = game.expenses.filter(e => !e.is_donation);
-        const donations = game.expenses.filter(e => e.is_donation);
-        
-        totalExpenses += expenses.reduce((sum, expense) => sum + expense.amount, 0);
-        totalDonations += donations.reduce((sum, expense) => sum + expense.amount, 0);
-        
-        // Calculate organization portion
-        const orgPortion = game.ticket_sales.reduce((sum, sale) => sum + sale.organization_total, 0);
-        organizationTotalPortion += orgPortion;
-        
-        // Calculate tickets sold
-        totalTicketsSold += game.ticket_sales.reduce((sum, sale) => sum + sale.tickets_sold, 0);
-      } else {
-        // Use pre-calculated totals
-        totalSales += game.total_sales;
-        totalPayouts += game.total_payouts;
-        totalExpenses += game.total_expenses;
-        totalDonations += game.total_donations;
-        
-        // Calculate organization portion (total_sales * organization_percentage / 100)
-        const orgPortion = game.total_sales * (game.organization_percentage / 100);
-        organizationTotalPortion += orgPortion;
-        
-        // Calculate tickets sold (approximate based on ticket price)
-        if (game.ticket_price > 0) {
-          totalTicketsSold += Math.round(game.total_sales / game.ticket_price);
-        }
-      }
-    });
-    
-    // Calculate net profit
-    const organizationNetProfit = organizationTotalPortion - totalExpenses - totalDonations;
-    
-    // Calculate jackpot portion (total_sales - organizationTotalPortion)
-    const jackpotTotalPortion = totalSales - organizationTotalPortion;
-    
+    const totalSales = filteredGames.reduce((sum, game) => sum + (game.total_sales || 0), 0);
+    const totalPayouts = filteredGames.reduce((sum, game) => sum + (game.total_payouts || 0), 0);
+    const totalExpenses = filteredGames.reduce((sum, game) => sum + (game.total_expenses || 0), 0);
+    const totalDonations = filteredGames.reduce((sum, game) => sum + (game.total_donations || 0), 0);
+    const totalTicketsSold = filteredGames.reduce((sum, game) => {
+      return sum + game.ticket_sales.reduce((ticketSum: number, sale: any) => ticketSum + sale.tickets_sold, 0);
+    }, 0);
+
+    const payoutPortion = totalSales * 0.6; // Assuming 60% goes to payouts
+    const organizationPortion = totalSales * 0.4; // Assuming 40% goes to organization
+
     return {
       totalTicketsSold,
       totalSales,
       totalPayouts,
       totalExpenses,
       totalDonations,
-      organizationTotalPortion,
-      jackpotTotalPortion,
-      organizationNetProfit,
-      filteredGames,
+      payoutPortion,
+      organizationPortion,
+      organizationNetProfit: organizationPortion - totalExpenses - totalDonations
     };
   };
-  
-  const summary = calculateSummaryData();
-  
-  // Sort table data
-  const sortTableData = (data: any[], column: string) => {
-    if (!sortColumn || sortColumn !== column) return data;
-    
-    return [...data].sort((a, b) => {
-      const aValue = a[column] || 0;
-      const bValue = b[column] || 0;
-      
-      if (sortDirection === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+
+  const summary = calculateSummary();
+
+  // Prepare chart data
+  const prepareChartData = () => {
+    return games.map(game => ({
+      name: game.name,
+      sales: game.total_sales || 0,
+      payouts: game.total_payouts || 0,
+      expenses: game.total_expenses || 0,
+      donations: game.total_donations || 0,
+      profit: game.organization_net_profit || 0
+    }));
   };
-  
-  // Handle column sort
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
+
+  const chartData = prepareChartData();
+
+  const pieChartData = [
+    { name: 'Payouts', value: summary.totalPayouts, color: COLORS[0] },
+    { name: 'Expenses', value: summary.totalExpenses, color: COLORS[1] },
+    { name: 'Donations', value: summary.totalDonations, color: COLORS[2] },
+    { name: 'Net Profit', value: summary.organizationNetProfit, color: COLORS[3] }
+  ];
+
+  const toggleExpand = (id: string) => {
+    setExpandedGameId(expandedGameId === id ? null : id);
   };
-  
-  // Quick filter presets
-  const applyQuickFilter = (preset: string) => {
-    const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const startOfQuarter = new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1);
-    
-    switch (preset) {
-      case "thisMonth":
-        setStartDate(startOfMonth.toISOString().split('T')[0]);
-        setEndDate(today.toISOString().split('T')[0]);
-        break;
-      case "thisQuarter":
-        setStartDate(startOfQuarter.toISOString().split('T')[0]);
-        setEndDate(today.toISOString().split('T')[0]);
-        break;
-      case "thisYear":
-        setStartDate(startOfYear.toISOString().split('T')[0]);
-        setEndDate(today.toISOString().split('T')[0]);
-        break;
-      case "allTime":
-        setStartDate("");
-        setEndDate("");
-        break;
-    }
-  };
-  
-  // Generate advanced PDF report
-  const generatePdfReport = async () => {
-    try {
-      toast({
-        title: "Generating PDF",
-        description: "Please wait while we prepare your report...",
-      });
-      
-      // Create a new PDF document
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 20;
-      
-      // Add title and report information - centered with proper spacing
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text('Queen of Hearts Financial Report', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-      
-      // Add report type and date
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      doc.text(`Report Date: ${format(new Date(), 'MMM d, yyyy')}`, 20, yPosition);
-      yPosition += 8;
-      
-      // Add filter information
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.text('Report Filters', 20, yPosition);
-      yPosition += 8;
-      
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      
-      doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 20, yPosition);
-      yPosition += 7;
-      
-      const selectedGameName = selectedGame === "all" 
-        ? "All Games" 
-        : games.find(g => g.id === selectedGame)?.name || "Unknown";
-        
-      doc.text(`Game Selection: ${selectedGameName}`, 20, yPosition);
-      yPosition += 7;
-      
-      if (startDate && endDate) {
-        doc.text(`Date Range: ${format(new Date(startDate), 'MMM d, yyyy')} to ${format(new Date(endDate), 'MMM d, yyyy')}`, 20, yPosition);
-        yPosition += 10;
-      } else {
-        doc.text("Date Range: All dates", 20, yPosition);
-        yPosition += 10;
-      }
-      
-      // Add summary section
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.text('Financial Summary', 20, yPosition);
-      yPosition += 10;
-      
-      // Summary table setup
-      const summaryData = [
-        { label: 'Total Tickets Sold', value: summary.totalTicketsSold.toLocaleString() },
-        { label: 'Total Sales', value: formatCurrency(summary.totalSales) },
-        { label: 'Total Payouts', value: formatCurrency(summary.totalPayouts) },
-        { label: 'Total Expenses', value: formatCurrency(summary.totalExpenses) },
-        { label: 'Total Donations', value: formatCurrency(summary.totalDonations) },
-        { label: 'Organization Portion', value: formatCurrency(summary.organizationTotalPortion) },
-        { label: 'Jackpot Portion', value: formatCurrency(summary.jackpotTotalPortion) },
-        { label: 'Organization Net Profit', value: formatCurrency(summary.organizationNetProfit) },
-      ];
-      
-      // Draw summary table
-      const colWidth1 = 80;
-      const colWidth2 = 60;
-      const rowHeight = 8;
-      
-      // Create table headers
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text('Metric', 20, yPosition);
-      doc.text('Value', 20 + colWidth1, yPosition);
-      yPosition += 5;
-      
-      // Draw a line under headers
-      doc.setDrawColor(200, 200, 200);
-      doc.line(20, yPosition, 20 + colWidth1 + colWidth2, yPosition);
-      yPosition += 5;
-      
-      // Draw summary table data
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      
-      summaryData.forEach(row => {
-        // Check if we need a new page
-        if (yPosition > pageHeight - 20) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.text(row.label, 20, yPosition);
-        doc.text(row.value, 20 + colWidth1, yPosition);
-        yPosition += rowHeight;
-      });
-      yPosition += 10;
-      
-      // Add game details section (if filtering for a specific game)
-      if (selectedGame !== "all" && summary.filteredGames.length === 1) {
-        const game = summary.filteredGames[0];
-        
-        // Check if we need a new page
-        if (yPosition > pageHeight - 60) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text(`Game Details: ${game.name}`, 20, yPosition);
-        yPosition += 10;
-        
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        
-        if (game.start_date) {
-          doc.text(`Start Date: ${format(new Date(game.start_date), 'MMM d, yyyy')}`, 20, yPosition);
-          yPosition += 7;
-        }
-        
-        if (game.end_date) {
-          doc.text(`End Date: ${format(new Date(game.end_date), 'MMM d, yyyy')}`, 20, yPosition);
-          yPosition += 7;
-        }
-        
-        // Add game summary
-        doc.text(`Total Sales: ${formatCurrency(game.total_sales)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Total Payouts: ${formatCurrency(game.total_payouts)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Total Expenses: ${formatCurrency(game.total_expenses)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Total Donations: ${formatCurrency(game.total_donations)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Organization Net Profit: ${formatCurrency(game.organization_net_profit)}`, 20, yPosition);
-        yPosition += 7;
-        doc.text(`Carryover Jackpot: ${formatCurrency(game.carryover_jackpot)}`, 20, yPosition);
-        yPosition += 15;
-        
-        // Add weeks table if there are weeks data
-        if (game.weeks && game.weeks.length > 0) {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.text('Weekly Summary', 20, yPosition);
-          yPosition += 10;
-          
-          // Draw week table headers
-          const weekHeaders = [
-            { text: 'Week #', width: 15 },
-            { text: 'Tickets', width: 20 },
-            { text: 'Sales', width: 30 },
-            { text: 'Winner', width: 40 },
-            { text: 'Card', width: 40 },
-            { text: 'Payout', width: 30 }
-          ];
-          
-          doc.setFontSize(10);
-          let xPos = 20;
-          weekHeaders.forEach(header => {
-            doc.text(header.text, xPos, yPosition);
-            xPos += header.width;
-          });
-          yPosition += 5;
-          
-          // Draw a line under headers
-          doc.setDrawColor(200, 200, 200);
-          doc.line(20, yPosition, xPos, yPosition);
-          yPosition += 5;
-          
-          // Draw week rows
-          doc.setFont("helvetica", "normal");
-          game.weeks.forEach(week => {
-            // Check if we need a new page
-            if (yPosition > pageHeight - 15) {
-              doc.addPage();
-              yPosition = 20;
-              
-              // Redraw headers on new page
-              doc.setFont("helvetica", "bold");
-              let xPos = 20;
-              weekHeaders.forEach(header => {
-                doc.text(header.text, xPos, yPosition);
-                xPos += header.width;
-              });
-              yPosition += 5;
-              doc.line(20, yPosition, xPos, yPosition);
-              yPosition += 5;
-              doc.setFont("helvetica", "normal");
-            }
-            
-            xPos = 20;
-            doc.text(`Week ${week.week_number}`, xPos, yPosition);
-            xPos += weekHeaders[0].width;
-            
-            doc.text(`${week.weekly_tickets_sold}`, xPos, yPosition);
-            xPos += weekHeaders[1].width;
-            
-            doc.text(`${formatCurrency(week.weekly_sales)}`, xPos, yPosition);
-            xPos += weekHeaders[2].width;
-            
-            doc.text(`${week.winner_name || '-'}`, xPos, yPosition);
-            xPos += weekHeaders[3].width;
-            
-            doc.text(`${week.card_selected || '-'}`, xPos, yPosition);
-            xPos += weekHeaders[4].width;
-            
-            doc.text(`${formatCurrency(week.weekly_payout)}`, xPos, yPosition);
-            
-            yPosition += rowHeight;
-          });
-        }
-        
-        // Add expenses if there are any
-        if (game.expenses && game.expenses.length > 0) {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          
-          yPosition += 10;
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.text('Expenses & Donations', 20, yPosition);
-          yPosition += 10;
-          
-          // Draw expense table headers
-          const expenseHeaders = [
-            { text: 'Date', width: 30 },
-            { text: 'Type', width: 30 },
-            { text: 'Amount', width: 30 },
-            { text: 'Memo', width: 80 }
-          ];
-          
-          doc.setFontSize(10);
-          let xPos = 20;
-          expenseHeaders.forEach(header => {
-            doc.text(header.text, xPos, yPosition);
-            xPos += header.width;
-          });
-          yPosition += 5;
-          
-          // Draw a line under headers
-          doc.setDrawColor(200, 200, 200);
-          doc.line(20, yPosition, xPos, yPosition);
-          yPosition += 5;
-          
-          // Draw expense rows
-          doc.setFont("helvetica", "normal");
-          game.expenses.forEach(expense => {
-            // Check if we need a new page
-            if (yPosition > pageHeight - 15) {
-              doc.addPage();
-              yPosition = 20;
-              
-              // Redraw headers on new page
-              doc.setFont("helvetica", "bold");
-              let xPos = 20;
-              expenseHeaders.forEach(header => {
-                doc.text(header.text, xPos, yPosition);
-                xPos += header.width;
-              });
-              yPosition += 5;
-              doc.line(20, yPosition, xPos, yPosition);
-              yPosition += 5;
-              doc.setFont("helvetica", "normal");
-            }
-            
-            xPos = 20;
-            doc.text(format(new Date(expense.date), 'MM/dd/yyyy'), xPos, yPosition);
-            xPos += expenseHeaders[0].width;
-            
-            doc.text(expense.is_donation ? 'Donation' : 'Expense', xPos, yPosition);
-            xPos += expenseHeaders[1].width;
-            
-            doc.text(formatCurrency(expense.amount), xPos, yPosition);
-            xPos += expenseHeaders[2].width;
-            
-            // Limit memo text to fit in the column
-            const memo = expense.memo || '-';
-            const truncatedMemo = memo.length > 40 ? memo.substring(0, 37) + '...' : memo;
-            doc.text(truncatedMemo, xPos, yPosition);
-            
-            yPosition += rowHeight;
-          });
-        }
-      } else if (summary.filteredGames.length > 0) {
-        // If showing multiple games, add a games summary table
-        // Check if we need a new page
-        if (yPosition > pageHeight - 40) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text('Games Summary', 20, yPosition);
-        yPosition += 10;
-        
-        // Draw game table headers
-        const gameHeaders = [
-          { text: 'Game', width: 25 },
-          { text: 'Sales', width: 30 },
-          { text: 'Payouts', width: 30 },
-          { text: 'Net Profit', width: 30 }
-        ];
-        
-        doc.setFontSize(10);
-        let xPos = 20;
-        gameHeaders.forEach(header => {
-          doc.text(header.text, xPos, yPosition);
-          xPos += header.width;
-        });
-        yPosition += 5;
-        
-        // Draw a line under headers
-        doc.setDrawColor(200, 200, 200);
-        doc.line(20, yPosition, xPos, yPosition);
-        yPosition += 5;
-        
-        // Draw game rows
-        doc.setFont("helvetica", "normal");
-        summary.filteredGames.forEach(game => {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 15) {
-            doc.addPage();
-            yPosition = 20;
-            
-            // Redraw headers on new page
-            doc.setFont("helvetica", "bold");
-            let xPos = 20;
-            gameHeaders.forEach(header => {
-              doc.text(header.text, xPos, yPosition);
-              xPos += header.width;
-            });
-            yPosition += 5;
-            doc.line(20, yPosition, xPos, yPosition);
-            yPosition += 5;
-            doc.setFont("helvetica", "normal");
-          }
-          
-          xPos = 20;
-          doc.text(game.name, xPos, yPosition);
-          xPos += gameHeaders[0].width;
-          
-          doc.text(formatCurrency(game.total_sales), xPos, yPosition);
-          xPos += gameHeaders[1].width;
-          
-          doc.text(formatCurrency(game.total_payouts), xPos, yPosition);
-          xPos += gameHeaders[2].width;
-          
-          doc.text(formatCurrency(game.organization_net_profit), xPos, yPosition);
-          
-          yPosition += rowHeight;
-        });
-      }
-      
-      // Add footer with timestamp
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(8);
-      const timestamp = `Generated on ${format(new Date(), 'MMM d, yyyy h:mm a')}`;
-      doc.text(timestamp, pageWidth - 20, pageHeight - 10, { align: 'right' });
-      
-      // Save the PDF
-      const fileName = `queen-of-hearts-report-${selectedGameName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(fileName);
-      
-      toast({
-        title: "PDF Generated",
-        description: `Your report has been downloaded as ${fileName}`,
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate PDF report. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Render performance indicators
-  const renderKPICards = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-blue-900">{formatCurrency(kpiData.totalRevenue || 0)}</p>
-              <p className="text-xs text-blue-600 mt-1">
-                <TrendingUp className="w-3 h-3 inline mr-1" />
-                {kpiData.revenueGrowth || 0}% vs last period
-              </p>
-            </div>
-            <DollarSign className="w-8 h-8 text-blue-600" />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-600">Net Profit</p>
-              <p className="text-2xl font-bold text-green-900">{formatCurrency(kpiData.totalProfit || 0)}</p>
-              <p className="text-xs text-green-600 mt-1">
-                <Target className="w-3 h-3 inline mr-1" />
-                {kpiData.profitMargin?.toFixed(1) || 0}% margin
-              </p>
-            </div>
-            <TrendingUp className="w-8 h-8 text-green-600" />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-purple-600">Active Games</p>
-              <p className="text-2xl font-bold text-purple-900">{kpiData.activeGames || 0}</p>
-              <p className="text-xs text-purple-600 mt-1">
-                <Activity className="w-3 h-3 inline mr-1" />
-                of {kpiData.totalGames || 0} total games
-              </p>
-            </div>
-            <Users className="w-8 h-8 text-purple-600" />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-orange-600">Avg. Game Revenue</p>
-              <p className="text-2xl font-bold text-orange-900">{formatCurrency(kpiData.averageTicketSales || 0)}</p>
-              <p className="text-xs text-orange-600 mt-1">
-                <Calendar className="w-3 h-3 inline mr-1" />
-                per game average
-              </p>
-            </div>
-            <BarChart3 className="w-8 h-8 text-orange-600" />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-  
-  // Render advanced chart
-  const renderAdvancedChart = () => {
-    const data = chartData.filter(item => 
-      !searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
+
+  if (loading) {
     return (
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">Financial Analytics</CardTitle>
-              <CardDescription>Interactive visualization of financial performance</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Select value={chartType} onValueChange={(value: any) => setChartType(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bar">Bar Chart</SelectItem>
-                  <SelectItem value="line">Line Chart</SelectItem>
-                  <SelectItem value="area">Area Chart</SelectItem>
-                  <SelectItem value="pie">Pie Chart</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartType === "bar" && (
-                <BarChart
-                  data={data}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 20,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" stroke="#666" />
-                  <YAxis stroke="#666" />
-                  <Tooltip 
-                    formatter={(value) => formatCurrency(value as number)} 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="Sales" fill="#A1E96C" name="Sales" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Payouts" fill="#1F4E4A" name="Payouts" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Expenses" fill="#132E2C" name="Expenses" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Donations" fill="#7B8C8A" name="Donations" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="NetProfit" fill="#4ECDC4" name="Net Profit" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              )}
-              
-              {chartType === "line" && (
-                <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" stroke="#666" />
-                  <YAxis stroke="#666" />
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  <Legend />
-                  <Line type="monotone" dataKey="Sales" stroke="#A1E96C" strokeWidth={3} dot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="NetProfit" stroke="#1F4E4A" strokeWidth={3} dot={{ r: 6 }} />
-                </LineChart>
-              )}
-              
-              {chartType === "area" && (
-                <AreaChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" stroke="#666" />
-                  <YAxis stroke="#666" />
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  <Legend />
-                  <Area type="monotone" dataKey="Sales" stackId="1" stroke="#A1E96C" fill="#A1E96C" fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="Expenses" stackId="1" stroke="#132E2C" fill="#132E2C" fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="Donations" stackId="1" stroke="#7B8C8A" fill="#7B8C8A" fillOpacity={0.6} />
-                </AreaChart>
-              )}
-              
-              {chartType === "pie" && (
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Sales', value: summary.totalSales, fill: '#A1E96C' },
-                      { name: 'Payouts', value: summary.totalPayouts, fill: '#1F4E4A' },
-                      { name: 'Expenses', value: summary.totalExpenses, fill: '#132E2C' },
-                      { name: 'Donations', value: summary.totalDonations, fill: '#7B8C8A' },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={150}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                </PieChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1F4E4A]"></div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div className="space-y-6 bg-[#F7F8FC] min-h-screen p-6" id="report-container" ref={reportContainerRef}>
-      {/* Header Section */}
-      <div className="flex items-center justify-between bg-white rounded-lg p-6 shadow-sm">
-        <div>
-          <h1 className="text-3xl font-bold text-[#1F4E4A]">Financial Analytics Dashboard</h1>
-          <p className="text-gray-600 mt-2">Comprehensive financial insights and performance analysis</p>
+    <div className="min-h-screen bg-[#F7F8FC] p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-[#1F4E4A] mb-2">Income vs Expense Analytics</h1>
+            <p className="text-gray-600">Professional financial analysis and reporting dashboard</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white">
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+            <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Expense
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Expense or Donation</DialogTitle>
+                  <DialogDescription>
+                    Record a new expense or charitable donation for tracking.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="gameSelect" className="text-right">Game</Label>
+                    <Select value={newExpense.gameId} onValueChange={(value) => setNewExpense({...newExpense, gameId: value})}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select a game" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {games.map((game) => (
+                          <SelectItem key={game.id} value={game.id}>{game.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="expenseDate" className="text-right">Date</Label>
+                    <div className="col-span-3">
+                      <DatePicker
+                        date={newExpense.date}
+                        setDate={(date) => setNewExpense({...newExpense, date: date || new Date()})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="expenseType" className="text-right">Type</Label>
+                    <Select value={newExpense.type} onValueChange={(value) => setNewExpense({...newExpense, type: value})}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="donation">Donation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="expenseAmount" className="text-right">Amount</Label>
+                    <Input
+                      id="expenseAmount"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newExpense.amount}
+                      onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="expenseMemo" className="text-right">Memo</Label>
+                    <Input
+                      id="expenseMemo"
+                      placeholder="Description..."
+                      value={newExpense.memo}
+                      onChange={(e) => setNewExpense({...newExpense, memo: e.target.value})}
+                      className="col-span-3"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" onClick={handleAddExpense} className="bg-[#1F4E4A]">
+                    Add {newExpense.type === 'donation' ? 'Donation' : 'Expense'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={generatePdfReport}
-            className="bg-white border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
-          >
-            <Download className="h-4 w-4 mr-2" /> Export Report
-          </Button>
-          <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#1F4E4A] hover:bg-[#132E2C]">
-                <PlusCircle className="h-4 w-4 mr-2" /> Add Expense/Donation
+
+        {/* Advanced Filter Panel */}
+        <Card className="border-[#1F4E4A]/20 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-[#1F4E4A] flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Advanced Filters & Controls
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="text-[#1F4E4A]"
+              >
+                {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <ExpenseModal 
-                open={addExpenseOpen} 
-                onOpenChange={setAddExpenseOpen}
-                gameId=""
-                gameName="Selected Game"
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      
-      {/* Advanced Filter Panel */}
-      <Card className="bg-white shadow-sm">
-        <Collapsible open={filtersExpanded} onOpenChange={setFiltersExpanded}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-[#1F4E4A]" />
-                  <CardTitle className="text-lg">Advanced Filters & Controls</CardTitle>
+            </div>
+          </CardHeader>
+          <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gameFilter">Game Filter</Label>
+                    <Select value={selectedGame} onValueChange={setSelectedGame}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select game" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Games</SelectItem>
+                        {games.map((game) => (
+                          <SelectItem key={game.id} value={game.id}>{game.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reportType">Report Type</Label>
+                    <Select value={reportType} onValueChange={setReportType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="game">Game</SelectItem>
+                        <SelectItem value="cumulative">Cumulative</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="chartType">Chart Type</Label>
+                    <Select value={selectedChartType} onValueChange={setSelectedChartType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bar">Bar Chart</SelectItem>
+                        <SelectItem value="line">Line Chart</SelectItem>
+                        <SelectItem value="area">Area Chart</SelectItem>
+                        <SelectItem value="pie">Pie Chart</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Quick Filters</Label>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="cursor-pointer hover:bg-[#A1E96C]">This Month</Badge>
+                      <Badge variant="outline" className="cursor-pointer hover:bg-[#A1E96C]">YTD</Badge>
+                    </div>
+                  </div>
                 </div>
-                {filtersExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-              </div>
-              <CardDescription>
-                Customize your data view with advanced filtering options
-              </CardDescription>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* KPI Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Overall Totals Column */}
+          <Card className="border-[#1F4E4A]/20 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#1F4E4A] to-[#132E2C] text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Overall Totals
+              </CardTitle>
             </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-6">
-              {/* Quick Filter Buttons */}
-              <div>
-                <Label className="text-sm font-medium mb-3 block">Quick Filters</Label>
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => applyQuickFilter("thisMonth")}
-                    className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]"
-                  >
-                    This Month
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => applyQuickFilter("thisQuarter")}
-                    className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]"
-                  >
-                    This Quarter
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => applyQuickFilter("thisYear")}
-                    className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]"
-                  >
-                    This Year
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => applyQuickFilter("allTime")}
-                    className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]"
-                  >
-                    All Time
-                  </Button>
-                </div>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Tickets Sold</span>
+                <span className="font-bold text-[#1F4E4A]">{summary.totalTicketsSold.toLocaleString()}</span>
               </div>
-              
-              {/* Filter Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <Label htmlFor="searchGames">Search Games</Label>
-                  <Input
-                    id="searchGames"
-                    placeholder="Search by game name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="gameFilter">Game Selection</Label>
-                  <Select value={selectedGame} onValueChange={setSelectedGame}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select game" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Games</SelectItem>
-                      {games.map(game => (
-                        <SelectItem key={game.id} value={game.id}>{game.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="reportType">Report Type</Label>
-                  <Select value={reportType} onValueChange={(value: any) => setReportType(value)}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly Analysis</SelectItem>
-                      <SelectItem value="game">Game Analysis</SelectItem>
-                      <SelectItem value="cumulative">Cumulative Analysis</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Ticket Sales</span>
+                <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.totalSales)}</span>
               </div>
-              
-              {/* Comparison Mode Toggle */}
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="comparisonMode"
-                  checked={comparisonMode}
-                  onChange={(e) => setComparisonMode(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                <Label htmlFor="comparisonMode">Enable Game Comparison Mode</Label>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Payouts</span>
+                <span className="font-bold text-red-600">{formatCurrency(summary.totalPayouts)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Expenses</span>
+                <span className="font-bold text-orange-600">{formatCurrency(summary.totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Donated</span>
+                <span className="font-bold text-blue-600">{formatCurrency(summary.totalDonations)}</span>
               </div>
             </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-      
-      {loading ? (
-        <div className="text-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1F4E4A] mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading financial analytics...</p>
+          </Card>
+
+          {/* Payout Portion Column */}
+          <Card className="border-[#A1E96C]/30 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#A1E96C] to-[#1F4E4A] text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Payout Portion (60%)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Allocated Amount</span>
+                <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.payoutPortion)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Paid Out</span>
+                <span className="font-bold text-red-600">{formatCurrency(summary.totalPayouts)}</span>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 font-semibold">Remaining</span>
+                  <span className="font-bold text-green-600">
+                    {formatCurrency(summary.payoutPortion - summary.totalPayouts)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Organization Portion Column */}
+          <Card className="border-[#132E2C]/20 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#132E2C] to-[#1F4E4A] text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Organization Portion (40%)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Allocated Amount</span>
+                <span className="font-bold text-[#1F4E4A]">{formatCurrency(summary.organizationPortion)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Expenses</span>
+                <span className="font-bold text-orange-600">{formatCurrency(summary.totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Donations</span>
+                <span className="font-bold text-blue-600">{formatCurrency(summary.totalDonations)}</span>
+              </div>
+              <div className="border-t pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 font-semibold">Net Profit</span>
+                  <span className="font-bold text-green-600">
+                    {formatCurrency(summary.organizationNetProfit)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      ) : (
-        <>
-          {/* KPI Dashboard */}
-          {renderKPICards()}
-          
-          {/* Three-Column Summary Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {/* Overall Totals Column */}
-            <Card className="bg-white shadow-sm border-l-4 border-l-blue-500">
-              <CardHeader className="bg-blue-50">
-                <CardTitle className="text-lg text-blue-900 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Overall Totals
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Tickets Sold</span>
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
-                      {summary.totalTicketsSold.toLocaleString()}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Ticket Sales</span>
-                    <span className="font-bold text-lg text-green-600">{formatCurrency(summary.totalSales)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Total Payouts</span>
-                    <span className="font-bold text-lg text-red-600">{formatCurrency(summary.totalPayouts)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Total Expenses</span>
-                    <span className="font-bold text-lg text-orange-600">{formatCurrency(summary.totalExpenses)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Total Donated</span>
-                    <span className="font-bold text-lg text-purple-600">{formatCurrency(summary.totalDonations)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Payout Portion Column */}
-            <Card className="bg-white shadow-sm border-l-4 border-l-green-500">
-              <CardHeader className="bg-green-50">
-                <CardTitle className="text-lg text-green-900 flex items-center gap-2">
-                  <PieChartIcon className="w-5 h-5" />
-                  Payout Portion
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Total Sales (Jackpot Portion)</span>
-                    <span className="font-bold text-lg text-green-600">{formatCurrency(summary.jackpotTotalPortion)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Total Payouts</span>
-                    <span className="font-bold text-lg text-red-600">{formatCurrency(summary.totalPayouts)}</span>
-                  </div>
-                  <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                    <div className="text-sm text-green-700">
-                      <strong>Payout Efficiency:</strong>
-                    </div>
-                    <div className="text-lg font-bold text-green-800">
-                      {summary.jackpotTotalPortion > 0 ? 
-                        ((summary.totalPayouts / summary.jackpotTotalPortion) * 100).toFixed(1) : 0}%
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Interactive Charts Section */}
+        <Card className="border-[#1F4E4A]/20 shadow-lg">
+          <CardHeader>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <CardTitle className="text-xl font-semibold text-[#1F4E4A] flex items-center gap-2">
+                <Activity className="h-6 w-6" />
+                Financial Analytics Dashboard
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant={selectedChartType === 'bar' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedChartType('bar')}
+                  className={selectedChartType === 'bar' ? 'bg-[#1F4E4A]' : ''}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={selectedChartType === 'line' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedChartType('line')}
+                  className={selectedChartType === 'line' ? 'bg-[#1F4E4A]' : ''}
+                >
+                  <LineChartIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={selectedChartType === 'pie' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedChartType('pie')}
+                  className={selectedChartType === 'pie' ? 'bg-[#1F4E4A]' : ''}
+                >
+                  <PieChartIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                {selectedChartType === 'bar' && (
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #1F4E4A',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value: number) => [formatCurrency(value), '']}
+                    />
+                    <Legend />
+                    <Bar dataKey="sales" fill={COLORS[0]} name="Sales" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="payouts" fill={COLORS[1]} name="Payouts" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" fill={COLORS[2]} name="Expenses" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="donations" fill={COLORS[3]} name="Donations" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                )}
+                {selectedChartType === 'line' && (
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #1F4E4A',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value: number) => [formatCurrency(value), '']}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="sales" stroke={COLORS[0]} strokeWidth={3} dot={{ fill: COLORS[0], strokeWidth: 2, r: 6 }} />
+                    <Line type="monotone" dataKey="payouts" stroke={COLORS[1]} strokeWidth={3} dot={{ fill: COLORS[1], strokeWidth: 2, r: 6 }} />
+                    <Line type="monotone" dataKey="profit" stroke={COLORS[3]} strokeWidth={3} dot={{ fill: COLORS[3], strokeWidth: 2, r: 6 }} />
+                  </LineChart>
+                )}
+                {selectedChartType === 'area' && (
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #1F4E4A',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value: number) => [formatCurrency(value), '']}
+                    />
+                    <Legend />
+                    <Area type="monotone" dataKey="sales" stackId="1" stroke={COLORS[0]} fill={COLORS[0]} fillOpacity={0.6} />
+                    <Area type="monotone" dataKey="payouts" stackId="2" stroke={COLORS[1]} fill={COLORS[1]} fillOpacity={0.6} />
+                  </AreaChart>
+                )}
+                {selectedChartType === 'pie' && (
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
+                  </PieChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Organization Portion Column */}
-            <Card className="bg-white shadow-sm border-l-4 border-l-purple-500">
-              <CardHeader className="bg-purple-50">
-                <CardTitle className="text-lg text-purple-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  Organization Portion
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Total Sales (Organization Portion)</span>
-                    <span className="font-bold text-lg text-blue-600">{formatCurrency(summary.organizationTotalPortion)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Total Expenses</span>
-                    <span className="font-bold text-lg text-orange-600">{formatCurrency(summary.totalExpenses)}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span className="font-medium">Total Donations</span>
-                    <span className="font-bold text-lg text-purple-600">{formatCurrency(summary.totalDonations)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Organization Net Profit</span>
-                    <span className="font-bold text-lg text-green-600">{formatCurrency(summary.organizationNetProfit)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Advanced Chart */}
-          {renderAdvancedChart()}
-          
-          {/* Enhanced Tabs Section */}
-          <Tabs defaultValue="summary" className="space-y-6">
-            <TabsList className="grid grid-cols-4 w-[500px] bg-white shadow-sm">
-              <TabsTrigger value="summary" className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white">
-                Game Details
-              </TabsTrigger>
-              <TabsTrigger value="comparison" className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white">
-                Comparison
-              </TabsTrigger>
-              <TabsTrigger value="trends" className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white">
-                Trends
-              </TabsTrigger>
-              <TabsTrigger value="data" className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white">
-                Raw Data
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="summary">
-              <Card className="bg-white shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-xl">Game Performance Details</CardTitle>
-                  <CardDescription>
-                    Comprehensive breakdown of each game's financial performance with detailed insights.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-8">
-                    {summary.filteredGames.map(game => (
-                      <div key={game.id} className="border-l-4 border-[#A1E96C] pl-6 space-y-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-xl font-bold text-[#1F4E4A]">{game.name}</h3>
-                            <p className="text-gray-600">
-                              {game.start_date && `Start: ${format(new Date(game.start_date), 'MMM d, yyyy')}`}
-                              {game.end_date && ` | End: ${format(new Date(game.end_date), 'MMM d, yyyy')}`}
-                              {!game.end_date && " | Active"}
-                            </p>
-                          </div>
-                          <Badge variant={game.end_date ? "secondary" : "default"} className="text-sm">
-                            {game.end_date ? "Completed" : "Active"}
-                          </Badge>
+        {/* Game Cards with Enhanced Data Tables */}
+        <div className="space-y-4">
+          <h3 className="text-2xl font-semibold text-[#1F4E4A] mb-4">Detailed Game Analysis</h3>
+          {games.map((game) => (
+            <Collapsible key={game.id} open={expandedGameId === game.id} onOpenChange={() => toggleExpand(game.id)}>
+              <Card className="border-[#1F4E4A]/20 shadow-md hover:shadow-lg transition-shadow">
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <CardTitle className="text-xl font-semibold text-[#1F4E4A]">{game.name}</CardTitle>
+                        <Badge variant={game.end_date ? "secondary" : "default"} className="bg-[#A1E96C] text-[#1F4E4A]">
+                          {game.end_date ? 'Completed' : 'Active'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-6 text-sm text-gray-600">
+                        <span>Start: {format(new Date(game.start_date), 'MMM d, yyyy')}</span>
+                        {game.end_date && <span>End: {format(new Date(game.end_date), 'MMM d, yyyy')}</span>}
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          <span className="font-semibold text-green-600">{formatCurrency(game.organization_net_profit)}</span>
                         </div>
-                        
-                        <div className="space-y-6">
-                          {/* Game Summary with Enhanced Styling */}
-                          <div>
-                            <h4 className="text-lg font-semibold mb-4 text-[#1F4E4A]">Financial Summary</h4>
-                            <div className="overflow-hidden rounded-lg border border-gray-200">
-                              <Table>
-                                <TableHeader className="bg-gray-50">
-                                  <TableRow>
-                                    <TableHead className="font-semibold">Total Sales</TableHead>
-                                    <TableHead className="font-semibold">Total Payouts</TableHead>
-                                    <TableHead className="font-semibold">Total Expenses</TableHead>
-                                    <TableHead className="font-semibold">Total Donations</TableHead>
-                                    <TableHead className="font-semibold">Net Profit</TableHead>
-                                    <TableHead className="font-semibold">Carryover</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  <TableRow className="hover:bg-gray-50">
-                                    <TableCell className="font-medium text-green-600">{formatCurrency(game.total_sales)}</TableCell>
-                                    <TableCell className="font-medium text-red-600">{formatCurrency(game.total_payouts)}</TableCell>
-                                    <TableCell className="font-medium text-orange-600">{formatCurrency(game.total_expenses)}</TableCell>
-                                    <TableCell className="font-medium text-purple-600">{formatCurrency(game.total_donations)}</TableCell>
-                                    <TableCell className="font-medium text-blue-600">{formatCurrency(game.organization_net_profit)}</TableCell>
-                                    <TableCell className="font-medium text-gray-600">{formatCurrency(game.carryover_jackpot)}</TableCell>
-                                  </TableRow>
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                          
-                          {/* Enhanced Weeks Table */}
-                          {game.weeks.length > 0 && (
-                            <div>
-                              <h4 className="text-lg font-semibold mb-4 text-[#1F4E4A]">Weekly Performance</h4>
-                              <div className="overflow-auto rounded-lg border border-gray-200">
-                                <Table>
-                                  <TableHeader className="bg-gray-50">
-                                    <TableRow>
-                                      <TableHead 
-                                        className="cursor-pointer hover:bg-gray-100 font-semibold"
-                                        onClick={() => handleSort('week_number')}
-                                      >
-                                        Week # {sortColumn === 'week_number' && (sortDirection === 'asc' ? '↑' : '↓')}
-                                      </TableHead>
-                                      <TableHead className="font-semibold">Period</TableHead>
-                                      <TableHead 
-                                        className="cursor-pointer hover:bg-gray-100 font-semibold"
-                                        onClick={() => handleSort('weekly_tickets_sold')}
-                                      >
-                                        Tickets {sortColumn === 'weekly_tickets_sold' && (sortDirection === 'asc' ? '↑' : '↓')}
-                                      </TableHead>
-                                      <TableHead 
-                                        className="cursor-pointer hover:bg-gray-100 font-semibold"
-                                        onClick={() => handleSort('weekly_sales')}
-                                      >
-                                        Sales {sortColumn === 'weekly_sales' && (sortDirection === 'asc' ? '↑' : '↓')}
-                                      </TableHead>
-                                      <TableHead className="font-semibold">Org. Portion</TableHead>
-                                      <TableHead className="font-semibold">Jackpot Portion</TableHead>
-                                      <TableHead 
-                                        className="cursor-pointer hover:bg-gray-100 font-semibold"
-                                        onClick={() => handleSort('weekly_payout')}
-                                      >
-                                        Payout {sortColumn === 'weekly_payout' && (sortDirection === 'asc' ? '↑' : '↓')}
-                                      </TableHead>
-                                      <TableHead className="font-semibold">Winner</TableHead>
-                                      <TableHead className="font-semibold">Card</TableHead>
-                                      <TableHead className="font-semibold">Status</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {sortTableData(game.weeks, sortColumn).map(week => {
-                                      const organizationPortion = week.weekly_sales * (game.organization_percentage / 100);
-                                      const jackpotPortion = week.weekly_sales * (game.jackpot_percentage / 100);
-                                      
-                                      return (
-                                        <TableRow key={week.id} className="hover:bg-gray-50">
-                                          <TableCell className="font-medium">Week {week.week_number}</TableCell>
-                                          <TableCell className="text-sm">
-                                            {format(new Date(week.start_date), 'MMM d')} - {format(new Date(week.end_date), 'MMM d, yyyy')}
-                                          </TableCell>
-                                          <TableCell>{week.weekly_tickets_sold?.toLocaleString() || 0}</TableCell>
-                                          <TableCell className="font-medium">{formatCurrency(week.weekly_sales)}</TableCell>
-                                          <TableCell className="text-blue-600">{formatCurrency(organizationPortion)}</TableCell>
-                                          <TableCell className="text-green-600">{formatCurrency(jackpotPortion)}</TableCell>
-                                          <TableCell className="font-medium text-red-600">{formatCurrency(week.weekly_payout)}</TableCell>
-                                          <TableCell>{week.winner_name || '-'}</TableCell>
-                                          <TableCell>
-                                            {week.card_selected ? (
-                                              <Badge variant={week.card_selected === 'Queen of Hearts' ? 'default' : 'secondary'}>
-                                                {week.card_selected}
-                                              </Badge>
-                                            ) : '-'}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Badge variant={week.winner_present ? 'default' : 'destructive'}>
-                                              {week.winner_present ? 'Present' : 'Absent'}
-                                            </Badge>
-                                          </TableCell>
-                                        </TableRow>
-                                      );
-                                    })}
-                                  </TableBody>
-                                </Table>
+                        {expandedGameId === game.id ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <Tabs defaultValue="overview" className="w-full">
+                      <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="weeks">Weekly Data</TabsTrigger>
+                        <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                        <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="overview" className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <Card className="p-4">
+                            <div className="text-sm text-gray-600">Total Sales</div>
+                            <div className="text-2xl font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
+                          </Card>
+                          <Card className="p-4">
+                            <div className="text-sm text-gray-600">Total Payouts</div>
+                            <div className="text-2xl font-bold text-red-600">{formatCurrency(game.total_payouts)}</div>
+                          </Card>
+                          <Card className="p-4">
+                            <div className="text-sm text-gray-600">Total Expenses</div>
+                            <div className="text-2xl font-bold text-orange-600">{formatCurrency(game.total_expenses)}</div>
+                          </Card>
+                          <Card className="p-4">
+                            <div className="text-sm text-gray-600">Net Profit</div>
+                            <div className="text-2xl font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</div>
+                          </Card>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="weeks">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="bg-[#F7F8FC] border-b-2 border-[#1F4E4A]">
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">Week #</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">Start Date</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">End Date</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">Tickets Sold</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">Weekly Sales</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">Winner</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A] cursor-pointer hover:bg-[#A1E96C]/20">Payout</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {game.weeks?.map((week: any, index: number) => (
+                                <tr key={week.id} className={`border-b hover:bg-[#F7F8FC] transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                  <td className="p-3 font-medium text-[#1F4E4A]">{week.week_number}</td>
+                                  <td className="p-3">{format(new Date(week.start_date), 'MMM d, yyyy')}</td>
+                                  <td className="p-3">{format(new Date(week.end_date), 'MMM d, yyyy')}</td>
+                                  <td className="p-3 font-semibold">{week.weekly_tickets_sold.toLocaleString()}</td>
+                                  <td className="p-3 font-semibold text-green-600">{formatCurrency(week.weekly_sales)}</td>
+                                  <td className="p-3">{week.winner_name || 'TBD'}</td>
+                                  <td className="p-3 font-semibold text-red-600">{formatCurrency(week.weekly_payout)}</td>
+                                </tr>
+                              )) || (
+                                <tr>
+                                  <td colSpan={7} className="p-6 text-center text-gray-500">No weekly data available</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="expenses">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="bg-[#F7F8FC] border-b-2 border-[#1F4E4A]">
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A]">Date</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A]">Amount</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A]">Memo</th>
+                                <th className="p-3 text-left font-semibold text-[#1F4E4A]">Type</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {expenses
+                                .filter((expense) => expense.game_id === game.id)
+                                .map((expense, index) => (
+                                  <tr key={expense.id} className={`border-b hover:bg-[#F7F8FC] transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                    <td className="p-3">{format(new Date(expense.date), 'MMM d, yyyy')}</td>
+                                    <td className="p-3 font-semibold text-red-600">{formatCurrency(expense.amount)}</td>
+                                    <td className="p-3">{expense.memo || 'No memo'}</td>
+                                    <td className="p-3">
+                                      <Badge variant={expense.is_donation ? "secondary" : "outline"} className={expense.is_donation ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-800"}>
+                                        {expense.is_donation ? 'Donation' : 'Expense'}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                )) || (
+                                <tr>
+                                  <td colSpan={4} className="p-6 text-center text-gray-500">No expenses recorded</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="analytics">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <Card className="p-4">
+                            <h4 className="font-semibold text-[#1F4E4A] mb-3">Performance Metrics</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Profit Margin</span>
+                                <span className="font-semibold">
+                                  {game.total_sales > 0 ? ((game.organization_net_profit / game.total_sales) * 100).toFixed(1) : 0}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Payout Ratio</span>
+                                <span className="font-semibold">
+                                  {game.total_sales > 0 ? ((game.total_payouts / game.total_sales) * 100).toFixed(1) : 0}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Expense Ratio</span>
+                                <span className="font-semibold">
+                                  {game.total_sales > 0 ? ((game.total_expenses / game.total_sales) * 100).toFixed(1) : 0}%
+                                </span>
                               </div>
                             </div>
-                          )}
-                          
-                          {/* Enhanced Expenses Table */}
-                          {game.expenses.length > 0 && (
-                            <div>
-                              <h4 className="text-lg font-semibold mb-4 text-[#1F4E4A]">Expenses & Donations</h4>
-                              <div className="overflow-hidden rounded-lg border border-gray-200">
-                                <Table>
-                                  <TableHeader className="bg-gray-50">
-                                    <TableRow>
-                                      <TableHead className="font-semibold">Date</TableHead>
-                                      <TableHead className="font-semibold">Type</TableHead>
-                                      <TableHead className="font-semibold">Amount</TableHead>
-                                      <TableHead className="font-semibold">Description</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {game.expenses.map(expense => (
-                                      <TableRow key={expense.id} className="hover:bg-gray-50">
-                                        <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell>
-                                          <Badge variant={expense.is_donation ? 'default' : 'secondary'}>
-                                            {expense.is_donation ? 'Donation' : 'Expense'}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell className={`font-medium ${expense.is_donation ? 'text-purple-600' : 'text-orange-600'}`}>
-                                          {formatCurrency(expense.amount)}
-                                        </TableCell>
-                                        <TableCell>{expense.memo || '-'}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                          </Card>
+                          <Card className="p-4">
+                            <h4 className="font-semibold text-[#1F4E4A] mb-3">Financial Health</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Revenue</span>
+                                <span className="font-semibold text-green-600">{formatCurrency(game.total_sales)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Total Costs</span>
+                                <span className="font-semibold text-red-600">
+                                  {formatCurrency(game.total_payouts + game.total_expenses + game.total_donations)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between border-t pt-2">
+                                <span className="font-semibold">Net Result</span>
+                                <span className="font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</span>
                               </div>
                             </div>
-                          )}
+                          </Card>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </CollapsibleContent>
               </Card>
-            </TabsContent>
-            
-            <TabsContent value="comparison">
-              <Card className="bg-white shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-xl">Game Comparison Analysis</CardTitle>
-                  <CardDescription>
-                    Compare performance metrics across multiple games to identify trends and opportunities.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-6">
-                    <p className="text-center text-gray-500 py-8">
-                      Select "Enable Game Comparison Mode" in the filters above to access advanced comparison features.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="trends">
-              <Card className="bg-white shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-xl">Trend Analysis</CardTitle>
-                  <CardDescription>
-                    Analyze performance trends over time to make data-driven decisions.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="name" stroke="#666" />
-                        <YAxis stroke="#666" />
-                        <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                        <Legend />
-                        <Line type="monotone" dataKey="Sales" stroke="#A1E96C" strokeWidth={3} dot={{ r: 6 }} />
-                        <Line type="monotone" dataKey="NetProfit" stroke="#1F4E4A" strokeWidth={3} dot={{ r: 6 }} />
-                        <Line type="monotone" dataKey="Expenses" stroke="#132E2C" strokeWidth={2} dot={{ r: 4 }} />
-                        <Line type="monotone" dataKey="Donations" stroke="#7B8C8A" strokeWidth={2} dot={{ r: 4 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="data">
-              <Card className="bg-white shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-xl">Raw Financial Data</CardTitle>
-                  <CardDescription>
-                    Detailed transaction-level data for comprehensive analysis and audit purposes.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-8">
-                    {summary.filteredGames.map(game => (
-                      <div key={game.id} className="space-y-6">
-                        <h3 className="text-lg font-bold text-[#1F4E4A] border-b pb-2">{game.name}</h3>
-                        
-                        {/* Detailed Ticket Sales Table */}
-                        {game.ticket_sales.length > 0 && (
-                          <div>
-                            <h4 className="text-md font-semibold mb-3 text-gray-700">Daily Ticket Sales Records</h4>
-                            <div className="overflow-auto rounded-lg border border-gray-200">
-                              <Table>
-                                <TableHeader className="bg-gray-50">
-                                  <TableRow>
-                                    <TableHead className="font-semibold">Date</TableHead>
-                                    <TableHead className="font-semibold">Tickets Sold</TableHead>
-                                    <TableHead className="font-semibold">Ticket Price</TableHead>
-                                    <TableHead className="font-semibold">Amount Collected</TableHead>
-                                    <TableHead className="font-semibold">Organization Total</TableHead>
-                                    <TableHead className="font-semibold">Jackpot Total</TableHead>
-                                    <TableHead className="font-semibold">Weekly Payout</TableHead>
-                                    <TableHead className="font-semibold">Ending Jackpot</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {game.ticket_sales.map(sale => (
-                                    <TableRow key={sale.id} className="hover:bg-gray-50">
-                                      <TableCell>{format(new Date(sale.date), 'MMM d, yyyy')}</TableCell>
-                                      <TableCell>{sale.tickets_sold?.toLocaleString()}</TableCell>
-                                      <TableCell>{formatCurrency(sale.ticket_price)}</TableCell>
-                                      <TableCell className="font-medium">{formatCurrency(sale.amount_collected)}</TableCell>
-                                      <TableCell className="text-blue-600">{formatCurrency(sale.organization_total)}</TableCell>
-                                      <TableCell className="text-green-600">{formatCurrency(sale.jackpot_total)}</TableCell>
-                                      <TableCell className="text-red-600">{formatCurrency(sale.weekly_payout_amount)}</TableCell>
-                                      <TableCell className="font-medium">{formatCurrency(sale.ending_jackpot_total)}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+            </Collapsible>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

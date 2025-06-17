@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -179,7 +180,7 @@ export default function Dashboard() {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <GameForm onCreate={handleGameCreated} />
+            <GameForm open={open} onOpenChange={setOpen} games={games} onComplete={() => window.location.reload()} />
           </DialogContent>
         </Dialog>
       </div>
@@ -274,18 +275,6 @@ export default function Dashboard() {
                         <Button size="sm" onClick={() => handleOpenExpenseModal(game)} className="bg-[#1F4E4A]">
                           <TrendingUp className="h-4 w-4 mr-2" /> Add Expense
                         </Button>
-                        <Dialog open={gameId === game.id} onOpenChange={(isOpen) => {
-                          setGameId(isOpen ? game.id : null);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="secondary">
-                              <Calendar className="h-4 w-4 mr-2" /> Edit Game
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <GameForm game={game} onUpdate={handleGameUpdated} onDelete={handleGameDeleted} />
-                          </DialogContent>
-                        </Dialog>
                       </div>
                       <div>
                         <h3 className="text-lg font-medium">Ticket Sales</h3>
@@ -303,12 +292,21 @@ export default function Dashboard() {
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Amount Collected
                                   </th>
-                                  {/* Add more headers as needed */}
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {game.ticket_sales.map((sale) => (
-                                  <TicketSalesRow key={sale.id} sale={sale} onSalesUpdated={(updatedSales) => handleSalesUpdated(game.id, updatedSales)} />
+                                  <tr key={sale.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {format(new Date(sale.date), 'MMM d, yyyy')}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {sale.tickets_sold}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                      {formatCurrency(sale.amount_collected)}
+                                    </td>
+                                  </tr>
                                 ))}
                               </tbody>
                             </table>
@@ -330,8 +328,10 @@ export default function Dashboard() {
         <WinnerForm
           open={isWinnerFormOpen}
           onOpenChange={setIsWinnerFormOpen}
-          game={selectedGame}
-          onClose={handleCloseWinnerForm}
+          gameId={selectedGame.id}
+          weekId=""
+          onComplete={() => window.location.reload()}
+          onOpenPayoutSlip={() => {}}
         />
       )}
 
@@ -339,8 +339,7 @@ export default function Dashboard() {
         <PayoutSlipModal
           open={isPayoutSlipModalOpen}
           onOpenChange={setIsPayoutSlipModalOpen}
-          game={selectedGame}
-          onClose={handleClosePayoutSlipModal}
+          winnerData={null}
         />
       )}
 
@@ -350,7 +349,6 @@ export default function Dashboard() {
           onOpenChange={setIsExpenseModalOpen}
           gameId={selectedGame.id}
           gameName={selectedGame.name}
-          onClose={handleCloseExpenseModal}
         />
       )}
     </div>
