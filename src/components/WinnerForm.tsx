@@ -50,8 +50,8 @@ export function WinnerForm({
     authorizedSignatureName: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [cardPayouts, setCardPayouts] = useState<{ card: string; payout: number }[]>([]);
-  const [selectedPayout, setSelectedPayout] = useState(0);
+  const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
+  const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
 
   // Use the hook to calculate proper displayed jackpot
@@ -64,27 +64,27 @@ export function WinnerForm({
   useEffect(() => {
     const loadGameConfiguration = async () => {
       try {
-        // First try to get card payouts from the game data (game-specific)
+        // First try to get card distributions from the game data (game-specific)
         if (gameData?.card_payouts) {
-          const payoutsData = gameData.card_payouts;
+          const distributionsData = gameData.card_payouts;
           
-          if (Array.isArray(payoutsData)) {
-            setCardPayouts(payoutsData.map(payout => ({
-              card: payout.card || '',
-              payout: payout.payout || 0
+          if (Array.isArray(distributionsData)) {
+            setCardDistributions(distributionsData.map(distribution => ({
+              card: distribution.card || '',
+              distribution: distribution.payout || 0
             })));
-          } else if (typeof payoutsData === 'object') {
+          } else if (typeof distributionsData === 'object') {
             // Convert object format to array
-            const payoutsArray = Object.entries(payoutsData)
-              .filter(([card, payout]) => card !== 'Queen of Hearts')
-              .map(([card, payout]) => ({
+            const distributionsArray = Object.entries(distributionsData)
+              .filter(([card, distribution]) => card !== 'Queen of Hearts')
+              .map(([card, distribution]) => ({
                 card,
-                payout: typeof payout === 'number' ? payout : 0
+                distribution: typeof distribution === 'number' ? distribution : 0
               }));
-            setCardPayouts(payoutsArray);
+            setCardDistributions(distributionsArray);
           }
         } else {
-          // Fallback to current configuration if game doesn't have card payouts
+          // Fallback to current configuration if game doesn't have card distributions
           const { data: config, error } = await supabase
             .from('configurations')
             .select('*')
@@ -98,21 +98,21 @@ export function WinnerForm({
           }
 
           if (config?.card_payouts) {
-            const payoutsData = typeof config.card_payouts === 'string' ? JSON.parse(config.card_payouts) : config.card_payouts;
+            const distributionsData = typeof config.card_payouts === 'string' ? JSON.parse(config.card_payouts) : config.card_payouts;
             
-            if (Array.isArray(payoutsData)) {
-              setCardPayouts(payoutsData.map(payout => ({
-                card: payout.card || '',
-                payout: payout.payout || 0
+            if (Array.isArray(distributionsData)) {
+              setCardDistributions(distributionsData.map(distribution => ({
+                card: distribution.card || '',
+                distribution: distribution.payout || 0
               })));
             } else {
-              const payoutsArray = Object.entries(payoutsData)
-                .filter(([card, payout]) => card !== 'Queen of Hearts')
-                .map(([card, payout]) => ({
+              const distributionsArray = Object.entries(distributionsData)
+                .filter(([card, distribution]) => card !== 'Queen of Hearts')
+                .map(([card, distribution]) => ({
                   card,
-                  payout: typeof payout === 'number' ? payout : 0
+                  distribution: typeof distribution === 'number' ? distribution : 0
                 }));
-              setCardPayouts(payoutsArray);
+              setCardDistributions(distributionsArray);
             }
           }
 
@@ -150,21 +150,21 @@ export function WinnerForm({
         return;
       }
 
-      if (!selectedPayout && formData.cardSelected !== 'Queen of Hearts') {
-        toast.error("Please select a valid payout");
+      if (!selectedDistribution && formData.cardSelected !== 'Queen of Hearts') {
+        toast.error("Please select a valid distribution");
         return;
       }
 
-      let finalPayout = selectedPayout;
+      let finalDistribution = selectedDistribution;
 
       // Handle Queen of Hearts special case
       if (formData.cardSelected === 'Queen of Hearts') {
-        finalPayout = displayedJackpot;
+        finalDistribution = displayedJackpot;
         
         // Apply penalty if winner not present
         if (!formData.winnerPresent) {
-          const penalty = finalPayout * (penaltyPercentage / 100);
-          finalPayout = finalPayout - penalty;
+          const penalty = finalDistribution * (penaltyPercentage / 100);
+          finalDistribution = finalDistribution - penalty;
         }
       }
 
@@ -177,13 +177,13 @@ export function WinnerForm({
           slot_chosen: formData.slotChosen,
           winner_present: formData.winnerPresent,
           authorized_signature_name: formData.authorizedSignatureName,
-          weekly_payout: finalPayout
+          weekly_payout: finalDistribution
         })
         .eq('id', weekId);
 
       if (weekError) throw weekError;
 
-      // Update the last ticket sales record with the payout
+      // Update the last ticket sales record with the distribution
       const { data: lastSale, error: lastSaleError } = await supabase
         .from('ticket_sales')
         .select('*')
@@ -195,7 +195,7 @@ export function WinnerForm({
       if (lastSaleError) throw lastSaleError;
 
       // Calculate new ending jackpot total
-      let newEndingJackpot = displayedJackpot - finalPayout;
+      let newEndingJackpot = displayedJackpot - finalDistribution;
 
       // Handle carryover for next game if Queen of Hearts was drawn
       let carryoverAmount = 0;
@@ -209,7 +209,7 @@ export function WinnerForm({
           .update({
             end_date: new Date().toISOString().split('T')[0],
             carryover_jackpot: carryoverAmount,
-            total_payouts: (gameData?.total_payouts || 0) + finalPayout
+            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
           .eq('id', gameId);
 
@@ -219,7 +219,7 @@ export function WinnerForm({
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            total_payouts: (gameData?.total_payouts || 0) + finalPayout
+            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
           .eq('id', gameId);
 
@@ -230,7 +230,7 @@ export function WinnerForm({
       const { error: updateSaleError } = await supabase
         .from('ticket_sales')
         .update({
-          weekly_payout_amount: finalPayout,
+          weekly_payout_amount: finalDistribution,
           ending_jackpot_total: newEndingJackpot,
           displayed_jackpot_total: newEndingJackpot
         })
@@ -238,12 +238,12 @@ export function WinnerForm({
 
       if (updateSaleError) throw updateSaleError;
 
-      // Prepare winner data for payout slip
+      // Prepare winner data for distribution slip
       const winnerData = {
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
         slotChosen: formData.slotChosen,
-        amountWon: finalPayout,
+        amountWon: finalDistribution,
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId
@@ -287,16 +287,16 @@ export function WinnerForm({
                 <Label htmlFor="cardSelected">Card Selected</Label>
                 <Select onValueChange={(value) => {
                   setFormData({ ...formData, cardSelected: value });
-                  const payout = cardPayouts.find(card => card.card === value)?.payout || 0;
-                  setSelectedPayout(payout);
+                  const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
+                  setSelectedDistribution(distribution);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a card" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
-                    {cardPayouts.map((card, index) => (
-                      <SelectItem key={index} value={card.card}>{card.card} - ${card.payout}</SelectItem>
+                    {cardDistributions.map((card, index) => (
+                      <SelectItem key={index} value={card.card}>{card.card} - ${card.distribution}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -304,11 +304,11 @@ export function WinnerForm({
 
               {formData.cardSelected !== 'Queen of Hearts' && (
                 <div className="space-y-2">
-                  <Label htmlFor="selectedPayout">Selected Payout</Label>
+                  <Label htmlFor="selectedDistribution">Selected Distribution</Label>
                   <Input
-                    id="selectedPayout"
+                    id="selectedDistribution"
                     type="number"
-                    value={selectedPayout}
+                    value={selectedDistribution}
                     readOnly
                   />
                 </div>

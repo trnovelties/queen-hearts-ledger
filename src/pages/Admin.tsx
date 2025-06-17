@@ -154,7 +154,7 @@ export default function Admin() {
       <Tabs defaultValue="game-settings" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="game-settings">Game Settings</TabsTrigger>
-          <TabsTrigger value="card-payouts">Card Payouts</TabsTrigger>
+          <TabsTrigger value="card-distributions">Card Distributions</TabsTrigger>
         </TabsList>
         
         {/* Game Settings Tab */}
@@ -289,8 +289,8 @@ export default function Admin() {
           </Card>
         </TabsContent>
         
-        {/* Card Payouts Tab */}
-        <TabsContent value="card-payouts" className="space-y-4">
+        {/* Card Distributions Tab */}
+        <TabsContent value="card-distributions" className="space-y-4">
           <CardPayoutConfig />
         </TabsContent>
       </Tabs>

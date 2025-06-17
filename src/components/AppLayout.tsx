@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,9 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { AdminViewIcon } from "./icons/AdminViewIcon";
+
 interface AppLayoutProps {
   children: ReactNode;
 }
+
 export default function AppLayout({
   children
 }: AppLayoutProps) {
@@ -139,7 +142,7 @@ function AppContent({
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => navigate("/admin")} className={location.pathname === "/admin" ? "bg-sidebar-primary" : ""}>
                     <Settings className="mr-2 h-6 w-6" />
-                    <span>Admin Panel</span>
+                    <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {profile?.role === 'admin' && <SidebarMenuItem>
@@ -181,7 +184,7 @@ function AppContent({
             <h1 className="text-xl font-semibold text-primary">
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
-              {location.pathname === "/admin" && "Admin Panel"}
+              {location.pathname === "/admin" && "Settings"}
               {location.pathname === "/admin-view" && "Admin View"}
               {location.pathname === "/account" && "Account"}
             </h1>
