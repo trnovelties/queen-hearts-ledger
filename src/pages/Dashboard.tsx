@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,11 +11,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
-import { GameForm } from '@/components/GameForm';
-import { TicketSalesRow } from '@/components/TicketSalesRow';
-import { WinnerForm } from '@/components/WinnerForm';
-import { PayoutSlipModal } from '@/components/PayoutSlipModal';
-import { ExpenseModal } from '@/components/ExpenseModal';
+import GameForm from '@/components/GameForm';
+import TicketSalesRow from '@/components/TicketSalesRow';
+import WinnerForm from '@/components/WinnerForm';
+import PayoutSlipModal from '@/components/PayoutSlipModal';
+import ExpenseModal from '@/components/ExpenseModal';
 
 const Dashboard = () => {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
@@ -189,7 +188,7 @@ const Dashboard = () => {
     setExpandedWeeks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(weekId)) {
-        newSet.delete(gameId);
+        newSet.delete(weekId);
       } else {
         newSet.add(weekId);
       }
@@ -238,15 +237,7 @@ const Dashboard = () => {
             <DialogHeader>
               <DialogTitle>Create New Game</DialogTitle>
             </DialogHeader>
-            <GameForm 
-              open={showGameForm}
-              onOpenChange={setShowGameForm}
-              games={games || []}
-              onComplete={() => {
-                queryClient.invalidateQueries({ queryKey: ['games'] });
-                setShowGameForm(false);
-              }}
-            />
+            <GameForm onClose={() => setShowGameForm(false)} />
           </DialogContent>
         </Dialog>
       </div>
@@ -380,13 +371,12 @@ const Dashboard = () => {
                                     {weekTicketSales.length > 0 ? (
                                       <div className="space-y-1">
                                         {weekTicketSales.map((sale) => (
-                                          <div key={sale.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                            <div className="flex items-center space-x-3">
-                                              <span className="text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</span>
-                                              <span className="text-sm">Tickets: {sale.tickets_sold}</span>
-                                              <span className="text-sm">Amount: {formatCurrency(sale.amount_collected)}</span>
-                                            </div>
-                                          </div>
+                                          <TicketSalesRow 
+                                            key={sale.id} 
+                                            sale={sale} 
+                                            gameId={game.id}
+                                            weekId={week.id}
+                                          />
                                         ))}
                                       </div>
                                     ) : (
@@ -405,9 +395,22 @@ const Dashboard = () => {
                                           <div><strong>Present:</strong> {week.winner_present ? 'Yes' : 'No'}</div>
                                           <div><strong>Payout:</strong> {formatCurrency(week.weekly_payout)}</div>
                                         </div>
+                                        <PayoutSlipModal 
+                                          week={week} 
+                                          game={game}
+                                        />
                                       </div>
                                     </div>
                                   )}
+
+                                  <div className="flex space-x-2">
+                                    <WinnerForm 
+                                      gameId={game.id}
+                                      weekId={week.id}
+                                      weekNumber={week.week_number}
+                                      disabled={!!week.winner_name}
+                                    />
+                                  </div>
                                 </CardContent>
                               </CollapsibleContent>
                             </Collapsible>
@@ -419,12 +422,7 @@ const Dashboard = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <h4 className="font-medium">Expenses & Donations</h4>
-                        <ExpenseModal 
-                          open={false}
-                          onOpenChange={() => {}}
-                          gameId={game.id}
-                          gameName={game.name}
-                        />
+                        <ExpenseModal gameId={game.id} />
                       </div>
                       {gameExpenses.length > 0 ? (
                         <div className="space-y-1">
