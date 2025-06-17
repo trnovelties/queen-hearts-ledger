@@ -20,6 +20,7 @@ export type Database = {
           penalty_to_organization: boolean
           ticket_price: number
           updated_at: string
+          version: number | null
         }
         Insert: {
           card_payouts?: Json
@@ -31,6 +32,7 @@ export type Database = {
           penalty_to_organization?: boolean
           ticket_price?: number
           updated_at?: string
+          version?: number | null
         }
         Update: {
           card_payouts?: Json
@@ -42,6 +44,7 @@ export type Database = {
           penalty_to_organization?: boolean
           ticket_price?: number
           updated_at?: string
+          version?: number | null
         }
         Relationships: []
       }
@@ -85,7 +88,9 @@ export type Database = {
       }
       games: {
         Row: {
+          card_payouts: Json | null
           carryover_jackpot: number
+          configuration_version: number | null
           created_at: string
           end_date: string | null
           game_number: number
@@ -103,7 +108,9 @@ export type Database = {
           total_sales: number
         }
         Insert: {
+          card_payouts?: Json | null
           carryover_jackpot?: number
+          configuration_version?: number | null
           created_at?: string
           end_date?: string | null
           game_number: number
@@ -121,7 +128,9 @@ export type Database = {
           total_sales?: number
         }
         Update: {
+          card_payouts?: Json | null
           carryover_jackpot?: number
+          configuration_version?: number | null
           created_at?: string
           end_date?: string | null
           game_number?: number

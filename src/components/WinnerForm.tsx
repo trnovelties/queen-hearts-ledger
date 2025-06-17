@@ -23,6 +23,7 @@ interface WinnerFormProps {
     minimum_starting_jackpot: number;
     carryover_jackpot: number;
     total_payouts: number;
+    card_payouts?: any;
   };
   currentJackpotTotal?: number;
   jackpotContributions?: number;
@@ -61,44 +62,83 @@ export function WinnerForm({
   });
 
   useEffect(() => {
-    const fetchConfiguration = async () => {
-      const { data: config, error } = await supabase
-        .from('configurations')
-        .select('*')
-        .limit(1)
-        .single();
+    const loadGameConfiguration = async () => {
+      try {
+        // First try to get card payouts from the game data (game-specific)
+        if (gameData?.card_payouts) {
+          const payoutsData = gameData.card_payouts;
+          
+          if (Array.isArray(payoutsData)) {
+            setCardPayouts(payoutsData.map(payout => ({
+              card: payout.card || '',
+              payout: payout.payout || 0
+            })));
+          } else if (typeof payoutsData === 'object') {
+            // Convert object format to array
+            const payoutsArray = Object.entries(payoutsData)
+              .filter(([card, payout]) => card !== 'Queen of Hearts')
+              .map(([card, payout]) => ({
+                card,
+                payout: typeof payout === 'number' ? payout : 0
+              }));
+            setCardPayouts(payoutsArray);
+          }
+        } else {
+          // Fallback to current configuration if game doesn't have card payouts
+          const { data: config, error } = await supabase
+            .from('configurations')
+            .select('*')
+            .limit(1)
+            .single();
 
-      if (error) {
-        console.error("Error fetching configuration:", error);
-        toast.error("Failed to load configuration");
-        return;
-      }
+          if (error) {
+            console.error("Error fetching configuration:", error);
+            toast.error("Failed to load configuration");
+            return;
+          }
 
-      if (config) {
-        // Parse card payouts
-        if (config.card_payouts) {
-          try {
-            const payouts = typeof config.card_payouts === 'string' ? JSON.parse(config.card_payouts) : config.card_payouts;
-            if (Array.isArray(payouts)) {
-              setCardPayouts(payouts.map(payout => ({
+          if (config?.card_payouts) {
+            const payoutsData = typeof config.card_payouts === 'string' ? JSON.parse(config.card_payouts) : config.card_payouts;
+            
+            if (Array.isArray(payoutsData)) {
+              setCardPayouts(payoutsData.map(payout => ({
                 card: payout.card || '',
                 payout: payout.payout || 0
               })));
             } else {
-              console.warn("Unexpected format for card_payouts:", payouts);
+              const payoutsArray = Object.entries(payoutsData)
+                .filter(([card, payout]) => card !== 'Queen of Hearts')
+                .map(([card, payout]) => ({
+                  card,
+                  payout: typeof payout === 'number' ? payout : 0
+                }));
+              setCardPayouts(payoutsArray);
             }
-          } catch (parseError) {
-            console.error("Error parsing card_payouts:", parseError);
           }
+
+          setPenaltyPercentage(config?.penalty_percentage || 0);
         }
 
-        // Set penalty percentage
-        setPenaltyPercentage(config.penalty_percentage || 0);
+        // Get penalty percentage from current configuration
+        const { data: config, error: configError } = await supabase
+          .from('configurations')
+          .select('penalty_percentage')
+          .limit(1)
+          .single();
+
+        if (!configError && config) {
+          setPenaltyPercentage(config.penalty_percentage || 0);
+        }
+      } catch (error) {
+        console.error("Error loading game configuration:", error);
+        toast.error("Failed to load game configuration");
       }
     };
 
-    fetchConfiguration();
-  }, []);
+    if (open) {
+      loadGameConfiguration();
+    }
+  }, [open, gameData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +159,7 @@ export function WinnerForm({
 
       // Handle Queen of Hearts special case
       if (formData.cardSelected === 'Queen of Hearts') {
-        finalPayout = displayedJackpot; // Use displayed jackpot instead of currentJackpotTotal
+        finalPayout = displayedJackpot;
         
         // Apply penalty if winner not present
         if (!formData.winnerPresent) {

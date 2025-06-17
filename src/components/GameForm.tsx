@@ -50,6 +50,19 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
+      // Get current configuration including card payouts and version
+      const { data: config, error: configError } = await supabase
+        .from('configurations')
+        .select('card_payouts, version')
+        .limit(1)
+        .single();
+
+      if (configError) {
+        console.error('Error fetching configuration:', configError);
+        toast.error("Failed to fetch current configuration");
+        return;
+      }
+
       // Get carryover from last game
       let carryoverJackpot = 0;
       if (games.length > 0) {
@@ -69,7 +82,9 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
           organization_percentage: formData.organizationPercentage,
           jackpot_percentage: formData.jackpotPercentage,
           minimum_starting_jackpot: formData.minimumStartingJackpot,
-          carryover_jackpot: carryoverJackpot
+          carryover_jackpot: carryoverJackpot,
+          card_payouts: config.card_payouts,
+          configuration_version: config.version
         });
 
       if (error) throw error;

@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InfoIcon } from "lucide-react";
 
 interface CardPayout {
   card: string;
@@ -14,6 +16,7 @@ export function CardPayoutConfig() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
+  const [configVersion, setConfigVersion] = useState<number>(1);
   
   // Initialize with all standard 54 cards
   const [cardPayouts, setCardPayouts] = useState<CardPayout[]>([
@@ -98,6 +101,7 @@ export function CardPayoutConfig() {
       
       if (data) {
         setConfigId(data.id);
+        setConfigVersion(data.version || 1);
         
         if (data.card_payouts) {
           try {
@@ -216,6 +220,11 @@ export function CardPayoutConfig() {
         throw result.error;
       }
       
+      // Update version number locally
+      if (result.data && result.data.length > 0) {
+        setConfigVersion(result.data[0].version || configVersion + 1);
+      }
+      
       toast({
         title: "Card Payouts Saved",
         description: "Card payout settings have been updated successfully.",
@@ -265,6 +274,14 @@ export function CardPayoutConfig() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <Alert className="mb-4">
+          <InfoIcon className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Important:</strong> Changes to card payouts will only affect new games created after saving. 
+            Existing games will continue to use their original payout structure (Configuration Version {configVersion}).
+          </AlertDescription>
+        </Alert>
+        
         {loading ? (
           <div className="flex justify-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -304,7 +321,6 @@ export function CardPayoutConfig() {
                             value={cardPayout.payout === '' ? '' : cardPayout.payout.toString()}
                             onChange={(e) => {
                               const value = e.target.value;
-                              // Allow empty value or valid decimal numbers
                               if (value === '' || /^\d*\.?\d*$/.test(value)) {
                                 updateCardPayout(index, 'payout', value === '' ? '' : value);
                               }
