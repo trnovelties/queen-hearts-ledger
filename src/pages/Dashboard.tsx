@@ -102,7 +102,12 @@ export default function Dashboard() {
   }, [user, toast]);
 
   const handleGameCreated = (newGame: Game) => {
-    setGames([newGame, ...games]);
+    const newGameSummary: GameSummary = {
+      ...newGame,
+      weeks: [],
+      ticket_sales: []
+    };
+    setGames([newGameSummary, ...games]);
     toast({
       title: "Game Created",
       description: `Successfully created game ${newGame.name}.`,
@@ -110,7 +115,16 @@ export default function Dashboard() {
   };
 
   const handleGameUpdated = (updatedGame: Game) => {
-    setGames(games.map(game => game.id === updatedGame.id ? updatedGame : game));
+    setGames(games.map(game => {
+      if (game.id === updatedGame.id) {
+        return {
+          ...updatedGame,
+          weeks: game.weeks,
+          ticket_sales: game.ticket_sales
+        };
+      }
+      return game;
+    }));
     toast({
       title: "Game Updated",
       description: `Successfully updated game ${updatedGame.name}.`,
