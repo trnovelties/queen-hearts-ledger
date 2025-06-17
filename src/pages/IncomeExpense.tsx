@@ -566,22 +566,20 @@ export default function IncomeExpense() {
             <h1 className="text-3xl font-bold">Financial Analytics</h1>
             <p className="text-[#A1E96C] mt-2">Comprehensive insights into your Queen of Hearts performance</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <Button 
               variant="secondary" 
               size="sm"
               onClick={refreshData}
               disabled={refreshing}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white transition-all duration-200 shadow-lg"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Button 
-              variant="export"
+              variant="secondary" 
               size="sm"
               onClick={generatePdfReport}
-              className="bg-[#A1E96C] text-[#132E2C] border-[#A1E96C] hover:bg-[#A1E96C]/90 hover:border-[#A1E96C]/90 font-semibold shadow-lg transition-all duration-200"
             >
               <Download className="h-4 w-4 mr-2" />
               Export PDF
@@ -589,46 +587,26 @@ export default function IncomeExpense() {
           </div>
         </div>
         
-        {/* Quick Date Filters - Enhanced Styling */}
-        <div className="flex flex-wrap gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setQuickDateFilter("all")}
-            className={`text-white border-white/30 hover:bg-white/15 hover:border-white/50 transition-all duration-200 font-medium ${!startDate && !endDate ? 'bg-white/20 border-white/50' : ''}`}
-          >
+        {/* Quick Date Filters */}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setQuickDateFilter("all")}
+            className={`text-white border-white/20 hover:bg-white/10 ${!startDate && !endDate ? 'bg-white/20' : ''}`}>
             All Time
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setQuickDateFilter("7d")}
-            className="text-white border-white/30 hover:bg-white/15 hover:border-white/50 transition-all duration-200 font-medium"
-          >
+          <Button variant="outline" size="sm" onClick={() => setQuickDateFilter("7d")}
+            className="text-white border-white/20 hover:bg-white/10">
             Last 7 Days
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setQuickDateFilter("30d")}
-            className="text-white border-white/30 hover:bg-white/15 hover:border-white/50 transition-all duration-200 font-medium"
-          >
+          <Button variant="outline" size="sm" onClick={() => setQuickDateFilter("30d")}
+            className="text-white border-white/20 hover:bg-white/10">
             Last 30 Days
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setQuickDateFilter("90d")}
-            className="text-white border-white/30 hover:bg-white/15 hover:border-white/50 transition-all duration-200 font-medium"
-          >
+          <Button variant="outline" size="sm" onClick={() => setQuickDateFilter("90d")}
+            className="text-white border-white/20 hover:bg-white/10">
             Last 90 Days
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setQuickDateFilter("1y")}
-            className="text-white border-white/30 hover:bg-white/15 hover:border-white/50 transition-all duration-200 font-medium"
-          >
+          <Button variant="outline" size="sm" onClick={() => setQuickDateFilter("1y")}
+            className="text-white border-white/20 hover:bg-white/10">
             Last Year
           </Button>
         </div>
@@ -711,11 +689,6 @@ export default function IncomeExpense() {
                 variant={viewMode === "summary" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("summary")}
-                className={`transition-all duration-200 font-medium ${
-                  viewMode === "summary" 
-                    ? 'bg-[#1F4E4A] text-white hover:bg-[#1F4E4A]/90 shadow-md' 
-                    : 'text-[#1F4E4A] border-[#1F4E4A]/30 hover:bg-[#1F4E4A]/10 hover:border-[#1F4E4A]/50'
-                }`}
               >
                 <Grid className="h-4 w-4 mr-2" />
                 Summary
@@ -724,11 +697,6 @@ export default function IncomeExpense() {
                 variant={viewMode === "detailed" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("detailed")}
-                className={`transition-all duration-200 font-medium ${
-                  viewMode === "detailed" 
-                    ? 'bg-[#1F4E4A] text-white hover:bg-[#1F4E4A]/90 shadow-md' 
-                    : 'text-[#1F4E4A] border-[#1F4E4A]/30 hover:bg-[#1F4E4A]/10 hover:border-[#1F4E4A]/50'
-                }`}
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Detailed
@@ -906,52 +874,32 @@ export default function IncomeExpense() {
               </CardTitle>
               <CardDescription>Interactive visualizations of your financial data</CardDescription>
             </div>
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+            <div className="flex gap-2">
               <Button
-                variant={chartType === "bar" ? "default" : "ghost"}
+                variant={chartType === "bar" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setChartType("bar")}
-                className={`transition-all duration-200 ${
-                  chartType === "bar" 
-                    ? 'bg-[#1F4E4A] text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-[#1F4E4A] hover:bg-white'
-                }`}
               >
                 <BarChart3 className="h-4 w-4" />
               </Button>
               <Button
-                variant={chartType === "line" ? "default" : "ghost"}
+                variant={chartType === "line" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setChartType("line")}
-                className={`transition-all duration-200 ${
-                  chartType === "line" 
-                    ? 'bg-[#1F4E4A] text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-[#1F4E4A] hover:bg-white'
-                }`}
               >
                 <LineChartIcon className="h-4 w-4" />
               </Button>
               <Button
-                variant={chartType === "pie" ? "default" : "ghost"}
+                variant={chartType === "pie" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setChartType("pie")}
-                className={`transition-all duration-200 ${
-                  chartType === "pie" 
-                    ? 'bg-[#1F4E4A] text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-[#1F4E4A] hover:bg-white'
-                }`}
               >
                 <PieChartIcon className="h-4 w-4" />
               </Button>
               <Button
-                variant={chartType === "area" ? "default" : "ghost"}
+                variant={chartType === "area" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setChartType("area")}
-                className={`transition-all duration-200 ${
-                  chartType === "area" 
-                    ? 'bg-[#1F4E4A] text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-[#1F4E4A] hover:bg-white'
-                }`}
               >
                 <BarChart3 className="h-4 w-4" />
               </Button>
@@ -1029,25 +977,10 @@ export default function IncomeExpense() {
       {/* Enhanced Data Tables */}
       {viewMode === "detailed" && (
         <Tabs defaultValue="summary" className="space-y-6">
-          <TabsList className="grid grid-cols-3 w-[400px] bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger 
-              value="summary"
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white transition-all duration-200 font-medium"
-            >
-              Game Summary
-            </TabsTrigger>
-            <TabsTrigger 
-              value="trends"
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white transition-all duration-200 font-medium"
-            >
-              Trend Analysis
-            </TabsTrigger>
-            <TabsTrigger 
-              value="breakdown"
-              className="data-[state=active]:bg-[#1F4E4A] data-[state=active]:text-white transition-all duration-200 font-medium"
-            >
-              Detailed Breakdown
-            </TabsTrigger>
+          <TabsList className="grid grid-cols-3 w-[400px]">
+            <TabsTrigger value="summary">Game Summary</TabsTrigger>
+            <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
+            <TabsTrigger value="breakdown">Detailed Breakdown</TabsTrigger>
           </TabsList>
           
           <TabsContent value="summary">
@@ -1224,7 +1157,7 @@ export default function IncomeExpense() {
                   </div>
                   <Dialog open={addExpenseOpen} onOpenChange={setAddExpenseOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-[#1F4E4A] hover:bg-[#1F4E4A]/90 text-white font-medium shadow-lg transition-all duration-200">
+                      <Button className="bg-[#1F4E4A]">
                         <PlusCircle className="h-4 w-4 mr-2" />
                         Add Expense/Donation
                       </Button>
