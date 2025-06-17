@@ -120,26 +120,27 @@ export function PayoutSlipModal({
             </div>
           ) : (
             <>
-              <div className="mb-4 flex-shrink-0">
-                <Label htmlFor="authorizedSignatureName" className="mb-2 block text-sm font-medium">
-                  Authorized Signature Name
-                </Label>
-                <Input
-                  id="authorizedSignatureName"
-                  placeholder="Enter name of authorized person signing"
-                  value={authorizedName}
-                  onChange={(e) => setAuthorizedName(e.target.value)}
-                  className="mb-4"
-                />
-              </div>
-              
-              <div className="flex justify-end mb-4 flex-shrink-0">
-                <Button 
-                  onClick={handleGeneratePDF} 
-                  className="bg-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90 font-medium"
-                >
-                  <Printer className="h-4 w-4 mr-2" /> Print Payout Slip
-                </Button>
+              <div className="flex-shrink-0 bg-gray-50 p-4 rounded-lg mb-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="authorizedSignatureName" className="mb-2 block text-sm font-medium text-[#1F4E4A]">
+                      Authorized Signature Name
+                    </Label>
+                    <Input
+                      id="authorizedSignatureName"
+                      placeholder="Enter name of authorized person signing"
+                      value={authorizedName}
+                      onChange={(e) => setAuthorizedName(e.target.value)}
+                      className="border-[#1F4E4A]/20 focus:border-[#A1E96C] focus:ring-[#A1E96C]"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleGeneratePDF} 
+                    className="bg-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90 font-medium px-6 py-2 h-10"
+                  >
+                    <Printer className="h-4 w-4 mr-2" /> Print Payout Slip
+                  </Button>
+                </div>
               </div>
               
               <div className="flex-1 overflow-y-auto bg-gray-50 p-4 rounded-lg">
