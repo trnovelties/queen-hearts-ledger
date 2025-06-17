@@ -100,7 +100,7 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                     <Target className="h-4 w-4 text-[#1F4E4A]" />
                   </div>
                   <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.total_payouts)}</div>
-                  <div className="text-xs text-[#132E2C]/70">Payouts</div>
+                  <div className="text-xs text-[#132E2C]/70">Distributions</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-1">
@@ -149,7 +149,7 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                           <TableHead className="font-semibold text-[#132E2C]">Sales</TableHead>
                           <TableHead className="font-semibold text-[#132E2C]">Winner</TableHead>
                           <TableHead className="font-semibold text-[#132E2C]">Card</TableHead>
-                          <TableHead className="font-semibold text-[#132E2C]">Payout</TableHead>
+                          <TableHead className="font-semibold text-[#132E2C]">Distribution</TableHead>
                           <TableHead className="font-semibold text-[#132E2C]">Present</TableHead>
                         </TableRow>
                       </TableHeader>
