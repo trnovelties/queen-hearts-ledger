@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X } from "lucide-react";
+import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -104,27 +104,22 @@ interface AppContentProps {
 }
 
 function AppContent({ children, profile, handleLogout, location, navigate }: AppContentProps) {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   return (
-    <div className="min-h-screen flex w-full">
+    <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-border/40">
         <SidebarHeader className="pt-6 pb-4 px-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white pl-2">
               {profile?.organization_name || "Queen of Hearts"}
             </h2>
-            <SidebarTrigger>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SidebarTrigger>
           </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-base">Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -179,16 +174,25 @@ function AppContent({ children, profile, handleLogout, location, navigate }: App
         </SidebarFooter>
       </Sidebar>
 
+      {/* Floating expand/collapse button */}
+      <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" 
+           style={{ left: isCollapsed ? '0px' : '256px' }}>
+        <button
+          onClick={toggleSidebar}
+          className="w-12 h-12 bg-[#A1E96C] hover:bg-[#8fd956] rounded-full flex items-center justify-center shadow-lg transition-all duration-300 border-2 border-white"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-6 h-6 text-[#132E2C]" />
+          ) : (
+            <ChevronLeft className="w-6 h-6 text-[#132E2C]" />
+          )}
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-border/40 flex items-center px-6 justify-between bg-white">
           <div className="flex items-center">
-            {isCollapsed && (
-              <SidebarTrigger>
-                <Button variant="ghost" size="icon" className="mr-4">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SidebarTrigger>
-            )}
             <h1 className="text-xl font-semibold text-primary">
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
