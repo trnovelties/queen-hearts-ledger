@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,77 +7,77 @@ import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 
-interface CardDistribution {
+interface CardPayout {
   card: string;
-  distribution: number | "jackpot" | "";
+  payout: number | "jackpot" | "";
 }
 
-export function CardDistributionConfig() {
+export function CardPayoutConfig() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
   const [configVersion, setConfigVersion] = useState<number>(1);
   
   // Initialize with all standard 54 cards
-  const [cardDistributions, setCardDistributions] = useState<CardDistribution[]>([
+  const [cardPayouts, setCardPayouts] = useState<CardPayout[]>([
     // Hearts
-    { card: "2 of Hearts", distribution: 25 },
-    { card: "3 of Hearts", distribution: 25 },
-    { card: "4 of Hearts", distribution: 25 },
-    { card: "5 of Hearts", distribution: 25 },
-    { card: "6 of Hearts", distribution: 25 },
-    { card: "7 of Hearts", distribution: 25 },
-    { card: "8 of Hearts", distribution: 25 },
-    { card: "9 of Hearts", distribution: 25 },
-    { card: "10 of Hearts", distribution: 25 },
-    { card: "Jack of Hearts", distribution: 30 },
-    { card: "Queen of Hearts", distribution: "jackpot" },
-    { card: "King of Hearts", distribution: 30 },
-    { card: "Ace of Hearts", distribution: 35 },
+    { card: "2 of Hearts", payout: 25 },
+    { card: "3 of Hearts", payout: 25 },
+    { card: "4 of Hearts", payout: 25 },
+    { card: "5 of Hearts", payout: 25 },
+    { card: "6 of Hearts", payout: 25 },
+    { card: "7 of Hearts", payout: 25 },
+    { card: "8 of Hearts", payout: 25 },
+    { card: "9 of Hearts", payout: 25 },
+    { card: "10 of Hearts", payout: 25 },
+    { card: "Jack of Hearts", payout: 30 },
+    { card: "Queen of Hearts", payout: "jackpot" },
+    { card: "King of Hearts", payout: 30 },
+    { card: "Ace of Hearts", payout: 35 },
     // Diamonds
-    { card: "2 of Diamonds", distribution: 25 },
-    { card: "3 of Diamonds", distribution: 25 },
-    { card: "4 of Diamonds", distribution: 25 },
-    { card: "5 of Diamonds", distribution: 25 },
-    { card: "6 of Diamonds", distribution: 25 },
-    { card: "7 of Diamonds", distribution: 25 },
-    { card: "8 of Diamonds", distribution: 25 },
-    { card: "9 of Diamonds", distribution: 25 },
-    { card: "10 of Diamonds", distribution: 25 },
-    { card: "Jack of Diamonds", distribution: 30 },
-    { card: "Queen of Diamonds", distribution: 40 },
-    { card: "King of Diamonds", distribution: 30 },
-    { card: "Ace of Diamonds", distribution: 35 },
+    { card: "2 of Diamonds", payout: 25 },
+    { card: "3 of Diamonds", payout: 25 },
+    { card: "4 of Diamonds", payout: 25 },
+    { card: "5 of Diamonds", payout: 25 },
+    { card: "6 of Diamonds", payout: 25 },
+    { card: "7 of Diamonds", payout: 25 },
+    { card: "8 of Diamonds", payout: 25 },
+    { card: "9 of Diamonds", payout: 25 },
+    { card: "10 of Diamonds", payout: 25 },
+    { card: "Jack of Diamonds", payout: 30 },
+    { card: "Queen of Diamonds", payout: 40 },
+    { card: "King of Diamonds", payout: 30 },
+    { card: "Ace of Diamonds", payout: 35 },
     // Clubs
-    { card: "2 of Clubs", distribution: 25 },
-    { card: "3 of Clubs", distribution: 25 },
-    { card: "4 of Clubs", distribution: 25 },
-    { card: "5 of Clubs", distribution: 25 },
-    { card: "6 of Clubs", distribution: 25 },
-    { card: "7 of Clubs", distribution: 25 },
-    { card: "8 of Clubs", distribution: 25 },
-    { card: "9 of Clubs", distribution: 25 },
-    { card: "10 of Clubs", distribution: 25 },
-    { card: "Jack of Clubs", distribution: 30 },
-    { card: "Queen of Clubs", distribution: 40 },
-    { card: "King of Clubs", distribution: 30 },
-    { card: "Ace of Clubs", distribution: 35 },
+    { card: "2 of Clubs", payout: 25 },
+    { card: "3 of Clubs", payout: 25 },
+    { card: "4 of Clubs", payout: 25 },
+    { card: "5 of Clubs", payout: 25 },
+    { card: "6 of Clubs", payout: 25 },
+    { card: "7 of Clubs", payout: 25 },
+    { card: "8 of Clubs", payout: 25 },
+    { card: "9 of Clubs", payout: 25 },
+    { card: "10 of Clubs", payout: 25 },
+    { card: "Jack of Clubs", payout: 30 },
+    { card: "Queen of Clubs", payout: 40 },
+    { card: "King of Clubs", payout: 30 },
+    { card: "Ace of Clubs", payout: 35 },
     // Spades
-    { card: "2 of Spades", distribution: 25 },
-    { card: "3 of Spades", distribution: 25 },
-    { card: "4 of Spades", distribution: 25 },
-    { card: "5 of Spades", distribution: 25 },
-    { card: "6 of Spades", distribution: 25 },
-    { card: "7 of Spades", distribution: 25 },
-    { card: "8 of Spades", distribution: 25 },
-    { card: "9 of Spades", distribution: 25 },
-    { card: "10 of Spades", distribution: 25 },
-    { card: "Jack of Spades", distribution: 30 },
-    { card: "Queen of Spades", distribution: 40 },
-    { card: "King of Spades", distribution: 30 },
-    { card: "Ace of Spades", distribution: 35 },
+    { card: "2 of Spades", payout: 25 },
+    { card: "3 of Spades", payout: 25 },
+    { card: "4 of Spades", payout: 25 },
+    { card: "5 of Spades", payout: 25 },
+    { card: "6 of Spades", payout: 25 },
+    { card: "7 of Spades", payout: 25 },
+    { card: "8 of Spades", payout: 25 },
+    { card: "9 of Spades", payout: 25 },
+    { card: "10 of Spades", payout: 25 },
+    { card: "Jack of Spades", payout: 30 },
+    { card: "Queen of Spades", payout: 40 },
+    { card: "King of Spades", payout: 30 },
+    { card: "Ace of Spades", payout: 35 },
     // Jokers
-    { card: "Joker", distribution: 50 },
+    { card: "Joker", payout: 50 },
   ]);
   
   // Fetch configuration on component mount
@@ -106,24 +105,24 @@ export function CardDistributionConfig() {
         
         if (data.card_payouts) {
           try {
-            // Parse the card distributions from the database
-            const distributionsData = typeof data.card_payouts === 'string' 
+            // Parse the card payouts from the database
+            const payoutsData = typeof data.card_payouts === 'string' 
               ? JSON.parse(data.card_payouts) 
               : data.card_payouts;
             
-            const distributionsArray: CardDistribution[] = Object.entries(distributionsData).map(([card, distribution]) => ({
+            const payoutsArray: CardPayout[] = Object.entries(payoutsData).map(([card, payout]) => ({
               card,
-              distribution: distribution === 'jackpot' ? 'jackpot' : Number(distribution)
+              payout: payout === 'jackpot' ? 'jackpot' : Number(payout)
             }));
             
-            if (distributionsArray.length > 0) {
-              setCardDistributions(distributionsArray);
+            if (payoutsArray.length > 0) {
+              setCardPayouts(payoutsArray);
             }
           } catch (parseError) {
-            console.error('Error parsing card distributions:', parseError);
+            console.error('Error parsing card payouts:', parseError);
             toast({
               title: "Warning",
-              description: "Could not parse existing card distributions. Using defaults.",
+              description: "Could not parse existing card payouts. Using defaults.",
               variant: "destructive",
             });
           }
@@ -141,24 +140,24 @@ export function CardDistributionConfig() {
     }
   };
   
-  // Handle saving card distributions
-  const handleSaveCardDistributions = async () => {
-    // Validate card distributions
-    const invalidCardDistributions = cardDistributions.filter(
-      card => !card.card.trim() || (typeof card.distribution === "number" && (isNaN(card.distribution) || card.distribution < 0))
+  // Handle saving card payouts
+  const handleSaveCardPayouts = async () => {
+    // Validate card payouts
+    const invalidCardPayouts = cardPayouts.filter(
+      card => !card.card.trim() || (typeof card.payout === "number" && (isNaN(card.payout) || card.payout < 0))
     );
     
-    if (invalidCardDistributions.length > 0) {
+    if (invalidCardPayouts.length > 0) {
       toast({
         title: "Validation Error",
-        description: "All cards must have a valid name and non-negative distribution amount.",
+        description: "All cards must have a valid name and non-negative payout amount.",
         variant: "destructive",
       });
       return;
     }
     
     // Check for duplicate cards
-    const cardNames = cardDistributions.map(c => c.card.trim().toLowerCase());
+    const cardNames = cardPayouts.map(c => c.card.trim().toLowerCase());
     const duplicates = cardNames.filter((name, index) => cardNames.indexOf(name) !== index);
     
     if (duplicates.length > 0) {
@@ -173,16 +172,16 @@ export function CardDistributionConfig() {
     setLoading(true);
     try {
       // Convert array to object format for storage
-      const distributionsObject: Record<string, number | string> = {};
-      cardDistributions.forEach(({ card, distribution }) => {
+      const payoutsObject: Record<string, number | string> = {};
+      cardPayouts.forEach(({ card, payout }) => {
         const trimmedCard = card.trim();
         if (trimmedCard) {
-          distributionsObject[trimmedCard] = distribution;
+          payoutsObject[trimmedCard] = payout;
         }
       });
       
       const configData = {
-        card_payouts: distributionsObject,
+        card_payouts: payoutsObject,
         updated_at: new Date().toISOString()
       };
 
@@ -227,14 +226,14 @@ export function CardDistributionConfig() {
       }
       
       toast({
-        title: "Card Distributions Saved",
-        description: "Card distribution settings have been updated successfully.",
+        title: "Card Payouts Saved",
+        description: "Card payout settings have been updated successfully.",
       });
     } catch (error: any) {
-      console.error('Error saving card distributions:', error);
+      console.error('Error saving card payouts:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save card distributions.",
+        description: error.message || "Failed to save card payouts.",
         variant: "destructive",
       });
     } finally {
@@ -242,54 +241,50 @@ export function CardDistributionConfig() {
     }
   };
   
-  // Handle updating a card distribution
-  const updateCardDistribution = (index: number, field: 'card' | 'distribution', value: string | number) => {
-    const updatedDistributions = [...cardDistributions];
+  // Handle updating a card payout
+  const updateCardPayout = (index: number, field: 'card' | 'payout', value: string | number) => {
+    const updatedPayouts = [...cardPayouts];
     if (field === 'card') {
-      updatedDistributions[index].card = value as string;
+      updatedPayouts[index].card = value as string;
     } else {
       if (value === 'jackpot') {
-        updatedDistributions[index].distribution = 'jackpot';
+        updatedPayouts[index].payout = 'jackpot';
       } else if (value === '' || value === null || value === undefined) {
-        updatedDistributions[index].distribution = '';
+        updatedPayouts[index].payout = '';
       } else {
         const numValue = typeof value === 'string' ? parseFloat(value) : value;
-        updatedDistributions[index].distribution = isNaN(numValue) ? '' : numValue;
+        updatedPayouts[index].payout = isNaN(numValue) ? '' : numValue;
       }
     }
-    setCardDistributions(updatedDistributions);
+    setCardPayouts(updatedPayouts);
   };
   
   // Handle removing a card
   const removeCard = (index: number) => {
-    const updatedDistributions = cardDistributions.filter((_, i) => i !== index);
-    setCardDistributions(updatedDistributions);
+    const updatedPayouts = cardPayouts.filter((_, i) => i !== index);
+    setCardPayouts(updatedPayouts);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Card Distribution Configuration</CardTitle>
+        <CardTitle>Card Payout Configuration</CardTitle>
         <CardDescription>
-          Set distribution amounts for each card in the deck. The Queen of Hearts is always set to "jackpot".
+          Set payout amounts for each card in the deck. The Queen of Hearts is always set to "jackpot".
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Alert className="mb-4">
           <InfoIcon className="h-4 w-4" />
           <AlertDescription>
-            <strong>Important:</strong> Changes to card distributions will only affect new games created after saving. 
-            Existing games will continue to use their original distribution structure (Configuration Version {configVersion}).
+            <strong>Important:</strong> Changes to card payouts will only affect new games created after saving. 
+            Existing games will continue to use their original payout structure (Configuration Version {configVersion}).
           </AlertDescription>
         </Alert>
         
         {loading ? (
-          <div className="min-h-[200px] bg-gradient-to-br from-[#F7F8FC] via-white to-[#F7F8FC]/50 flex flex-col items-center justify-center py-12 space-y-6">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#A1E96C] border-t-[#1F4E4A]"></div>
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold text-[#1F4E4A] font-inter">Loading Configuration</h3>
-              <p className="text-[#132E2C]/60">Please wait while we load your card distribution settings...</p>
-            </div>
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -298,22 +293,22 @@ export function CardDistributionConfig() {
                 <thead className="sticky top-0 bg-background">
                   <tr className="border-b">
                     <th className="py-2 text-left">Card</th>
-                    <th className="py-2 text-left">Distribution ($)</th>
+                    <th className="py-2 text-left">Payout ($)</th>
                     <th className="py-2 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cardDistributions.map((cardDistribution, index) => (
+                  {cardPayouts.map((cardPayout, index) => (
                     <tr key={index} className="border-b">
                       <td className="py-2 pr-2">
                         <Input
-                          value={cardDistribution.card}
-                          onChange={(e) => updateCardDistribution(index, 'card', e.target.value)}
+                          value={cardPayout.card}
+                          onChange={(e) => updateCardPayout(index, 'card', e.target.value)}
                           placeholder="e.g., Ace of Hearts"
                         />
                       </td>
                       <td className="py-2 pr-2">
-                        {cardDistribution.card === "Queen of Hearts" ? (
+                        {cardPayout.card === "Queen of Hearts" ? (
                           <Input
                             value="jackpot"
                             disabled
@@ -323,11 +318,11 @@ export function CardDistributionConfig() {
                           <Input
                             type="text"
                             inputMode="decimal"
-                            value={cardDistribution.distribution === '' ? '' : cardDistribution.distribution.toString()}
+                            value={cardPayout.payout === '' ? '' : cardPayout.payout.toString()}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                                updateCardDistribution(index, 'distribution', value === '' ? '' : value);
+                                updateCardPayout(index, 'payout', value === '' ? '' : value);
                               }
                             }}
                             placeholder="25.00"
@@ -335,7 +330,7 @@ export function CardDistributionConfig() {
                         )}
                       </td>
                       <td className="py-2">
-                        {cardDistribution.card !== "Queen of Hearts" && (
+                        {cardPayout.card !== "Queen of Hearts" && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -356,13 +351,13 @@ export function CardDistributionConfig() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setCardDistributions([...cardDistributions, { card: "", distribution: "" }]);
+                  setCardPayouts([...cardPayouts, { card: "", payout: "" }]);
                 }}
               >
                 Add Card
               </Button>
-              <Button onClick={handleSaveCardDistributions} disabled={loading}>
-                {loading ? 'Saving...' : 'Save Card Distributions'}
+              <Button onClick={handleSaveCardPayouts} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Card Payouts'}
               </Button>
             </div>
           </div>

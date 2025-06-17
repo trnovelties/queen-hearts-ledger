@@ -12,14 +12,14 @@ import { Printer } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from "@/integrations/supabase/client";
 
-interface DistributionSlipModalProps {
+interface PayoutSlipModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   winnerData: {
     winnerName: string;
     slotChosen: number;
     cardSelected: string;
-    distributionAmount: number;
+    payoutAmount: number;
     date: string;
     gameNumber: number;
     gameName: string;
@@ -30,11 +30,11 @@ interface DistributionSlipModalProps {
   } | null;
 }
 
-export function DistributionSlipModal({
+export function PayoutSlipModal({
   open,
   onOpenChange,
   winnerData
-}: DistributionSlipModalProps) {
+}: PayoutSlipModalProps) {
   const slipRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -222,7 +222,7 @@ export function DistributionSlipModal({
                     <div className="bg-[#A1E96C] rounded-lg p-6 text-center border-2 border-[#1F4E4A]">
                       <h3 className="text-lg font-bold text-[#1F4E4A] mb-2">AMOUNT WON</h3>
                       <div className="text-4xl font-bold text-[#1F4E4A]">
-                        {formatCurrency(winnerData.distributionAmount)}
+                        {formatCurrency(winnerData.payoutAmount)}
                       </div>
                     </div>
                   </div>
