@@ -596,7 +596,8 @@ export default function IncomeExpense() {
           <TabsContent value="overview" className="space-y-6">
             <FinancialCharts 
               games={summary.filteredGames}
-              reportType={reportType}
+              reportType="cumulative"
+              selectedGame={selectedGame}
             />
           </TabsContent>
 
@@ -611,6 +612,7 @@ export default function IncomeExpense() {
             <FinancialCharts 
               games={summary.filteredGames}
               reportType={reportType}
+              selectedGame={selectedGame}
             />
           </TabsContent>
 
