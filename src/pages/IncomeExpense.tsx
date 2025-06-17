@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -177,7 +176,7 @@ export default function IncomeExpense() {
     }
     
     let totalSales = 0;
-    let totalDistributions = 0;
+    let totalPayouts = 0;
     let totalExpenses = 0;
     let totalDonations = 0;
     let organizationTotalPortion = 0;
@@ -187,7 +186,7 @@ export default function IncomeExpense() {
       if (startDate && endDate) {
         const sales = game.ticket_sales.reduce((sum, sale) => sum + sale.amount_collected, 0);
         totalSales += sales;
-        totalDistributions += game.ticket_sales.reduce((sum, sale) => sum + sale.weekly_payout_amount, 0);
+        totalPayouts += game.ticket_sales.reduce((sum, sale) => sum + sale.weekly_payout_amount, 0);
         
         const expenses = game.expenses.filter(e => !e.is_donation);
         const donations = game.expenses.filter(e => e.is_donation);
@@ -201,7 +200,7 @@ export default function IncomeExpense() {
         totalTicketsSold += game.ticket_sales.reduce((sum, sale) => sum + sale.tickets_sold, 0);
       } else {
         totalSales += game.total_sales;
-        totalDistributions += game.total_payouts;
+        totalPayouts += game.total_payouts;
         totalExpenses += game.total_expenses;
         totalDonations += game.total_donations;
         
@@ -220,15 +219,13 @@ export default function IncomeExpense() {
     return {
       totalTicketsSold,
       totalSales,
-      totalDistributions,
+      totalPayouts,
       totalExpenses,
       totalDonations,
       organizationTotalPortion,
       jackpotTotalPortion,
       organizationNetProfit,
       filteredGames,
-      // Map for compatibility with existing components
-      totalPayouts: totalDistributions,
     };
   };
 
@@ -437,7 +434,7 @@ export default function IncomeExpense() {
       const summaryData = [
         ['Total Tickets Sold', summary.totalTicketsSold.toLocaleString()],
         ['Total Revenue', formatCurrency(summary.totalSales)],
-        ['Total Distributions', formatCurrency(summary.totalDistributions)],
+        ['Total Payouts', formatCurrency(summary.totalPayouts)],
         ['Total Expenses', formatCurrency(summary.totalExpenses)],
         ['Total Donations', formatCurrency(summary.totalDonations)],
         ['Organization Net Profit', formatCurrency(summary.organizationNetProfit)]
@@ -476,7 +473,7 @@ export default function IncomeExpense() {
       const overallTotals = [
         ['Tickets Sold', summary.totalTicketsSold.toLocaleString()],
         ['Ticket Sales', formatCurrency(summary.totalSales)],
-        ['Total Distributions', formatCurrency(summary.totalDistributions)],
+        ['Total Payouts', formatCurrency(summary.totalPayouts)],
         ['Total Expenses', formatCurrency(summary.totalExpenses)],
         ['Total Donated', formatCurrency(summary.totalDonations)]
       ];
@@ -489,11 +486,11 @@ export default function IncomeExpense() {
       // Reset position for second column
       let column2Y = yPosition - (overallTotals.length * 5) - 8;
       
-      // Column 2: Distribution Portion Allocation
+      // Column 2: Payout Portion Allocation
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
       doc.setTextColor(19, 46, 44);
-      doc.text('Distribution Portion (60%)', leftMargin + 70, column2Y);
+      doc.text('Payout Portion (60%)', leftMargin + 70, column2Y);
       column2Y += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
@@ -501,7 +498,7 @@ export default function IncomeExpense() {
       
       doc.text(`Total Sales: ${formatCurrency(summary.jackpotTotalPortion)}`, leftMargin + 75, column2Y);
       column2Y += 5;
-      doc.text(`Total Distributions: ${formatCurrency(summary.totalDistributions)}`, leftMargin + 75, column2Y);
+      doc.text(`Total Payouts: ${formatCurrency(summary.totalPayouts)}`, leftMargin + 75, column2Y);
       column2Y += 5;
       
       // Column 3: Organization Portion Allocation
@@ -554,7 +551,7 @@ export default function IncomeExpense() {
             ['Start Date', format(new Date(game.start_date), 'MMM d, yyyy')],
             ['End Date', game.end_date ? format(new Date(game.end_date), 'MMM d, yyyy') : 'Ongoing'],
             ['Total Sales', formatCurrency(game.total_sales)],
-            ['Total Distributions', formatCurrency(game.total_payouts)],
+            ['Total Payouts', formatCurrency(game.total_payouts)],
             ['Total Expenses', formatCurrency(game.total_expenses)],
             ['Total Donations', formatCurrency(game.total_donations)],
             ['Net Profit', formatCurrency(game.organization_net_profit)],

@@ -185,7 +185,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           value={summary.jackpotTotalPortion}
           icon={Trophy}
           colorScheme="orange"
-          subtitle={`${payoutEfficiency.toFixed(1)}% distribution efficiency`}
+          subtitle={`${payoutEfficiency.toFixed(1)}% payout efficiency`}
         />
       </div>
 
@@ -229,12 +229,12 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           </CardContent>
         </Card>
 
-        {/* Distribution Analysis */}
+        {/* Payout Analysis */}
         <Card className="bg-white border-[#1F4E4A]/20 border-2">
           <CardHeader className="pb-4">
             <CardTitle className="text-[#1F4E4A] font-inter flex items-center gap-3">
               <Target className="h-6 w-6" />
-              Distribution
+              Payout Distribution
             </CardTitle>
             <CardDescription>Winner payments and jackpot management</CardDescription>
           </CardHeader>
@@ -251,7 +251,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
               <div className="flex justify-between items-center p-4 bg-[#F7F8FC] rounded-lg border">
                 <div className="flex items-center gap-3">
                   <Banknote className="h-5 w-5 text-[#1F4E4A]" />
-                  <span className="font-semibold text-[#132E2C]">Total Distributions</span>
+                  <span className="font-semibold text-[#132E2C]">Total Payouts</span>
                 </div>
                 <span className="font-bold text-[#1F4E4A] text-lg">{formatCurrency(summary.totalPayouts)}</span>
               </div>
