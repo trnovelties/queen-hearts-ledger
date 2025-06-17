@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -669,9 +668,19 @@ const TicketSalesRowForm = ({ weekId, onSuccess, onCancel }: { weekId: string; o
 
       const amountCollected = ticketsSold * formData.ticketPrice;
 
+      // Get the game_id from the week
+      const { data: weekData, error: weekError } = await supabase
+        .from('weeks')
+        .select('game_id')
+        .eq('id', weekId)
+        .single();
+
+      if (weekError) throw weekError;
+
       const { error } = await supabase
         .from('ticket_sales')
         .insert({
+          game_id: weekData.game_id,
           week_id: weekId,
           date: formData.date,
           tickets_sold: ticketsSold,
