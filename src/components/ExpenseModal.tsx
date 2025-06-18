@@ -39,17 +39,10 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
 
     setIsSubmitting(true);
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
-
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          user_id: user.id,
           date: selectedDate.toISOString().split('T')[0],
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,
