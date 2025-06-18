@@ -50,7 +50,13 @@ export default function Dashboard() {
   });
 
   const { toast } = useToast();
-  const { calculateDisplayedJackpot } = useJackpotCalculation();
+
+  // Fix jackpot calculation hook usage - only call when we have the required data
+  const calculateDisplayedJackpot = useJackpotCalculation({
+    jackpotContributions: 0,
+    minimumJackpot: selectedGame?.minimum_starting_jackpot || 500,
+    carryoverJackpot: selectedGame?.carryover_jackpot || 0
+  });
 
   const fetchGames = useCallback(async () => {
     try {
@@ -242,11 +248,11 @@ export default function Dashboard() {
       const jackpotTotal = cumulativeCollected * (selectedGame.jackpot_percentage / 100);
       
       const jackpotContributions = jackpotTotal;
-      const displayedJackpot = calculateDisplayedJackpot(
-        jackpotContributions, 
-        selectedGame.minimum_starting_jackpot || 500, 
-        selectedGame.carryover_jackpot || 0
-      );
+      const displayedJackpot = calculateDisplayedJackpot({
+        jackpotContributions: jackpotContributions,
+        minimumJackpot: selectedGame.minimum_starting_jackpot || 500,
+        carryoverJackpot: selectedGame.carryover_jackpot || 0
+      });
 
       const weeklyPayout = selectedWeek.weekly_payout || 0;
       const endingJackpotTotal = displayedJackpot - weeklyPayout;
@@ -422,6 +428,15 @@ export default function Dashboard() {
     }
   };
 
+  // Helper function to format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
   if (showAdminView) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
@@ -435,7 +450,7 @@ export default function Dashboard() {
               Back to Dashboard
             </Button>
           </div>
-          <GameComparisonTable games={allGameData} />
+          <GameComparisonTable games={allGameData} formatCurrency={formatCurrency} />
         </div>
       </div>
     );
@@ -566,7 +581,19 @@ export default function Dashboard() {
                                 
                                 {week.winner_name && (
                                   <WinnerInformation 
-                                    week={week}
+                                    winnerData={{
+                                      winnerName: week.winner_name,
+                                      slotChosen: week.slot_chosen,
+                                      cardSelected: week.card_selected,
+                                      payoutAmount: week.weekly_payout,
+                                      date: week.end_date,
+                                      gameNumber: selectedGame.game_number,
+                                      gameName: selectedGame.name,
+                                      weekNumber: week.week_number,
+                                      weekId: week.id,
+                                      weekStartDate: week.start_date,
+                                      weekEndDate: week.end_date
+                                    }}
                                     onViewPayout={(data) => {
                                       setPayoutSlipData(data);
                                       setShowPayoutSlip(true);
@@ -579,7 +606,22 @@ export default function Dashboard() {
                                   {ticketSales
                                     .filter(ts => ts.week_id === week.id)
                                     .map((sale) => (
-                                      <TicketSalesRow key={sale.id} sale={sale} />
+                                      <div key={sale.id} className="p-3 bg-gray-50 rounded-lg">
+                                        <div className="grid grid-cols-4 gap-4 text-sm">
+                                          <div>
+                                            <span className="font-medium">Date:</span> {new Date(sale.date).toLocaleDateString()}
+                                          </div>
+                                          <div>
+                                            <span className="font-medium">Tickets:</span> {sale.tickets_sold}
+                                          </div>
+                                          <div>
+                                            <span className="font-medium">Price:</span> ${sale.ticket_price}
+                                          </div>
+                                          <div>
+                                            <span className="font-medium">Amount:</span> ${sale.amount_collected.toFixed(2)}
+                                          </div>
+                                        </div>
+                                      </div>
                                     ))}
                                 </div>
 
@@ -741,7 +783,7 @@ export default function Dashboard() {
 
           <TabsContent value="financial">
             {selectedGame ? (
-              <FinancialOverview gameId={selectedGame.id} />
+              <FinancialOverview game={selectedGame} />
             ) : (
               <Card>
                 <CardContent className="p-8 text-center">
@@ -755,7 +797,7 @@ export default function Dashboard() {
 
           <TabsContent value="reports">
             {selectedGame ? (
-              <DetailedFinancialTable gameId={selectedGame.id} />
+              <DetailedFinancialTable game={selectedGame} />
             ) : (
               <Card>
                 <CardContent className="p-8 text-center">
@@ -787,8 +829,8 @@ export default function Dashboard() {
         <WinnerForm
           open={showWinnerForm}
           onOpenChange={setShowWinnerForm}
-          week={selectedWeek}
-          game={selectedGame}
+          selectedWeek={selectedWeek}
+          selectedGame={selectedGame}
           onComplete={handleWinnerComplete}
         />
       )}
@@ -797,7 +839,7 @@ export default function Dashboard() {
         <PayoutSlipModal
           open={showPayoutSlip}
           onOpenChange={setShowPayoutSlip}
-          data={payoutSlipData}
+          winnerData={payoutSlipData}
         />
       )}
     </div>
