@@ -63,6 +63,12 @@ export function TicketSalesRow({
         return;
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No authenticated user');
+      }
+
       const amountCollected = ticketsSold * formData.ticketPrice;
       const organizationTotal = amountCollected * (gameData.organization_percentage / 100);
       const jackpotTotal = amountCollected * (gameData.jackpot_percentage / 100);
@@ -84,6 +90,7 @@ export function TicketSalesRow({
       const { error: insertError } = await supabase
         .from('ticket_sales')
         .insert({
+          user_id: user.id,
           game_id: gameId,
           week_id: weekId,
           date: formData.date.toISOString().split('T')[0],

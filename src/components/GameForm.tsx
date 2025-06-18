@@ -50,6 +50,12 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No authenticated user');
+      }
+
       // Get current configuration including card payouts and version
       const { data: config, error: configError } = await supabase
         .from('configurations')
@@ -75,6 +81,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       const { error } = await supabase
         .from('games')
         .insert({
+          user_id: user.id,
           game_number: gameNumber,
           name: formData.name,
           start_date: new Date().toISOString().split('T')[0],
