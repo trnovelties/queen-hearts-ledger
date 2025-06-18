@@ -228,7 +228,7 @@ export function WeekManager({
           onOpenChange={setShowWinnerForm}
           weekId={week.id}
           gameId={game.id}
-          onWinnerAdded={() => {
+          onComplete={() => {
             onWeekUpdated();
             setShowWinnerForm(false);
           }}
