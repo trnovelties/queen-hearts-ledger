@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,24 @@ export default function Dashboard() {
     gameId: ''
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // New state for handling updates and preventing double submissions
+  const [updatingEntries, setUpdatingEntries] = useState<Set<string>>(new Set());
+  const [submittedKeys, setSubmittedKeys] = useState<Set<string>>(new Set());
+  
+  // Refs for debouncing
+  const updateTimeoutRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Debounced fetchGames function
+  const debouncedFetchGames = useCallback(() => {
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+    fetchTimeoutRef.current = setTimeout(() => {
+      fetchGames();
+    }, 300);
+  }, []);
 
   useEffect(() => {
     const initializeUser = async () => {
@@ -63,7 +81,7 @@ export default function Dashboard() {
 
     initializeUser();
 
-    // Set up user-specific real-time subscriptions only
+    // Set up user-specific real-time subscriptions with debouncing
     let gamesSubscription: any;
     let weeksSubscription: any;
     let ticketSalesSubscription: any;
@@ -73,7 +91,7 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Only subscribe to changes for this user's data
+      // Only subscribe to changes for this user's data with debounced updates
       gamesSubscription = supabase
         .channel(`user-games-${user.id}`)
         .on('postgres_changes', {
@@ -83,7 +101,7 @@ export default function Dashboard() {
           filter: `user_id=eq.${user.id}`
         }, () => {
           console.log('User games changed, refreshing data');
-          fetchGames();
+          debouncedFetchGames();
         })
         .subscribe();
 
@@ -96,7 +114,7 @@ export default function Dashboard() {
           filter: `user_id=eq.${user.id}`
         }, () => {
           console.log('User weeks changed, refreshing data');
-          fetchGames();
+          debouncedFetchGames();
         })
         .subscribe();
 
@@ -109,7 +127,7 @@ export default function Dashboard() {
           filter: `user_id=eq.${user.id}`
         }, () => {
           console.log('User ticket sales changed, refreshing data');
-          fetchGames();
+          debouncedFetchGames();
         })
         .subscribe();
 
@@ -122,7 +140,7 @@ export default function Dashboard() {
           filter: `user_id=eq.${user.id}`
         }, () => {
           console.log('User expenses changed, refreshing data');
-          fetchGames();
+          debouncedFetchGames();
         })
         .subscribe();
     };
@@ -134,8 +152,12 @@ export default function Dashboard() {
       if (weeksSubscription) supabase.removeChannel(weeksSubscription);
       if (ticketSalesSubscription) supabase.removeChannel(ticketSalesSubscription);
       if (expensesSubscription) supabase.removeChannel(expensesSubscription);
+      
+      // Clear timeouts
+      Object.values(updateTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
+      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
     };
-  }, []);
+  }, [debouncedFetchGames]);
 
   const fetchGames = async () => {
     try {
@@ -255,205 +277,250 @@ export default function Dashboard() {
     }
   };
 
-  const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
+  // Improved updateDailyEntry with debouncing and loading states
+  const updateDailyEntry = useCallback(async (weekId: string, dayIndex: number, ticketsSold: number) => {
     if (!currentGameId || !currentUserId) return;
 
-    try {
-      const game = games.find(g => g.id === currentGameId);
-      if (!game) throw new Error("Game not found");
+    const entryKey = `${weekId}-${dayIndex}`;
+    
+    // Prevent multiple simultaneous updates for the same entry
+    if (updatingEntries.has(entryKey)) {
+      return;
+    }
 
-      const week = game.weeks.find((w: any) => w.id === weekId);
-      if (!week) throw new Error("Week not found");
+    // Clear any existing timeout for this entry
+    if (updateTimeoutRef.current[entryKey]) {
+      clearTimeout(updateTimeoutRef.current[entryKey]);
+    }
 
-      // Calculate the date for this day
-      const weekStartDate = new Date(week.start_date);
-      const entryDate = new Date(weekStartDate);
-      entryDate.setDate(entryDate.getDate() + dayIndex);
+    // Set loading state
+    setUpdatingEntries(prev => new Set([...prev, entryKey]));
 
-      // Find existing entry for this specific date
-      const existingEntry = week.ticket_sales.find((entry: any) => {
-        const existingDate = new Date(entry.date);
-        return existingDate.toDateString() === entryDate.toDateString();
-      });
+    // Debounce the actual database update
+    updateTimeoutRef.current[entryKey] = setTimeout(async () => {
+      try {
+        const game = games.find(g => g.id === currentGameId);
+        if (!game) throw new Error("Game not found");
 
-      // Calculate the basic values
-      const ticketPrice = game.ticket_price;
-      const amountCollected = ticketsSold * ticketPrice;
-      const organizationPercentage = game.organization_percentage;
-      const jackpotPercentage = game.jackpot_percentage;
-      const organizationTotal = amountCollected * (organizationPercentage / 100);
-      const jackpotTotal = amountCollected * (jackpotPercentage / 100);
+        const week = game.weeks.find((w: any) => w.id === weekId);
+        if (!week) throw new Error("Week not found");
 
-      // Get all ticket sales for this game to calculate cumulative correctly
-      const { data: allGameSales, error: salesError } = await supabase
-        .from('ticket_sales')
-        .select('*')
-        .eq('game_id', currentGameId)
-        .eq('user_id', currentUserId)
-        .order('date', { ascending: true });
+        // Calculate the date for this day
+        const weekStartDate = new Date(week.start_date);
+        const entryDate = new Date(weekStartDate);
+        entryDate.setDate(entryDate.getDate() + dayIndex);
 
-      if (salesError) throw salesError;
+        // Find existing entry for this specific date
+        const existingEntry = week.ticket_sales.find((entry: any) => {
+          const existingDate = new Date(entry.date);
+          return existingDate.toDateString() === entryDate.toDateString();
+        });
 
-      // Calculate cumulative collected up to this date (excluding current entry if updating)
-      let cumulativeCollected = game.carryover_jackpot || 0;
-      if (allGameSales) {
-        for (const sale of allGameSales) {
-          const saleDate = new Date(sale.date);
-          const currentEntryDate = new Date(entryDate);
+        // Calculate the basic values
+        const ticketPrice = game.ticket_price;
+        const amountCollected = ticketsSold * ticketPrice;
+        const organizationPercentage = game.organization_percentage;
+        const jackpotPercentage = game.jackpot_percentage;
+        const organizationTotal = amountCollected * (organizationPercentage / 100);
+        const jackpotTotal = amountCollected * (jackpotPercentage / 100);
 
-          // Include all sales before this date, and this date if it's not the current entry being updated
-          if (saleDate < currentEntryDate || 
-              (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id)) {
-            cumulativeCollected += sale.amount_collected;
+        // Get all ticket sales for this game to calculate cumulative correctly
+        const { data: allGameSales, error: salesError } = await supabase
+          .from('ticket_sales')
+          .select('*')
+          .eq('game_id', currentGameId)
+          .eq('user_id', currentUserId)
+          .order('date', { ascending: true });
+
+        if (salesError) throw salesError;
+
+        // Calculate cumulative collected up to this date (excluding current entry if updating)
+        let cumulativeCollected = game.carryover_jackpot || 0;
+        if (allGameSales) {
+          for (const sale of allGameSales) {
+            const saleDate = new Date(sale.date);
+            const currentEntryDate = new Date(entryDate);
+
+            // Include all sales before this date, and this date if it's not the current entry being updated
+            if (saleDate < currentEntryDate || 
+                (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id)) {
+              cumulativeCollected += sale.amount_collected;
+            }
           }
         }
-      }
-      cumulativeCollected += amountCollected;
+        cumulativeCollected += amountCollected;
 
-      // Calculate ending jackpot total
-      let previousJackpotTotal = game.carryover_jackpot || 0;
-      if (allGameSales && allGameSales.length > 0) {
-        const previousEntries = allGameSales.filter(sale => {
-          const saleDate = new Date(sale.date);
-          const currentEntryDate = new Date(entryDate);
-          return saleDate < currentEntryDate || 
-                 (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id);
-        });
-        if (previousEntries.length > 0) {
-          const lastEntry = previousEntries[previousEntries.length - 1];
-          previousJackpotTotal = lastEntry.ending_jackpot_total;
+        // Calculate ending jackpot total
+        let previousJackpotTotal = game.carryover_jackpot || 0;
+        if (allGameSales && allGameSales.length > 0) {
+          const previousEntries = allGameSales.filter(sale => {
+            const saleDate = new Date(sale.date);
+            const currentEntryDate = new Date(entryDate);
+            return saleDate < currentEntryDate || 
+                   (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id);
+          });
+          if (previousEntries.length > 0) {
+            const lastEntry = previousEntries[previousEntries.length - 1];
+            previousJackpotTotal = lastEntry.ending_jackpot_total;
+          }
         }
-      }
-      const endingJackpotTotal = previousJackpotTotal + jackpotTotal;
+        const endingJackpotTotal = previousJackpotTotal + jackpotTotal;
 
-      if (existingEntry) {
-        // Update existing entry
-        const { error } = await supabase
+        if (existingEntry) {
+          // Update existing entry
+          const { error } = await supabase
+            .from('ticket_sales')
+            .update({
+              date: format(entryDate, 'yyyy-MM-dd'),
+              tickets_sold: ticketsSold,
+              ticket_price: ticketPrice,
+              amount_collected: amountCollected,
+              cumulative_collected: cumulativeCollected,
+              organization_total: organizationTotal,
+              jackpot_total: jackpotTotal,
+              ending_jackpot_total: endingJackpotTotal
+            })
+            .eq('id', existingEntry.id)
+            .eq('user_id', currentUserId);
+
+          if (error) throw error;
+        } else {
+          // Insert new entry
+          const { error } = await supabase
+            .from('ticket_sales')
+            .insert([{
+              game_id: currentGameId,
+              week_id: weekId,
+              date: format(entryDate, 'yyyy-MM-dd'),
+              tickets_sold: ticketsSold,
+              ticket_price: ticketPrice,
+              amount_collected: amountCollected,
+              cumulative_collected: cumulativeCollected,
+              organization_total: organizationTotal,
+              jackpot_total: jackpotTotal,
+              ending_jackpot_total: endingJackpotTotal,
+              user_id: currentUserId
+            }]);
+
+          if (error) throw error;
+        }
+
+        // Recalculate and update week totals
+        const { data: weekSales } = await supabase
           .from('ticket_sales')
-          .update({
-            date: format(entryDate, 'yyyy-MM-dd'),
-            tickets_sold: ticketsSold,
-            ticket_price: ticketPrice,
-            amount_collected: amountCollected,
-            cumulative_collected: cumulativeCollected,
-            organization_total: organizationTotal,
-            jackpot_total: jackpotTotal,
-            ending_jackpot_total: endingJackpotTotal
-          })
-          .eq('id', existingEntry.id)
+          .select('*')
+          .eq('week_id', weekId)
           .eq('user_id', currentUserId);
 
-        if (error) throw error;
-      } else {
-        // Insert new entry
-        const { error } = await supabase
+        if (weekSales) {
+          const weekTotalTickets = weekSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
+          const weekTotalSales = weekSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+
+          await supabase
+            .from('weeks')
+            .update({
+              weekly_sales: weekTotalSales,
+              weekly_tickets_sold: weekTotalTickets
+            })
+            .eq('id', weekId)
+            .eq('user_id', currentUserId);
+        }
+
+        // Recalculate and update game totals
+        const { data: gameSales } = await supabase
           .from('ticket_sales')
-          .insert([{
-            game_id: currentGameId,
-            week_id: weekId,
-            date: format(entryDate, 'yyyy-MM-dd'),
-            tickets_sold: ticketsSold,
-            ticket_price: ticketPrice,
-            amount_collected: amountCollected,
-            cumulative_collected: cumulativeCollected,
-            organization_total: organizationTotal,
-            jackpot_total: jackpotTotal,
-            ending_jackpot_total: endingJackpotTotal,
-            user_id: currentUserId
-          }]);
-
-        if (error) throw error;
-      }
-
-      // Recalculate and update week totals
-      const { data: weekSales } = await supabase
-        .from('ticket_sales')
-        .select('*')
-        .eq('week_id', weekId)
-        .eq('user_id', currentUserId);
-
-      if (weekSales) {
-        const weekTotalTickets = weekSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
-        const weekTotalSales = weekSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-
-        await supabase
-          .from('weeks')
-          .update({
-            weekly_sales: weekTotalSales,
-            weekly_tickets_sold: weekTotalTickets
-          })
-          .eq('id', weekId)
-          .eq('user_id', currentUserId);
-      }
-
-      // Recalculate and update game totals
-      const { data: gameSales } = await supabase
-        .from('ticket_sales')
-        .select('*')
-        .eq('game_id', currentGameId)
-        .eq('user_id', currentUserId);
-
-      if (gameSales) {
-        const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-        const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
-
-        // Get total expenses and donations
-        const { data: expenses } = await supabase
-          .from('expenses')
           .select('*')
           .eq('game_id', currentGameId)
           .eq('user_id', currentUserId);
 
-        const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-        const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-        const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
+        if (gameSales) {
+          const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+          const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
 
-        await supabase
-          .from('games')
-          .update({
-            total_sales: gameTotalSales,
-            total_expenses: totalExpenses,
-            total_donations: totalDonations,
-            organization_net_profit: organizationNetProfit
-          })
-          .eq('id', currentGameId)
-          .eq('user_id', currentUserId);
+          // Get total expenses and donations
+          const { data: expenses } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('game_id', currentGameId)
+            .eq('user_id', currentUserId);
+
+          const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
+          const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
+          const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
+
+          await supabase
+            .from('games')
+            .update({
+              total_sales: gameTotalSales,
+              total_expenses: totalExpenses,
+              total_donations: totalDonations,
+              organization_net_profit: organizationNetProfit
+            })
+            .eq('id', currentGameId)
+            .eq('user_id', currentUserId);
+        }
+
+      } catch (error: any) {
+        console.error('Error updating daily entry:', error);
+        toast({
+          title: "Error",
+          description: `Failed to update daily entry: ${error.message}`,
+          variant: "destructive"
+        });
+      } finally {
+        // Clear loading state
+        setUpdatingEntries(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(entryKey);
+          return newSet;
+        });
+        
+        // Clear the timeout reference
+        delete updateTimeoutRef.current[entryKey];
       }
+    }, 500); // 500ms debounce
+  }, [currentGameId, currentUserId, games, toast]);
 
-    } catch (error: any) {
-      console.error('Error updating daily entry:', error);
-      toast({
-        title: "Error",
-        description: `Failed to update daily entry: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Handle input change for ticket sold (store temporarily)
-  const handleTicketInputChange = (weekId: string, dayIndex: number, value: string) => {
+  // Improved input change handler with better state management
+  const handleTicketInputChange = useCallback((weekId: string, dayIndex: number, value: string) => {
     const key = `${weekId}-${dayIndex}`;
     setTempTicketInputs(prev => ({
       ...prev,
       [key]: value
     }));
-  };
+    
+    // Clear submitted flag when user starts typing again
+    setSubmittedKeys(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(key);
+      return newSet;
+    });
+  }, []);
 
-  // Handle Enter key press to submit the ticket input
-  const handleTicketInputSubmit = (weekId: string, dayIndex: number, value: string) => {
+  // Improved submit handler with double-submission prevention
+  const handleTicketInputSubmit = useCallback((weekId: string, dayIndex: number, value: string) => {
+    const key = `${weekId}-${dayIndex}`;
+    
+    // Prevent double submission
+    if (submittedKeys.has(key) || updatingEntries.has(key)) {
+      return;
+    }
+    
     const ticketsSold = parseInt(value) || 0;
 
+    // Mark as submitted
+    setSubmittedKeys(prev => new Set([...prev, key]));
+    
     // Clear the temporary input immediately
-    const key = `${weekId}-${dayIndex}`;
     setTempTicketInputs(prev => {
       const newInputs = { ...prev };
       delete newInputs[key];
       return newInputs;
     });
 
-    // Update the database without optimistic updates
+    // Update the database
     updateDailyEntry(weekId, dayIndex, ticketsSold);
-  };
+  }, [submittedKeys, updatingEntries, updateDailyEntry]);
 
   const toggleGame = (gameId: string) => {
     setExpandedGame(expandedGame === gameId ? null : gameId);
@@ -1108,7 +1175,7 @@ export default function Dashboard() {
                                       )}
                                     </div>
 
-                                    {/* 7 Daily Entries */}
+                                    {/* 7 Daily Entries - Updated with improved input handling */}
                                     <div className="pt-6">
                                       <h5 className="text-lg font-semibold mb-4 text-[#1F4E4A]">
                                         Daily Entries (7 Days)
@@ -1128,6 +1195,7 @@ export default function Dashboard() {
                                           const inputKey = `${week.id}-${dayIndex}`;
                                           const tempValue = tempTicketInputs[inputKey];
                                           const currentValue = tempValue !== undefined ? tempValue : existingEntry?.tickets_sold || '';
+                                          const isUpdating = updatingEntries.has(inputKey);
 
                                           return (
                                             <div
@@ -1156,16 +1224,20 @@ export default function Dashboard() {
                                                       handleTicketInputChange(week.id, dayIndex, e.target.value)
                                                     }
                                                     onKeyDown={e => {
-                                                      if (e.key === 'Enter') {
+                                                      if (e.key === 'Enter' && !isUpdating) {
+                                                        e.preventDefault();
                                                         handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
                                                       }
                                                     }}
-                                                    onBlur={e => {
-                                                      handleTicketInputSubmit(week.id, dayIndex, e.target.value);
-                                                    }}
-                                                    className="w-28 h-9 text-center font-medium"
+                                                    disabled={isUpdating}
+                                                    className={`w-28 h-9 text-center font-medium ${
+                                                      isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                                    }`}
                                                     placeholder="0"
                                                   />
+                                                  {isUpdating && (
+                                                    <div className="text-xs text-blue-600 text-center">Saving...</div>
+                                                  )}
                                                 </div>
 
                                                 <div className="flex flex-col gap-1">
