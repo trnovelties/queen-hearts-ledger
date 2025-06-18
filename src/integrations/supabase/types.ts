@@ -365,6 +365,17 @@ export type Database = {
         }
         Returns: number
       }
+      get_organization_data: {
+        Args: { target_user_id: string }
+        Returns: {
+          user_id: string
+          email: string
+          organization_name: string
+          logo_url: string
+          about: string
+          role: string
+        }[]
+      }
       get_user_profile: {
         Args: { user_id: string }
         Returns: {
@@ -376,6 +387,10 @@ export type Database = {
           organization_name: string | null
           role: string
         }[]
+      }
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       update_user_profile: {
         Args: {

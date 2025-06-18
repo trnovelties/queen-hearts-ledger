@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useAdmin } from "@/context/AdminContext";
+import { AdminViewingIndicator } from "@/components/AdminViewingIndicator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Mail, Calendar, Shield, Users } from "lucide-react";
+import { Search, Mail, Calendar, Shield, Users, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
 
 type Organization = {
   id: string;
@@ -23,6 +27,8 @@ type Organization = {
 export default function AdminView() {
   const { toast } = useToast();
   const { isAdmin } = useAuth();
+  const { switchToOrganization } = useAdmin();
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,7 +84,6 @@ export default function AdminView() {
         description: "User role has been updated successfully.",
       });
 
-      // Refresh the list
       fetchAllOrganizations();
     } catch (error: any) {
       console.error('Error updating role:', error);
@@ -88,6 +93,18 @@ export default function AdminView() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleOrganizationClick = (org: Organization) => {
+    switchToOrganization({
+      id: org.id,
+      email: org.email,
+      organization_name: org.organization_name,
+      logo_url: org.logo_url,
+      about: org.about,
+      role: org.role
+    });
+    navigate('/dashboard');
   };
 
   const filteredOrganizations = organizations.filter((org) => {
@@ -111,6 +128,8 @@ export default function AdminView() {
 
   return (
     <div className="space-y-6">
+      <AdminViewingIndicator />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Admin View</h1>
@@ -157,11 +176,15 @@ export default function AdminView() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredOrganizations.map((org) => (
-            <Card key={org.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={org.id} 
+              className="hover:shadow-lg transition-all cursor-pointer group hover:border-primary/50"
+              onClick={() => handleOrganizationClick(org)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center space-x-3">
                   {org.logo_url ? (
-                    <Avatar className="h-12 w-12 border-2 border-primary">
+                    <Avatar className="h-12 w-12 border-2 border-primary group-hover:border-primary/80">
                       <AvatarImage 
                         src={org.logo_url} 
                         alt={org.organization_name || "Organization logo"} 
@@ -172,14 +195,14 @@ export default function AdminView() {
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <Avatar className="h-12 w-12 border-2 border-primary">
+                    <Avatar className="h-12 w-12 border-2 border-primary group-hover:border-primary/80">
                       <AvatarFallback className="bg-primary/10 text-primary text-lg">
                         {org.organization_name?.charAt(0) || org.email.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   )}
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">
+                    <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">
                       {org.organization_name || "Unnamed Organization"}
                     </CardTitle>
                     <div className="flex items-center space-x-2 mt-1">
@@ -193,6 +216,7 @@ export default function AdminView() {
                           'Organizer'
                         )}
                       </Badge>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   </div>
                 </div>
@@ -218,9 +242,13 @@ export default function AdminView() {
                 <div className="pt-2">
                   <Select 
                     value={org.role} 
-                    onValueChange={(newRole) => updateUserRole(org.id, newRole)}
+                    onValueChange={(newRole) => {
+                      // Prevent event propagation to avoid card click
+                      updateUserRole(org.id, newRole);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-8 text-xs" onClick={(e) => e.stopPropagation()}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

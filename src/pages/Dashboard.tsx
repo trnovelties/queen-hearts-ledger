@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
+import { useAdmin } from '@/context/AdminContext';
+import { AdminViewingIndicator } from '@/components/AdminViewingIndicator';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
 
 export default function Dashboard() {
+  const { getCurrentUserId } = useAdmin();
+  
   const [games, setGames] = useState<any[]>([]);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
   const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
@@ -50,7 +54,6 @@ export default function Dashboard() {
     memo: '',
     gameId: ''
   });
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // New state for handling updates and preventing double submissions
   const [updatingEntries, setUpdatingEntries] = useState<Set<string>>(new Set());
@@ -71,104 +74,80 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const initializeUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        await fetchGames();
-      }
-    };
+    fetchGames();
 
-    initializeUser();
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) return;
 
-    // Set up user-specific real-time subscriptions with debouncing
-    let gamesSubscription: any;
-    let weeksSubscription: any;
-    let ticketSalesSubscription: any;
-    let expensesSubscription: any;
+    // Set up real-time subscription for games table
+    const gamesSubscription = supabase.channel('public:games').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'games',
+      filter: `user_id=eq.${currentUserId}`
+    }, () => {
+      console.log('Games changed, refreshing data');
+      fetchGames();
+    }).subscribe();
 
-    const setupSubscriptions = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    // Set up real-time subscription for weeks table
+    const weeksSubscription = supabase.channel('public:weeks').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'weeks',
+      filter: `user_id=eq.${currentUserId}`
+    }, () => {
+      console.log('Weeks changed, refreshing data');
+      fetchGames();
+    }).subscribe();
 
-      // Only subscribe to changes for this user's data with debounced updates
-      gamesSubscription = supabase
-        .channel(`user-games-${user.id}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'games',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          console.log('User games changed, refreshing data');
-          debouncedFetchGames();
-        })
-        .subscribe();
+    // Set up real-time subscription for ticket_sales table
+    const ticketSalesSubscription = supabase.channel('public:ticket_sales').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'ticket_sales',
+      filter: `user_id=eq.${currentUserId}`
+    }, () => {
+      console.log('Ticket sales changed, refreshing data');
+      fetchGames();
+    }).subscribe();
 
-      weeksSubscription = supabase
-        .channel(`user-weeks-${user.id}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'weeks',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          console.log('User weeks changed, refreshing data');
-          debouncedFetchGames();
-        })
-        .subscribe();
-
-      ticketSalesSubscription = supabase
-        .channel(`user-ticket-sales-${user.id}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'ticket_sales',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          console.log('User ticket sales changed, refreshing data');
-          debouncedFetchGames();
-        })
-        .subscribe();
-
-      expensesSubscription = supabase
-        .channel(`user-expenses-${user.id}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'expenses',
-          filter: `user_id=eq.${user.id}`
-        }, () => {
-          console.log('User expenses changed, refreshing data');
-          debouncedFetchGames();
-        })
-        .subscribe();
-    };
-
-    setupSubscriptions();
+    // Set up real-time subscription for expenses table
+    const expensesSubscription = supabase.channel('public:expenses').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'expenses',
+      filter: `user_id=eq.${currentUserId}`
+    }, () => {
+      console.log('Expenses changed, refreshing data');
+      fetchGames();
+    }).subscribe();
 
     return () => {
-      if (gamesSubscription) supabase.removeChannel(gamesSubscription);
-      if (weeksSubscription) supabase.removeChannel(weeksSubscription);
-      if (ticketSalesSubscription) supabase.removeChannel(ticketSalesSubscription);
-      if (expensesSubscription) supabase.removeChannel(expensesSubscription);
+      supabase.removeChannel(gamesSubscription);
+      supabase.removeChannel(weeksSubscription);
+      supabase.removeChannel(ticketSalesSubscription);
+      supabase.removeChannel(expensesSubscription);
       
       // Clear timeouts
       Object.values(updateTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
     };
-  }, [debouncedFetchGames]);
+  }, [getCurrentUserId, debouncedFetchGames]);
 
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const currentUserId = getCurrentUserId();
+      if (!currentUserId) {
+        setLoading(false);
+        return;
+      }
 
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUserId)
         .order('game_number', { ascending: true });
 
       if (gamesError) throw gamesError;
@@ -179,7 +158,7 @@ export default function Dashboard() {
           .from('weeks')
           .select('*')
           .eq('game_id', game.id)
-          .eq('user_id', user.id)
+          .eq('user_id', currentUserId)
           .order('week_number', { ascending: true });
 
         if (weeksError) throw weeksError;
@@ -189,7 +168,7 @@ export default function Dashboard() {
           .from('expenses')
           .select('*')
           .eq('game_id', game.id)
-          .eq('user_id', user.id)
+          .eq('user_id', currentUserId)
           .order('date', { ascending: false });
 
         if (expensesError) throw expensesError;
@@ -200,7 +179,7 @@ export default function Dashboard() {
             .from('ticket_sales')
             .select('*')
             .eq('week_id', week.id)
-            .eq('user_id', user.id)
+            .eq('user_id', currentUserId)
             .order('date', { ascending: true });
 
           if (salesError) throw salesError;
@@ -835,6 +814,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <AdminViewingIndicator />
+      
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
         <Button onClick={() => setGameFormOpen(true)} className="bg-primary hover:bg-primary/90">
