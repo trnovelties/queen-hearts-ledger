@@ -216,6 +216,7 @@ export default function Dashboard() {
   const displayGames = activeTab === 'current' ? currentGames : archivedGames;
 
   const createWeek = async () => {
+    const currentUserId = getCurrentUserId();
     if (!currentGameId || !currentUserId) return;
 
     try {
@@ -258,6 +259,7 @@ export default function Dashboard() {
 
   // Improved updateDailyEntry with debouncing and loading states
   const updateDailyEntry = useCallback(async (weekId: string, dayIndex: number, ticketsSold: number) => {
+    const currentUserId = getCurrentUserId();
     if (!currentGameId || !currentUserId) return;
 
     const entryKey = `${weekId}-${dayIndex}`;
@@ -458,7 +460,7 @@ export default function Dashboard() {
         delete updateTimeoutRef.current[entryKey];
       }
     }, 500); // 500ms debounce
-  }, [currentGameId, currentUserId, games, toast]);
+  }, [currentGameId, getCurrentUserId, games, toast]);
 
   // Improved input change handler with better state management
   const handleTicketInputChange = useCallback((weekId: string, dayIndex: number, value: string) => {
@@ -538,6 +540,7 @@ export default function Dashboard() {
   };
 
   const confirmDelete = async () => {
+    const currentUserId = getCurrentUserId();
     if (!deleteItemId || !currentUserId) {
       toast({
         title: "Error",
@@ -725,6 +728,7 @@ export default function Dashboard() {
   };
 
   const handleDailyDonation = async (date: string, amount: number) => {
+    const currentUserId = getCurrentUserId();
     if (!currentGameId || !currentUserId || amount <= 0) return;
 
     try {
@@ -756,6 +760,7 @@ export default function Dashboard() {
   };
 
   const handleDailyExpense = async () => {
+    const currentUserId = getCurrentUserId();
     if (!dailyExpenseForm.gameId || !currentUserId || dailyExpenseForm.amount <= 0) return;
 
     try {
