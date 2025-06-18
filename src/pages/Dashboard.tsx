@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -336,10 +337,10 @@ export default function Dashboard() {
               </div>
               <div className="text-right space-y-1">
                 <div className="text-sm font-semibold text-[#132E2C]">
-                  Total Sales: <span className="text-[#A1E96C]">${game.total_sales?.toFixed(2) || '0.00'}</span>
+                  Total Sales: <span className="text-[#A1E96C]">${(game.total_sales || 0).toFixed(2)}</span>
                 </div>
                 <div className="text-sm font-semibold text-[#132E2C]">
-                  Net Profit: <span className="text-[#1F4E4A]">${game.organization_net_profit?.toFixed(2) || '0.00'}</span>
+                  Net Profit: <span className="text-[#1F4E4A]">${(game.organization_net_profit || 0).toFixed(2)}</span>
                 </div>
               </div>
             </CardHeader>
@@ -412,7 +413,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="font-semibold text-[#132E2C]">Ticket Sales</div>
-                  <div className="text-[#A1E96C]">${week.weekly_sales?.toFixed(2) || '0.00'}</div>
+                  <div className="text-[#A1E96C]">${(week.weekly_sales || 0).toFixed(2)}</div>
                 </div>
                 <div>
                   <div className="font-semibold text-[#132E2C]">Winner</div>
@@ -437,7 +438,13 @@ export default function Dashboard() {
                   </Button>
                   {sortedTicketSales.length >= 7 && !week.winner_name && (
                     <Button
-                      onClick={() => setShowWinnerForm({ week, game })}
+                      onClick={() => setShowWinnerForm({ 
+                        gameId: game.id, 
+                        weekId: week.id, 
+                        gameData: game, 
+                        currentJackpotTotal: 0, 
+                        jackpotContributions: 0 
+                      })}
                       size="sm"
                       className="bg-[#A1E96C] hover:bg-[#A1E96C]/80 text-[#132E2C]"
                     >
@@ -446,7 +453,21 @@ export default function Dashboard() {
                   )}
                   {week.winner_name && (
                     <Button
-                      onClick={() => setShowPayoutSlip({ week, game })}
+                      onClick={() => setShowPayoutSlip({ 
+                        winnerData: {
+                          winnerName: week.winner_name,
+                          slotChosen: week.slot_chosen,
+                          cardSelected: week.card_selected,
+                          payoutAmount: week.weekly_payout,
+                          date: week.end_date,
+                          gameNumber: game.game_number,
+                          gameName: game.name,
+                          weekNumber: week.week_number,
+                          weekId: week.id,
+                          weekStartDate: week.start_date,
+                          weekEndDate: week.end_date
+                        }
+                      })}
                       size="sm"
                       variant="outline"
                       className="border-[#1F4E4A] text-[#1F4E4A] hover:bg-[#1F4E4A] hover:text-white"
@@ -476,11 +497,11 @@ export default function Dashboard() {
                         <tr key={sale.id} className={index % 2 === 0 ? 'bg-white/50' : ''}>
                           <td className="py-2 text-[#132E2C]">{new Date(sale.date).toLocaleDateString()}</td>
                           <td className="text-right py-2 text-[#132E2C]">{sale.tickets_sold}</td>
-                          <td className="text-right py-2 text-[#132E2C]">${sale.ticket_price?.toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#A1E96C] font-semibold">${sale.amount_collected?.toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#1F4E4A]">${sale.organization_total?.toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#1F4E4A]">${sale.jackpot_total?.toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#132E2C] font-semibold">${sale.ending_jackpot_total?.toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#132E2C]">${(sale.ticket_price || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#A1E96C] font-semibold">${(sale.amount_collected || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#1F4E4A]">${(sale.organization_total || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#1F4E4A]">${(sale.jackpot_total || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#132E2C] font-semibold">${(sale.ending_jackpot_total || 0).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -615,12 +636,16 @@ export default function Dashboard() {
           <WinnerForm
             open={true}
             onOpenChange={() => setShowWinnerForm(null)}
-            week={showWinnerForm.week}
-            game={showWinnerForm.game}
+            gameId={showWinnerForm.gameId}
+            weekId={showWinnerForm.weekId}
+            gameData={showWinnerForm.gameData}
+            currentJackpotTotal={showWinnerForm.currentJackpotTotal}
+            jackpotContributions={showWinnerForm.jackpotContributions}
             onComplete={() => {
               setShowWinnerForm(null);
               fetchGames();
             }}
+            onOpenPayoutSlip={() => {}}
           />
         )}
 
@@ -637,8 +662,7 @@ export default function Dashboard() {
           <PayoutSlipModal
             open={true}
             onOpenChange={() => setShowPayoutSlip(null)}
-            week={showPayoutSlip.week}
-            game={showPayoutSlip.game}
+            winnerData={showPayoutSlip.winnerData}
           />
         )}
       </div>
