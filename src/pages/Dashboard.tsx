@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/AuthContext';
 import { useAdmin } from '@/context/AdminContext';
-import { AdminViewingIndicator } from '@/components/AdminViewingIndicator';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,63 +21,359 @@ import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
 
 export default function Dashboard() {
-  const { getCurrentUserId } = useAdmin();
+  const { user } = useAuth();
+  const { getCurrentUserId, viewingOrganization } = useAdmin();
   
-  const [games, setGames] = useState<any[]>([]);
-  const [expandedGame, setExpandedGame] = useState<string | null>(null);
-  const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
-  const [expandedExpenses, setExpandedExpenses] = useState<string | null>(null);
-  const [gameFormOpen, setGameFormOpen] = useState(false);
-  const [weekFormOpen, setWeekFormOpen] = useState(false);
-  const [winnerFormOpen, setWinnerFormOpen] = useState(false);
-  const [currentGameId, setCurrentGameId] = useState<string | null>(null);
-  const [currentWeekId, setCurrentWeekId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [weekForm, setWeekForm] = useState({
-    weekNumber: 1,
-    startDate: new Date()
-  });
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
-  const [deleteType, setDeleteType] = useState<"game" | "week" | "entry" | "expense">('game');
-  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
-  const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
-  const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
-  const { toast } = useToast();
-  const [currentGameName, setCurrentGameName] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
-  const [tempTicketInputs, setTempTicketInputs] = useState<{ [key: string]: string }>({});
-  const [dailyExpenseModalOpen, setDailyExpenseModalOpen] = useState(false);
-  const [dailyExpenseForm, setDailyExpenseForm] = useState({
-    date: '',
-    amount: 0,
-    memo: '',
-    gameId: ''
-  });
-  
-  // New state for handling updates and preventing double submissions
-  const [updatingEntries, setUpdatingEntries] = useState<Set<string>>(new Set());
-  const [submittedKeys, setSubmittedKeys] = useState<Set<string>>(new Set());
-  
-  // Refs for debouncing
-  const updateTimeoutRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
-  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
+  // Get the current user ID (either the logged-in user or the organization being viewed by admin)
+  const currentUserId = getCurrentUserId();
 
-  // Debounced fetchGames function
-  const debouncedFetchGames = useCallback(() => {
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
+  const { toast } = useToast();
+  const [games, setGames] = useState([]);
+  const [weeks, setWeeks] = useState([]);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isPayoutSlipModalOpen, setIsPayoutSlipModalOpen] = useState(false);
+  const [gameFormOpen, setGameFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [newWeekStartDate, setNewWeekStartDate] = useState<Date | null>(null);
+  const [isAddingWeek, setIsAddingWeek] = useState(false);
+  const [isEditingRules, setIsEditingRules] = useState(false);
+  const [newRules, setNewRules] = useState('');
+  const [organizationRules, setOrganizationRules] = useState('');
+
+  useEffect(() => {
+    fetchOrganizationRules();
+  }, [currentUserId]);
+
+  const fetchOrganizationRules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('organization_rules')
+        .select('rules')
+        .eq('user_id', currentUserId)
+        .single();
+
+      if (error) {
+        // If no rules exist, that's fine, just log the error
+        console.error('Error fetching organization rules:', error);
+        return;
+      }
+
+      setOrganizationRules(data?.rules || '');
+      setNewRules(data?.rules || '');
+    } catch (error: any) {
+      console.error('Error fetching organization rules:', error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch organization rules: ${error.message}`,
+        variant: "destructive"
+      });
     }
-    fetchTimeoutRef.current = setTimeout(() => {
+  };
+
+  const handleEditRules = () => {
+    setIsEditingRules(true);
+  };
+
+  const handleSaveRules = async () => {
+    try {
+      // Check if rules already exist for the organization
+      const { data, error: selectError } = await supabase
+        .from('organization_rules')
+        .select('*')
+        .eq('user_id', currentUserId);
+
+      if (selectError) throw selectError;
+
+      if (data && data.length > 0) {
+        // Update existing rules
+        const { error: updateError } = await supabase
+          .from('organization_rules')
+          .update({ rules: newRules })
+          .eq('user_id', currentUserId);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: "Rules Updated",
+          description: "Organization rules have been updated successfully."
+        });
+      } else {
+        // Insert new rules
+        const { error: insertError } = await supabase
+          .from('organization_rules')
+          .insert([{ user_id: currentUserId, rules: newRules }]);
+
+        if (insertError) throw insertError;
+
+        toast({
+          title: "Rules Created",
+          description: "Organization rules have been created successfully."
+        });
+      }
+
+      setOrganizationRules(newRules);
+      setIsEditingRules(false);
+    } catch (error: any) {
+      console.error('Error saving organization rules:', error);
+      toast({
+        title: "Error",
+        description: `Failed to save organization rules: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCancelEditRules = () => {
+    setNewRules(organizationRules);
+    setIsEditingRules(false);
+  };
+
+  const handleOpenWinnerModal = (game: any) => {
+    setSelectedGame(game);
+    setIsWinnerModalOpen(true);
+  };
+
+  const handleCloseWinnerModal = () => {
+    setIsWinnerModalOpen(false);
+    setSelectedGame(null);
+  };
+
+  const handleOpenExpenseModal = (game: any) => {
+    setSelectedGame(game);
+    setIsExpenseModalOpen(true);
+  };
+
+  const handleCloseExpenseModal = () => {
+    setIsExpenseModalOpen(false);
+    setSelectedGame(null);
+  };
+
+  const handleOpenPayoutSlipModal = (game: any) => {
+    setSelectedGame(game);
+    setIsPayoutSlipModalOpen(true);
+  };
+
+  const handleClosePayoutSlipModal = () => {
+    setIsPayoutSlipModalOpen(false);
+    setSelectedGame(null);
+  };
+
+  const handleDeleteConfirmation = (game: any) => {
+    setGameToDelete(game);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setGameToDelete(null);
+  };
+
+  const handleDeleteGame = async () => {
+    if (!gameToDelete) return;
+
+    try {
+      // Delete associated ticket sales
+      const { error: ticketSalesError } = await supabase
+        .from('ticket_sales')
+        .delete()
+        .eq('game_id', gameToDelete.id);
+
+      if (ticketSalesError) throw ticketSalesError;
+
+      // Delete associated expenses
+      const { error: expensesError } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('game_id', gameToDelete.id);
+
+      if (expensesError) throw expensesError;
+
+      // Finally, delete the game
+      const { error: gameError } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameToDelete.id);
+
+      if (gameError) throw gameError;
+
+      toast({
+        title: "Game Deleted",
+        description: "The game has been successfully deleted."
+      });
+      setDeleteDialogOpen(false);
+      setGameToDelete(null);
       fetchGames();
-    }, 300);
-  }, []);
+    } catch (error: any) {
+      console.error('Error deleting game:', error);
+      toast({
+        title: "Error",
+        description: `Failed to delete game: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDownloadGameData = async (game: any) => {
+    try {
+      setLoading(true);
+
+      // Fetch ticket sales data for the game
+      const { data: ticketSalesData, error: ticketSalesError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('game_id', game.id);
+
+      if (ticketSalesError) throw ticketSalesError;
+
+      // Fetch expenses data for the game
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('game_id', game.id);
+
+      if (expensesError) throw expensesError;
+
+      // Create a new jsPDF instance
+      const pdf = new jsPDF();
+
+      // Set document properties
+      pdf.setProperties({
+        title: `Game Data - Game #${game.game_number}`,
+        subject: 'Game Data Export',
+        author: 'Queen of Hearts App'
+      });
+
+      // Add title to the PDF
+      pdf.setFontSize(20);
+      pdf.text(`Game Data - Game #${game.game_number}`, 10, 10);
+
+      // Add game details
+      pdf.setFontSize(12);
+      pdf.text(`Game Number: ${game.game_number}`, 10, 20);
+      pdf.text(`Week: ${game.week_id}`, 10, 26);
+      pdf.text(`Total Tickets Sold: ${game.total_tickets_sold}`, 10, 32);
+      pdf.text(`Total Sales: $${game.total_sales}`, 10, 38);
+      pdf.text(`Total Expenses: $${game.total_expenses}`, 10, 44);
+      pdf.text(`Net Profit: $${game.net_profit}`, 10, 50);
+      pdf.text(`Organization Net Profit: $${game.organization_net_profit}`, 10, 56);
+
+      // Add ticket sales data
+      pdf.addPage();
+      pdf.setFontSize(16);
+      pdf.text('Ticket Sales Data', 10, 10);
+
+      if (ticketSalesData && ticketSalesData.length > 0) {
+        // Define table headers
+        const headers = ['Ticket Number', 'Amount Paid', 'Created At'];
+
+        // Map ticket sales data to table rows
+        const rows = ticketSalesData.map(sale => [
+          sale.ticket_number.toString(),
+          `$${sale.amount_paid.toFixed(2)}`,
+          format(new Date(sale.created_at), 'MMM d, yyyy h:mm a'),
+        ]);
+
+        // Add table to the PDF
+        (pdf as any).autoTable({
+          head: [headers],
+          body: rows,
+          startY: 20,
+        });
+      } else {
+        pdf.setFontSize(12);
+        pdf.text('No ticket sales data available for this game.', 10, 20);
+      }
+
+      // Add expenses data
+      pdf.addPage();
+      pdf.setFontSize(16);
+      pdf.text('Expenses Data', 10, 10);
+
+      if (expensesData && expensesData.length > 0) {
+        // Define table headers
+        const headers = ['Description', 'Amount', 'Created At'];
+
+        // Map expenses data to table rows
+        const rows = expensesData.map(expense => [
+          expense.description,
+          `$${expense.amount.toFixed(2)}`,
+          format(new Date(expense.created_at), 'MMM d, yyyy h:mm a'),
+        ]);
+
+        // Add table to the PDF
+        (pdf as any).autoTable({
+          head: [headers],
+          body: rows,
+          startY: 20,
+        });
+      } else {
+        pdf.setFontSize(12);
+        pdf.text('No expenses data available for this game.', 10, 20);
+      }
+
+      // Save the PDF
+      pdf.save(`GameData_Game${game.game_number}.pdf`);
+    } catch (error: any) {
+      console.error('Error downloading game data:', error);
+      toast({
+        title: "Error",
+        description: `Failed to download game data: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWeekSelect = (week: any) => {
+    setSelectedWeek(week);
+  };
+
+  const handleAddWeek = async () => {
+    if (!newWeekStartDate) {
+      toast({
+        title: "Error",
+        description: "Please select a start date for the new week.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAddingWeek(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('weeks')
+        .insert([{ user_id: currentUserId, start_date: newWeekStartDate }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Week Added",
+        description: "New week has been added successfully."
+      });
+
+      setNewWeekStartDate(null);
+      fetchGames();
+    } catch (error: any) {
+      console.error('Error adding week:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add week: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingWeek(false);
+    }
+  };
 
   useEffect(() => {
     fetchGames();
-
-    const currentUserId = getCurrentUserId();
-    if (!currentUserId) return;
 
     // Set up real-time subscription for games table
     const gamesSubscription = supabase.channel('public:games').on('postgres_changes', {
@@ -122,28 +418,17 @@ export default function Dashboard() {
       console.log('Expenses changed, refreshing data');
       fetchGames();
     }).subscribe();
-
     return () => {
       supabase.removeChannel(gamesSubscription);
       supabase.removeChannel(weeksSubscription);
       supabase.removeChannel(ticketSalesSubscription);
       supabase.removeChannel(expensesSubscription);
-      
-      // Clear timeouts
-      Object.values(updateTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
-      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
     };
-  }, [getCurrentUserId, debouncedFetchGames]);
+  }, [currentUserId]);
 
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const currentUserId = getCurrentUserId();
-      if (!currentUserId) {
-        setLoading(false);
-        return;
-      }
-
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select('*')
@@ -152,52 +437,16 @@ export default function Dashboard() {
 
       if (gamesError) throw gamesError;
 
-      const gamesWithDetails = await Promise.all(gamesData.map(async game => {
-        // Get weeks for this game
-        const { data: weeksData, error: weeksError } = await supabase
-          .from('weeks')
-          .select('*')
-          .eq('game_id', game.id)
-          .eq('user_id', currentUserId)
-          .order('week_number', { ascending: true });
+      const { data: weeksData, error: weeksError } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .order('start_date', { ascending: false });
 
-        if (weeksError) throw weeksError;
+      if (weeksError) throw weeksError;
 
-        // Get expenses for this game
-        const { data: expensesData, error: expensesError } = await supabase
-          .from('expenses')
-          .select('*')
-          .eq('game_id', game.id)
-          .eq('user_id', currentUserId)
-          .order('date', { ascending: false });
-
-        if (expensesError) throw expensesError;
-
-        // Get detailed week data with ticket sales
-        const weeksWithDetails = await Promise.all(weeksData.map(async week => {
-          const { data: salesData, error: salesError } = await supabase
-            .from('ticket_sales')
-            .select('*')
-            .eq('week_id', week.id)
-            .eq('user_id', currentUserId)
-            .order('date', { ascending: true });
-
-          if (salesError) throw salesError;
-
-          return {
-            ...week,
-            ticket_sales: salesData || []
-          };
-        }));
-
-        return {
-          ...game,
-          weeks: weeksWithDetails || [],
-          expenses: expensesData || []
-        };
-      }));
-
-      setGames(gamesWithDetails);
+      setGames(gamesData || []);
+      setWeeks(weeksData || []);
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast({
@@ -210,1381 +459,226 @@ export default function Dashboard() {
     }
   };
 
-  // Filter games based on active tab
-  const currentGames = games.filter(game => !game.end_date);
-  const archivedGames = games.filter(game => game.end_date);
-  const displayGames = activeTab === 'current' ? currentGames : archivedGames;
-
-  const createWeek = async () => {
-    const currentUserId = getCurrentUserId();
-    if (!currentGameId || !currentUserId) return;
-
-    try {
-      // Calculate end date as 6 days after start date (7 days total)
-      const endDate = new Date(weekForm.startDate);
-      endDate.setDate(endDate.getDate() + 6);
-
-      const { data, error } = await supabase
-        .from('weeks')
-        .insert([{
-          game_id: currentGameId,
-          week_number: weekForm.weekNumber,
-          start_date: format(weekForm.startDate, 'yyyy-MM-dd'),
-          end_date: format(endDate, 'yyyy-MM-dd'),
-          user_id: currentUserId
-        }])
-        .select();
-
-      if (error) throw error;
-
-      toast({
-        title: "Week Created",
-        description: `Week ${weekForm.weekNumber} has been created successfully.`
-      });
-
-      setWeekFormOpen(false);
-      setWeekForm({
-        weekNumber: 1,
-        startDate: new Date()
-      });
-    } catch (error: any) {
-      console.error('Error creating week:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create week: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Improved updateDailyEntry with debouncing and loading states
-  const updateDailyEntry = useCallback(async (weekId: string, dayIndex: number, ticketsSold: number) => {
-    const currentUserId = getCurrentUserId();
-    if (!currentGameId || !currentUserId) return;
-
-    const entryKey = `${weekId}-${dayIndex}`;
-    
-    // Prevent multiple simultaneous updates for the same entry
-    if (updatingEntries.has(entryKey)) {
-      return;
-    }
-
-    // Clear any existing timeout for this entry
-    if (updateTimeoutRef.current[entryKey]) {
-      clearTimeout(updateTimeoutRef.current[entryKey]);
-    }
-
-    // Set loading state
-    setUpdatingEntries(prev => new Set([...prev, entryKey]));
-
-    // Debounce the actual database update
-    updateTimeoutRef.current[entryKey] = setTimeout(async () => {
-      try {
-        const game = games.find(g => g.id === currentGameId);
-        if (!game) throw new Error("Game not found");
-
-        const week = game.weeks.find((w: any) => w.id === weekId);
-        if (!week) throw new Error("Week not found");
-
-        // Calculate the date for this day
-        const weekStartDate = new Date(week.start_date);
-        const entryDate = new Date(weekStartDate);
-        entryDate.setDate(entryDate.getDate() + dayIndex);
-
-        // Find existing entry for this specific date
-        const existingEntry = week.ticket_sales.find((entry: any) => {
-          const existingDate = new Date(entry.date);
-          return existingDate.toDateString() === entryDate.toDateString();
-        });
-
-        // Calculate the basic values
-        const ticketPrice = game.ticket_price;
-        const amountCollected = ticketsSold * ticketPrice;
-        const organizationPercentage = game.organization_percentage;
-        const jackpotPercentage = game.jackpot_percentage;
-        const organizationTotal = amountCollected * (organizationPercentage / 100);
-        const jackpotTotal = amountCollected * (jackpotPercentage / 100);
-
-        // Get all ticket sales for this game to calculate cumulative correctly
-        const { data: allGameSales, error: salesError } = await supabase
-          .from('ticket_sales')
-          .select('*')
-          .eq('game_id', currentGameId)
-          .eq('user_id', currentUserId)
-          .order('date', { ascending: true });
-
-        if (salesError) throw salesError;
-
-        // Calculate cumulative collected up to this date (excluding current entry if updating)
-        let cumulativeCollected = game.carryover_jackpot || 0;
-        if (allGameSales) {
-          for (const sale of allGameSales) {
-            const saleDate = new Date(sale.date);
-            const currentEntryDate = new Date(entryDate);
-
-            // Include all sales before this date, and this date if it's not the current entry being updated
-            if (saleDate < currentEntryDate || 
-                (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id)) {
-              cumulativeCollected += sale.amount_collected;
-            }
-          }
-        }
-        cumulativeCollected += amountCollected;
-
-        // Calculate ending jackpot total
-        let previousJackpotTotal = game.carryover_jackpot || 0;
-        if (allGameSales && allGameSales.length > 0) {
-          const previousEntries = allGameSales.filter(sale => {
-            const saleDate = new Date(sale.date);
-            const currentEntryDate = new Date(entryDate);
-            return saleDate < currentEntryDate || 
-                   (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id);
-          });
-          if (previousEntries.length > 0) {
-            const lastEntry = previousEntries[previousEntries.length - 1];
-            previousJackpotTotal = lastEntry.ending_jackpot_total;
-          }
-        }
-        const endingJackpotTotal = previousJackpotTotal + jackpotTotal;
-
-        if (existingEntry) {
-          // Update existing entry
-          const { error } = await supabase
-            .from('ticket_sales')
-            .update({
-              date: format(entryDate, 'yyyy-MM-dd'),
-              tickets_sold: ticketsSold,
-              ticket_price: ticketPrice,
-              amount_collected: amountCollected,
-              cumulative_collected: cumulativeCollected,
-              organization_total: organizationTotal,
-              jackpot_total: jackpotTotal,
-              ending_jackpot_total: endingJackpotTotal
-            })
-            .eq('id', existingEntry.id)
-            .eq('user_id', currentUserId);
-
-          if (error) throw error;
-        } else {
-          // Insert new entry
-          const { error } = await supabase
-            .from('ticket_sales')
-            .insert([{
-              game_id: currentGameId,
-              week_id: weekId,
-              date: format(entryDate, 'yyyy-MM-dd'),
-              tickets_sold: ticketsSold,
-              ticket_price: ticketPrice,
-              amount_collected: amountCollected,
-              cumulative_collected: cumulativeCollected,
-              organization_total: organizationTotal,
-              jackpot_total: jackpotTotal,
-              ending_jackpot_total: endingJackpotTotal,
-              user_id: currentUserId
-            }]);
-
-          if (error) throw error;
-        }
-
-        // Recalculate and update week totals
-        const { data: weekSales } = await supabase
-          .from('ticket_sales')
-          .select('*')
-          .eq('week_id', weekId)
-          .eq('user_id', currentUserId);
-
-        if (weekSales) {
-          const weekTotalTickets = weekSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
-          const weekTotalSales = weekSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-
-          await supabase
-            .from('weeks')
-            .update({
-              weekly_sales: weekTotalSales,
-              weekly_tickets_sold: weekTotalTickets
-            })
-            .eq('id', weekId)
-            .eq('user_id', currentUserId);
-        }
-
-        // Recalculate and update game totals
-        const { data: gameSales } = await supabase
-          .from('ticket_sales')
-          .select('*')
-          .eq('game_id', currentGameId)
-          .eq('user_id', currentUserId);
-
-        if (gameSales) {
-          const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-          const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
-
-          // Get total expenses and donations
-          const { data: expenses } = await supabase
-            .from('expenses')
-            .select('*')
-            .eq('game_id', currentGameId)
-            .eq('user_id', currentUserId);
-
-          const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-          const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-          const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
-
-          await supabase
-            .from('games')
-            .update({
-              total_sales: gameTotalSales,
-              total_expenses: totalExpenses,
-              total_donations: totalDonations,
-              organization_net_profit: organizationNetProfit
-            })
-            .eq('id', currentGameId)
-            .eq('user_id', currentUserId);
-        }
-
-      } catch (error: any) {
-        console.error('Error updating daily entry:', error);
-        toast({
-          title: "Error",
-          description: `Failed to update daily entry: ${error.message}`,
-          variant: "destructive"
-        });
-      } finally {
-        // Clear loading state
-        setUpdatingEntries(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(entryKey);
-          return newSet;
-        });
-        
-        // Clear the timeout reference
-        delete updateTimeoutRef.current[entryKey];
-      }
-    }, 500); // 500ms debounce
-  }, [currentGameId, getCurrentUserId, games, toast]);
-
-  // Improved input change handler with better state management
-  const handleTicketInputChange = useCallback((weekId: string, dayIndex: number, value: string) => {
-    const key = `${weekId}-${dayIndex}`;
-    setTempTicketInputs(prev => ({
-      ...prev,
-      [key]: value
-    }));
-    
-    // Clear submitted flag when user starts typing again
-    setSubmittedKeys(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(key);
-      return newSet;
-    });
-  }, []);
-
-  // Improved submit handler with double-submission prevention
-  const handleTicketInputSubmit = useCallback((weekId: string, dayIndex: number, value: string) => {
-    const key = `${weekId}-${dayIndex}`;
-    
-    // Prevent double submission
-    if (submittedKeys.has(key) || updatingEntries.has(key)) {
-      return;
-    }
-    
-    const ticketsSold = parseInt(value) || 0;
-
-    // Mark as submitted
-    setSubmittedKeys(prev => new Set([...prev, key]));
-    
-    // Clear the temporary input immediately
-    setTempTicketInputs(prev => {
-      const newInputs = { ...prev };
-      delete newInputs[key];
-      return newInputs;
-    });
-
-    // Update the database
-    updateDailyEntry(weekId, dayIndex, ticketsSold);
-  }, [submittedKeys, updatingEntries, updateDailyEntry]);
-
-  const toggleGame = (gameId: string) => {
-    setExpandedGame(expandedGame === gameId ? null : gameId);
-    setExpandedWeek(null);
-    setExpandedExpenses(null);
-  };
-
-  const toggleWeek = (weekId: string) => {
-    setExpandedWeek(expandedWeek === weekId ? null : weekId);
-  };
-
-  const toggleExpenses = (gameId: string) => {
-    setExpandedExpenses(expandedExpenses === gameId ? null : gameId);
-  };
-
-  const openWeekForm = (gameId: string) => {
-    const game = games.find(g => g.id === gameId);
-    if (!game) return;
-
-    const lastWeekNumber = game.weeks.length > 0 
-      ? Math.max(...game.weeks.map((w: any) => w.week_number)) 
-      : 0;
-    
-    setWeekForm({
-      weekNumber: lastWeekNumber + 1,
-      startDate: new Date()
-    });
-    setCurrentGameId(gameId);
-    setWeekFormOpen(true);
-  };
-
-  const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
-    setDeleteItemId(id);
-    setDeleteType(type);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    const currentUserId = getCurrentUserId();
-    if (!deleteItemId || !currentUserId) {
-      toast({
-        title: "Error",
-        description: "No item selected for deletion.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      console.log(`Starting deletion of ${deleteType} with ID: ${deleteItemId}`);
-      
-      if (deleteType === 'game') {
-        // Delete all related data first, then the game
-        const { error: ticketSalesError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('game_id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (ticketSalesError) throw ticketSalesError;
-
-        const { error: weeksError } = await supabase
-          .from('weeks')
-          .delete()
-          .eq('game_id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (weeksError) throw weeksError;
-
-        const { error: expensesError } = await supabase
-          .from('expenses')
-          .delete()
-          .eq('game_id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (expensesError) throw expensesError;
-
-        const { error: gameError } = await supabase
-          .from('games')
-          .delete()
-          .eq('id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (gameError) throw gameError;
-
-        if (expandedGame === deleteItemId) setExpandedGame(null);
-        if (expandedExpenses === deleteItemId) setExpandedExpenses(null);
-
-        toast({
-          title: "Game Deleted",
-          description: "Game and all associated data have been deleted successfully."
-        });
-
-      } else if (deleteType === 'week') {
-        const { error: ticketSalesError } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('week_id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (ticketSalesError) throw ticketSalesError;
-
-        const { error: weekError } = await supabase
-          .from('weeks')
-          .delete()
-          .eq('id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (weekError) throw weekError;
-
-        if (expandedWeek === deleteItemId) setExpandedWeek(null);
-
-        toast({
-          title: "Week Deleted",
-          description: "Week and all associated entries have been deleted."
-        });
-
-      } else if (deleteType === 'entry') {
-        const { error } = await supabase
-          .from('ticket_sales')
-          .delete()
-          .eq('id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (error) throw error;
-
-        toast({
-          title: "Entry Deleted",
-          description: "Daily entry has been deleted."
-        });
-
-      } else if (deleteType === 'expense') {
-        const { error } = await supabase
-          .from('expenses')
-          .delete()
-          .eq('id', deleteItemId)
-          .eq('user_id', currentUserId);
-
-        if (error) throw error;
-
-        toast({
-          title: "Expense Deleted",
-          description: "Expense/donation has been deleted."
-        });
-      }
-
-    } catch (error: any) {
-      console.error('Error during deletion:', error);
-      toast({
-        title: "Delete Failed",
-        description: error.message || `Failed to delete ${deleteType}: Unknown error`,
-        variant: "destructive"
-      });
-    } finally {
-      setDeleteDialogOpen(false);
-      setDeleteItemId(null);
-    }
-  };
-
-  const openExpenseModal = (gameId: string, gameName: string) => {
-    setCurrentGameId(gameId);
-    setCurrentGameName(gameName);
-    setExpenseModalOpen(true);
-  };
-
-  const handleOpenPayoutSlip = (winnerData: any) => {
-    setPayoutSlipData(winnerData);
-    setPayoutSlipOpen(true);
-  };
-
-  const handleWinnerComplete = () => {
-    fetchGames();
-  };
-
-  const handleGameComplete = () => {
-    fetchGames();
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const generateGamePdfReport = async (game: any) => {
-    try {
-      toast({
-        title: "Generating PDF",
-        description: `Creating report for ${game.name}...`
-      });
-
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 20;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text(`${game.name} - Detailed Report`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      doc.text(`Report Date: ${format(new Date(), 'MMM d, yyyy')}`, 20, yPosition);
-      yPosition += 10;
-
-      const fileName = `${game.name.replace(/\s+/g, '-')}-report-${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(fileName);
-
-      toast({
-        title: "Report Generated",
-        description: `${game.name} report has been downloaded successfully.`
-      });
-    } catch (error: any) {
-      console.error('Error generating game PDF:', error);
-      toast({
-        title: "Error",
-        description: `Failed to generate report: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDailyDonation = async (date: string, amount: number) => {
-    const currentUserId = getCurrentUserId();
-    if (!currentGameId || !currentUserId || amount <= 0) return;
-
-    try {
-      const { error } = await supabase
-        .from('expenses')
-        .insert([{
-          game_id: currentGameId,
-          date: date,
-          amount: amount,
-          memo: 'Daily donation',
-          is_donation: true,
-          user_id: currentUserId
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Donation Added",
-        description: `Daily donation of ${formatCurrency(amount)} has been recorded.`
-      });
-    } catch (error: any) {
-      console.error('Error adding daily donation:', error);
-      toast({
-        title: "Error",
-        description: `Failed to add donation: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDailyExpense = async () => {
-    const currentUserId = getCurrentUserId();
-    if (!dailyExpenseForm.gameId || !currentUserId || dailyExpenseForm.amount <= 0) return;
-
-    try {
-      const { error } = await supabase
-        .from('expenses')
-        .insert([{
-          game_id: dailyExpenseForm.gameId,
-          date: dailyExpenseForm.date,
-          amount: dailyExpenseForm.amount,
-          memo: dailyExpenseForm.memo,
-          is_donation: false,
-          user_id: currentUserId
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Expense Added",
-        description: `Daily expense of ${formatCurrency(dailyExpenseForm.amount)} has been recorded.`
-      });
-
-      setDailyExpenseModalOpen(false);
-      setDailyExpenseForm({
-        date: '',
-        amount: 0,
-        memo: '',
-        gameId: ''
-      });
-    } catch (error: any) {
-      console.error('Error adding daily expense:', error);
-      toast({
-        title: "Error",
-        description: `Failed to add expense: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const openDailyExpenseModal = (date: string, gameId: string) => {
-    setDailyExpenseForm({
-      date: date,
-      amount: 0,
-      memo: '',
-      gameId: gameId
-    });
-    setDailyExpenseModalOpen(true);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <AdminViewingIndicator />
-      
+  return <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
+          {viewingOrganization && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Viewing: {viewingOrganization.organization_name || viewingOrganization.email}
+            </p>
+          )}
+        </div>
         <Button onClick={() => setGameFormOpen(true)} className="bg-primary hover:bg-primary/90">
           <Plus className="h-4 w-4 mr-2" /> Create Game
         </Button>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
-        <button
-          onClick={() => setActiveTab('current')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'current'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Current Game
-        </button>
-        <button
-          onClick={() => setActiveTab('archived')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'archived'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Archived Games
-        </button>
-      </div>
+      {/* Weeks Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Weeks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-3 items-start">
+            <Select onValueChange={(value) => {
+                const week = weeks.find((w: any) => w.id === value);
+                handleWeekSelect(week);
+              }}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select a week" />
+              </SelectTrigger>
+              <SelectContent>
+                {weeks.map((week: any) => (
+                  <SelectItem key={week.id} value={week.id}>
+                    {format(new Date(week.start_date), 'MMM d, yyyy')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      <div className="space-y-4">
-        {displayGames.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 flex justify-center items-center">
-              <p className="text-muted-foreground">
-                {activeTab === 'current'
-                  ? 'No current games. Click "Create Game" to get started.'
-                  : 'No archived games yet.'}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          displayGames.map(game => {
-            const gameStartDate = game.weeks.length > 0
-              ? game.weeks.reduce((earliest: any, week: any) =>
-                  new Date(week.start_date) < new Date(earliest.start_date) ? week : earliest
-                ).start_date
-              : game.start_date;
-
-            const gameEndDate = game.weeks.length > 0
-              ? game.weeks.reduce((latest: any, week: any) =>
-                  new Date(week.end_date) > new Date(latest.end_date) ? week : latest
-                ).end_date
-              : game.end_date;
-
-            return (
-              <Card key={game.id} className="overflow-hidden">
-                <CardHeader
-                  className={`flex flex-col items-start justify-between cursor-pointer ${
-                    expandedGame === game.id ? 'bg-accent/50' : ''
-                  }`}
-                  onClick={() => toggleGame(game.id)}
-                >
-                  <div className="w-full flex flex-row items-center justify-between">
-                    <CardTitle className="text-xl">
-                      {game.name}
-                      {game.end_date && (
-                        <span className="ml-2 text-sm text-green-600 font-normal">(Completed)</span>
-                      )}
-                    </CardTitle>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-sm hidden md:flex space-x-4">
-                        <div>
-                          <span className="text-muted-foreground">Start:</span>{' '}
-                          {format(new Date(gameStartDate), 'MMM d, yyyy')}
-                          {gameEndDate && (
-                            <>
-                              <span className="ml-4 text-muted-foreground">End:</span>{' '}
-                              {format(new Date(gameEndDate), 'MMM d, yyyy')}
-                            </>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Total:</span>{' '}
-                          {formatCurrency(game.total_sales)}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Profit:</span>{' '}
-                          {formatCurrency(game.organization_net_profit)}
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={e => {
-                          e.stopPropagation();
-                          openDeleteConfirm(game.id, 'game');
-                        }}
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
-
-                      <div className="flex items-center">
-                        {expandedGame === game.id ? (
-                          <ChevronUp className="h-6 w-6 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-6 w-6 text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                {expandedGame === game.id && (
-                  <CardContent className="p-0 border-t">
-                    <div className="p-4 border-t">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Weeks</h3>
-                        <div className="flex space-x-2">
-                          <Button
-                            onClick={() => generateGamePdfReport(game)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="h-4 w-4" /> Export Game PDF
-                          </Button>
-                          <Button
-                            onClick={() => openWeekForm(game.id)}
-                            size="sm"
-                            className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] flex items-center gap-2"
-                          >
-                            <Plus className="h-4 w-4" /> Add Week
-                          </Button>
-                        </div>
-                      </div>
-
-                      {game.weeks.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No weeks added yet.</p>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Week Calendar-style Layout */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[5px]">
-                            {game.weeks.map((week: any) => (
-                              <div key={week.id} className="space-y-2">
-                                <Button
-                                  onClick={() => {
-                                    toggleWeek(week.id);
-                                    setCurrentGameId(game.id);
-                                  }}
-                                  variant="outline"
-                                  className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
-                                    expandedWeek === week.id
-                                      ? 'bg-[#4A7C59] border-[#4A7C59] text-white shadow-md'
-                                      : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
-                                  }`}
-                                >
-                                  Week {week.week_number}
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Expanded Week Details */}
-                          {expandedWeek && game.weeks.find((w: any) => w.id === expandedWeek) && (
-                            <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
-                              {(() => {
-                                const week = game.weeks.find((w: any) => w.id === expandedWeek);
-                                const weekTotalTickets = week.ticket_sales.reduce(
-                                  (sum: number, entry: any) => sum + entry.tickets_sold,
-                                  0
-                                );
-                                const weekTotalSales = week.ticket_sales.reduce(
-                                  (sum: number, entry: any) => sum + entry.amount_collected,
-                                  0
-                                );
-                                const weekOrganizationTotal = week.ticket_sales.reduce(
-                                  (sum: number, entry: any) => sum + entry.organization_total,
-                                  0
-                                );
-                                const weekJackpotTotal = week.ticket_sales.reduce(
-                                  (sum: number, entry: any) => sum + entry.jackpot_total,
-                                  0
-                                );
-
-                                return (
-                                  <div>
-                                    {/* Week Details Header */}
-                                    <div className="pb-6 border-b border-gray-200">
-                                      <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                          <h4 className="text-2xl font-bold text-[#1F4E4A] mb-2">
-                                            Week {week.week_number}
-                                          </h4>
-                                          <p className="text-gray-600 text-lg">
-                                            {format(new Date(week.start_date), 'MMMM d')} -{' '}
-                                            {format(new Date(week.end_date), 'MMMM d, yyyy')}
-                                          </p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            onClick={() => openDeleteConfirm(week.id, 'week')}
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                          <button
-                                            onClick={() => setExpandedWeek(null)}
-                                            className="text-gray-400 hover:text-gray-600 text-2xl font-light w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100"
-                                          >
-                                            ×
-                                          </button>
-                                        </div>
-                                      </div>
-
-                                      {/* Week Summary Stats */}
-                                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                          <div className="text-2xl font-bold text-blue-700">
-                                            {weekTotalTickets}
-                                          </div>
-                                          <div className="text-sm text-blue-600 font-medium">
-                                            Tickets Sold
-                                          </div>
-                                        </div>
-                                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                                          <div className="text-2xl font-bold text-green-700">
-                                            {formatCurrency(weekTotalSales)}
-                                          </div>
-                                          <div className="text-sm text-green-600 font-medium">
-                                            Total Sales
-                                          </div>
-                                        </div>
-                                        <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                                          <div className="text-2xl font-bold text-purple-700">
-                                            {formatCurrency(weekOrganizationTotal)}
-                                          </div>
-                                          <div className="text-sm text-purple-600 font-medium">
-                                            Organization Net
-                                          </div>
-                                        </div>
-                                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                                          <div className="text-2xl font-bold text-orange-700">
-                                            {formatCurrency(weekJackpotTotal)}
-                                          </div>
-                                          <div className="text-sm text-orange-600 font-medium">
-                                            Jackpot Total
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      {/* Winner Information */}
-                                      {week.winner_name && (
-                                        <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
-                                          <h5 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
-                                            🏆 Winner Information
-                                          </h5>
-                                          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
-                                            <div className="space-y-1">
-                                              <div className="font-medium text-yellow-700">Winner Name</div>
-                                              <div className="text-yellow-900 font-semibold">
-                                                {week.winner_name}
-                                              </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                              <div className="font-medium text-yellow-700">Slot Selected</div>
-                                              <div className="text-yellow-900 font-semibold">
-                                                #{week.slot_chosen}
-                                              </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                              <div className="font-medium text-yellow-700">Card Drawn</div>
-                                              <div className="text-yellow-900 font-semibold">
-                                                {week.card_selected}
-                                              </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                              <div className="font-medium text-yellow-700">
-                                                Distribution Amount
-                                              </div>
-                                              <div className="text-yellow-900 font-semibold">
-                                                {formatCurrency(week.weekly_payout)}
-                                              </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                              <div className="font-medium text-yellow-700">Winner Present</div>
-                                              <div
-                                                className={`font-semibold ${
-                                                  week.winner_present
-                                                    ? 'text-green-600'
-                                                    : 'text-red-600'
-                                                }`}
-                                              >
-                                                {week.winner_present ? '✓ Yes' : '✗ No'}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div className="mt-4 flex gap-3">
-                                            <Button
-                                              onClick={() => {
-                                                setCurrentWeekId(week.id);
-                                                setWinnerFormOpen(true);
-                                              }}
-                                              size="sm"
-                                              className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] border border-[#A1E96C]"
-                                            >
-                                              Edit Winner Details
-                                            </Button>
-                                            <Button
-                                              onClick={() => {
-                                                const winnerData = {
-                                                  winnerName: week.winner_name,
-                                                  slotChosen: week.slot_chosen,
-                                                  cardSelected: week.card_selected,
-                                                  payoutAmount: week.weekly_payout,
-                                                  date: new Date().toISOString().split('T')[0],
-                                                  gameNumber: game.game_number,
-                                                  gameName: game.name,
-                                                  weekNumber: week.week_number,
-                                                  weekStartDate: week.start_date,
-                                                  weekEndDate: week.end_date
-                                                };
-                                                handleOpenPayoutSlip(winnerData);
-                                              }}
-                                              size="sm"
-                                              className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] border border-[#A1E96C]"
-                                            >
-                                              Print Distribution Slip
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* 7 Daily Entries - Updated with improved input handling */}
-                                    <div className="pt-6">
-                                      <h5 className="text-lg font-semibold mb-4 text-[#1F4E4A]">
-                                        Daily Entries (7 Days)
-                                      </h5>
-
-                                      <div className="space-y-3 h-fit">
-                                        {Array.from({ length: 7 }, (_, dayIndex) => {
-                                          const weekStartDate = new Date(week.start_date);
-                                          const entryDate = new Date(weekStartDate);
-                                          entryDate.setDate(entryDate.getDate() + dayIndex);
-
-                                          const existingEntry = week.ticket_sales.find((entry: any) => {
-                                            const existingDate = new Date(entry.date);
-                                            return existingDate.toDateString() === entryDate.toDateString();
-                                          });
-
-                                          const inputKey = `${week.id}-${dayIndex}`;
-                                          const tempValue = tempTicketInputs[inputKey];
-                                          const currentValue = tempValue !== undefined ? tempValue : existingEntry?.tickets_sold || '';
-                                          const isUpdating = updatingEntries.has(inputKey);
-
-                                          return (
-                                            <div
-                                              key={dayIndex}
-                                              className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                                            >
-                                              <div className="min-w-0 flex-1">
-                                                <div className="text-base font-semibold text-gray-900">
-                                                  Day {dayIndex + 1}
-                                                </div>
-                                                <div className="text-sm text-gray-600">
-                                                  {format(entryDate, 'EEEE, MMMM d, yyyy')}
-                                                </div>
-                                              </div>
-
-                                              <div className="flex items-center gap-3">
-                                                <div className="flex flex-col gap-1">
-                                                  <label className="text-xs font-medium text-gray-600">
-                                                    Tickets Sold
-                                                  </label>
-                                                  <Input
-                                                    type="number"
-                                                    min="0"
-                                                    value={currentValue}
-                                                    onChange={e =>
-                                                      handleTicketInputChange(week.id, dayIndex, e.target.value)
-                                                    }
-                                                    onKeyDown={e => {
-                                                      if (e.key === 'Enter' && !isUpdating) {
-                                                        e.preventDefault();
-                                                        handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
-                                                      }
-                                                    }}
-                                                    disabled={isUpdating}
-                                                    className={`w-28 h-9 text-center font-medium ${
-                                                      isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                                                    }`}
-                                                    placeholder="0"
-                                                  />
-                                                  {isUpdating && (
-                                                    <div className="text-xs text-blue-600 text-center">Saving...</div>
-                                                  )}
-                                                </div>
-
-                                                <div className="flex flex-col gap-1">
-                                                  <label className="text-xs font-medium text-gray-600">
-                                                    Quick Add
-                                                  </label>
-                                                  <Select
-                                                    onValueChange={value => {
-                                                      if (value === 'donation') {
-                                                        const amount = prompt('Enter donation amount:');
-                                                        if (amount && !isNaN(parseFloat(amount))) {
-                                                          handleDailyDonation(
-                                                            format(entryDate, 'yyyy-MM-dd'),
-                                                            parseFloat(amount)
-                                                          );
-                                                        }
-                                                      } else if (value === 'expense') {
-                                                        openDailyExpenseModal(
-                                                          format(entryDate, 'yyyy-MM-dd'),
-                                                          game.id
-                                                        );
-                                                      }
-                                                    }}
-                                                  >
-                                                    <SelectTrigger className="w-24 h-9">
-                                                      <SelectValue placeholder="+" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                      <SelectItem value="donation">Donation</SelectItem>
-                                                      <SelectItem value="expense">Expense</SelectItem>
-                                                    </SelectContent>
-                                                  </Select>
-                                                </div>
-
-                                                {existingEntry && (
-                                                  <div className="flex flex-col gap-1">
-                                                    <label className="text-xs font-medium text-gray-600">
-                                                      Day Total
-                                                    </label>
-                                                    <div className="text-sm font-bold px-3 py-2 bg-blue-100 text-blue-800 rounded border border-blue-200 min-w-[80px] text-center">
-                                                      {formatCurrency(existingEntry.amount_collected)}
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-
-                                      {week.ticket_sales.length >= 7 && !week.winner_name && (
-                                        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                                          <div className="flex items-center gap-3">
-                                            <div className="flex-1">
-                                              <p className="text-sm font-medium text-amber-800">
-                                                Week is complete!
-                                              </p>
-                                              <p className="text-xs text-amber-700">
-                                                Please enter winner details to finalize this week.
-                                              </p>
-                                            </div>
-                                            <Button
-                                              onClick={() => {
-                                                setCurrentWeekId(week.id);
-                                                setWinnerFormOpen(true);
-                                              }}
-                                              size="sm"
-                                              className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
-                                            >
-                                              Enter Winner Details
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Expenses & Donations Section */}
-                    <div className="p-4 border-t">
-                      <div
-                        className="flex justify-between items-center mb-4 cursor-pointer"
-                        onClick={() => toggleExpenses(game.id)}
-                      >
-                        <h3 className="text-lg font-semibold flex items-center">
-                          Expenses & Donations
-                          <div className="ml-2">
-                            {expandedExpenses === game.id ? (
-                              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </div>
-                        </h3>
-                        <Button
-                          onClick={e => {
-                            e.stopPropagation();
-                            openExpenseModal(game.id, game.name);
-                          }}
-                          size="sm"
-                          variant="outline"
-                          className="text-sm"
-                        >
-                          Add Expense/Donation
-                        </Button>
-                      </div>
-
-                      {expandedExpenses === game.id && (
-                        <>
-                          {game.expenses && game.expenses.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Memo</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {game.expenses.map((expense: any) => (
-                                    <TableRow key={expense.id}>
-                                      <TableCell>
-                                        {format(new Date(expense.date), 'MMM d, yyyy')}
-                                      </TableCell>
-                                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                                      <TableCell>
-                                        {expense.is_donation ? 'Donation' : 'Expense'}
-                                      </TableCell>
-                                      <TableCell>{expense.memo}</TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          onClick={() => openDeleteConfirm(expense.id, 'expense')}
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          ) : (
-                            <p className="text-muted-foreground text-sm">
-                              No expenses or donations recorded yet.
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })
-        )}
-      </div>
-
-      {/* Week Form Dialog */}
-      <Dialog open={weekFormOpen} onOpenChange={setWeekFormOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Week</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new week. The end date will be automatically calculated as 7
-              days from the start date.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="weekNumber" className="text-sm font-medium">
-                Week Number
-              </label>
-              <Input
-                id="weekNumber"
-                type="number"
-                value={weekForm.weekNumber}
-                onChange={e =>
-                  setWeekForm({
-                    ...weekForm,
-                    weekNumber: parseInt(e.target.value)
-                  })
-                }
-                min="1"
-              />
-            </div>
-
-            <div className="grid gap-2">
+            <div className="flex items-center space-x-2">
               <DatePickerWithInput
-                label="Start Date"
-                date={weekForm.startDate}
-                setDate={date =>
-                  date
-                    ? setWeekForm({
-                        ...weekForm,
-                        startDate: date
-                      })
-                    : null
-                }
-                placeholder="Select start date"
+                onDateChange={setNewWeekStartDate}
+                date={newWeekStartDate}
               />
-              <p className="text-xs text-muted-foreground">
-                End date will be automatically set to{' '}
-                {weekForm.startDate
-                  ? format(
-                      new Date(weekForm.startDate.getTime() + 6 * 24 * 60 * 60 * 1000),
-                      'MMM d, yyyy'
-                    )
-                  : 'N/A'}
-              </p>
+              <Button onClick={handleAddWeek} disabled={isAddingWeek}>
+                {isAddingWeek ? 'Adding...' : 'Add Week'}
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <DialogFooter>
-            <Button onClick={() => setWeekFormOpen(false)} variant="secondary">
-              Cancel
-            </Button>
-            <Button onClick={createWeek} type="submit" variant="default">
-              Create Week
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Organization Rules Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Organization Rules</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isEditingRules ? (
+            <div className="space-y-4">
+              <Textarea
+                value={newRules}
+                onChange={(e) => setNewRules(e.target.value)}
+                className="w-full"
+                placeholder="Enter organization rules..."
+              />
+              <div className="flex justify-end space-x-2">
+                <Button variant="secondary" onClick={handleCancelEditRules}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveRules}>Save</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{organizationRules || 'No rules defined.'}</p>
+              <Button variant="outline" onClick={handleEditRules}>
+                Edit Rules
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Delete Confirm Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this {deleteType}?
-              {deleteType === 'game' &&
-                ' This will permanently delete the game and ALL associated weeks, ticket sales, and expenses.'}
-              {deleteType === 'week' &&
-                ' This will permanently delete the week and ALL associated daily entries.'}
-              {deleteType === 'entry' && ' This will permanently delete this daily entry.'}
-              {deleteType === 'expense' && ' This will permanently delete this expense/donation.'}
-              <br />
-              <br />
-              <strong>This action cannot be undone.</strong>
-            </DialogDescription>
-          </DialogHeader>
+      {/* Games Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Games</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Game #</TableHead>
+                <TableHead>Week</TableHead>
+                <TableHead>Tickets Sold</TableHead>
+                <TableHead>Total Sales</TableHead>
+                <TableHead>Net Profit</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4">Loading...</TableCell>
+                </TableRow>
+              ) : games.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4">No games found.</TableCell>
+                </TableRow>
+              ) : (
+                games.map((game: any) => (
+                  <TableRow key={game.id}>
+                    <TableCell>{game.game_number}</TableCell>
+                    <TableCell>
+                      {weeks.find((week: any) => week.id === game.week_id)?.start_date
+                        ? format(new Date(weeks.find((week: any) => week.id === game.week_id)?.start_date), 'MMM d, yyyy')
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>{game.total_tickets_sold}</TableCell>
+                    <TableCell>${game.total_sales}</TableCell>
+                    <TableCell>${game.net_profit}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          onClick={() => handleOpenWinnerModal(game)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Winners
+                        </Button>
+                        <Button
+                          onClick={() => handleOpenExpenseModal(game)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Expenses
+                        </Button>
+                        <Button
+                          onClick={() => handleOpenPayoutSlipModal(game)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Payout Slip
+                        </Button>
+                        <Button
+                          onClick={() => handleDownloadGameData(game)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteConfirmation(game)}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-          <DialogFooter>
-            <Button onClick={() => setDeleteDialogOpen(false)} variant="secondary">
-              Cancel
-            </Button>
-            <Button onClick={confirmDelete} type="submit" variant="destructive">
-              Delete {deleteType}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Winner Modal */}
+      <WinnerForm
+        isOpen={isWinnerModalOpen}
+        onClose={handleCloseWinnerModal}
+        game={selectedGame}
+        fetchGames={fetchGames}
+      />
 
       {/* Expense Modal */}
       <ExpenseModal
-        open={expenseModalOpen}
-        onOpenChange={setExpenseModalOpen}
-        gameId={currentGameId || ''}
-        gameName={currentGameName}
+        isOpen={isExpenseModalOpen}
+        onClose={handleCloseExpenseModal}
+        game={selectedGame}
+        fetchGames={fetchGames}
       />
 
       {/* Payout Slip Modal */}
       <PayoutSlipModal
-        open={payoutSlipOpen}
-        onOpenChange={setPayoutSlipOpen}
-        winnerData={payoutSlipData}
+        isOpen={isPayoutSlipModalOpen}
+        onClose={handleClosePayoutSlipModal}
+        game={selectedGame}
+        fetchGames={fetchGames}
       />
 
-      {/* Winner Form */}
-      <WinnerForm
-        open={winnerFormOpen}
-        onOpenChange={setWinnerFormOpen}
-        gameId={currentGameId || ''}
-        weekId={currentWeekId || ''}
-        onComplete={handleWinnerComplete}
-        onOpenPayoutSlip={handleOpenPayoutSlip}
-      />
-
-      {/* Game Form */}
+      {/* Game Form Modal */}
       <GameForm
-        open={gameFormOpen}
-        onOpenChange={setGameFormOpen}
-        games={games}
-        onComplete={handleGameComplete}
+        isOpen={gameFormOpen}
+        onClose={() => setGameFormOpen(false)}
+        fetchGames={fetchGames}
+        weeks={weeks}
       />
 
-      {/* Daily Expense Modal */}
-      <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Daily Expense</DialogTitle>
+            <DialogTitle>Delete Game</DialogTitle>
             <DialogDescription>
-              Enter the expense details for{' '}
-              {dailyExpenseForm.date && format(new Date(dailyExpenseForm.date), 'MMM d, yyyy')}.
+              Are you sure you want to delete this game? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={dailyExpenseForm.amount || ''}
-                onChange={e =>
-                  setDailyExpenseForm({
-                    ...dailyExpenseForm,
-                    amount: parseFloat(e.target.value) || 0
-                  })
-                }
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="memo">Memo</Label>
-              <Textarea
-                id="memo"
-                value={dailyExpenseForm.memo}
-                onChange={e =>
-                  setDailyExpenseForm({
-                    ...dailyExpenseForm,
-                    memo: e.target.value
-                  })
-                }
-                placeholder="Enter expense description..."
-                rows={3}
-              />
-            </div>
-          </div>
-
           <DialogFooter>
-            <Button onClick={() => setDailyExpenseModalOpen(false)} variant="secondary">
+            <Button onClick={handleCancelDelete} variant="secondary">
               Cancel
             </Button>
-            <Button
-              onClick={handleDailyExpense}
-              type="submit"
-              variant="default"
-              disabled={dailyExpenseForm.amount <= 0}
-            >
-              Add Expense
+            <Button onClick={handleDeleteGame} variant="destructive">
+              Delete Game
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 }
