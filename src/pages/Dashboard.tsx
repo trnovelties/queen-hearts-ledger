@@ -337,10 +337,10 @@ export default function Dashboard() {
               </div>
               <div className="text-right space-y-1">
                 <div className="text-sm font-semibold text-[#132E2C]">
-                  Total Sales: <span className="text-[#A1E96C]">${(game.total_sales || 0).toFixed(2)}</span>
+                  Total Sales: <span className="text-[#A1E96C]">${(Number(game.total_sales) || 0).toFixed(2)}</span>
                 </div>
                 <div className="text-sm font-semibold text-[#132E2C]">
-                  Net Profit: <span className="text-[#1F4E4A]">${(game.organization_net_profit || 0).toFixed(2)}</span>
+                  Net Profit: <span className="text-[#1F4E4A]">${(Number(game.organization_net_profit) || 0).toFixed(2)}</span>
                 </div>
               </div>
             </CardHeader>
@@ -383,6 +383,15 @@ export default function Dashboard() {
     const ticketSales = week.ticket_sales || [];
     const sortedTicketSales = ticketSales.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Calculate current jackpot and contributions for the week
+    const jackpotContributions = sortedTicketSales.reduce((total, sale) => {
+      return total + (Number(sale.jackpot_total) || 0);
+    }, 0);
+
+    const currentJackpotTotal = sortedTicketSales.length > 0 
+      ? (Number(sortedTicketSales[sortedTicketSales.length - 1].ending_jackpot_total) || 0)
+      : (Number(game.carryover_jackpot) || 0) + (Number(game.minimum_starting_jackpot) || 0);
+
     return (
       <Card key={week.id} className="border-[#1F4E4A]/10 bg-[#F7F8FC]">
         <Collapsible>
@@ -413,7 +422,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="font-semibold text-[#132E2C]">Ticket Sales</div>
-                  <div className="text-[#A1E96C]">${(week.weekly_sales || 0).toFixed(2)}</div>
+                  <div className="text-[#A1E96C]">${(Number(week.weekly_sales) || 0).toFixed(2)}</div>
                 </div>
                 <div>
                   <div className="font-semibold text-[#132E2C]">Winner</div>
@@ -442,8 +451,8 @@ export default function Dashboard() {
                         gameId: game.id, 
                         weekId: week.id, 
                         gameData: game, 
-                        currentJackpotTotal: 0, 
-                        jackpotContributions: 0 
+                        currentJackpotTotal: currentJackpotTotal, 
+                        jackpotContributions: jackpotContributions 
                       })}
                       size="sm"
                       className="bg-[#A1E96C] hover:bg-[#A1E96C]/80 text-[#132E2C]"
@@ -497,11 +506,11 @@ export default function Dashboard() {
                         <tr key={sale.id} className={index % 2 === 0 ? 'bg-white/50' : ''}>
                           <td className="py-2 text-[#132E2C]">{new Date(sale.date).toLocaleDateString()}</td>
                           <td className="text-right py-2 text-[#132E2C]">{sale.tickets_sold}</td>
-                          <td className="text-right py-2 text-[#132E2C]">${(sale.ticket_price || 0).toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#A1E96C] font-semibold">${(sale.amount_collected || 0).toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#1F4E4A]">${(sale.organization_total || 0).toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#1F4E4A]">${(sale.jackpot_total || 0).toFixed(2)}</td>
-                          <td className="text-right py-2 text-[#132E2C] font-semibold">${(sale.ending_jackpot_total || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#132E2C]">${(Number(sale.ticket_price) || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#A1E96C] font-semibold">${(Number(sale.amount_collected) || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#1F4E4A]">${(Number(sale.organization_total) || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#1F4E4A]">${(Number(sale.jackpot_total) || 0).toFixed(2)}</td>
+                          <td className="text-right py-2 text-[#132E2C] font-semibold">${(Number(sale.ending_jackpot_total) || 0).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
