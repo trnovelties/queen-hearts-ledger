@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, ChevronDown, ChevronRight, Edit, Trash2, DollarSign, Users, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -493,7 +494,7 @@ export default function Dashboard() {
                                                 <th className="text-right py-2 px-3 font-semibold text-[#1F4E4A]">Price</th>
                                                 <th className="text-right py-2 px-3 font-semibold text-[#1F4E4A]">Amount</th>
                                                 <th className="text-right py-2 px-3 font-semibold text-[#1F4E4A]">Org Total</th>
-                                                <th className="text-right py-2 px-3 font-semibold text-[#A1E96C]">{/* Jackpot */}</th>
+                                                <th className="text-right py-2 px-3 font-semibold text-[#A1E96C]">Jackpot</th>
                                               </tr>
                                             </thead>
                                             <tbody>
@@ -615,10 +616,14 @@ export default function Dashboard() {
             open={!!showWinnerForm}
             onOpenChange={(open) => !open && setShowWinnerForm(null)}
             weekId={showWinnerForm}
+            gameId={games.find(g => 
+              weeks[g.id]?.some(w => w.id === showWinnerForm)
+            )?.id || ''}
             onComplete={() => {
               setShowWinnerForm(null);
               fetchGames();
             }}
+            onOpenPayoutSlip={() => {}}
           />
         )}
 
