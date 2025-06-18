@@ -57,6 +57,7 @@ export type Database = {
           id: string
           is_donation: boolean
           memo: string | null
+          user_id: string
         }
         Insert: {
           amount: number
@@ -66,6 +67,7 @@ export type Database = {
           id?: string
           is_donation?: boolean
           memo?: string | null
+          user_id: string
         }
         Update: {
           amount?: number
@@ -75,6 +77,7 @@ export type Database = {
           id?: string
           is_donation?: boolean
           memo?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -106,6 +109,7 @@ export type Database = {
           total_expenses: number
           total_payouts: number
           total_sales: number
+          user_id: string
         }
         Insert: {
           card_payouts?: Json | null
@@ -126,6 +130,7 @@ export type Database = {
           total_expenses?: number
           total_payouts?: number
           total_sales?: number
+          user_id: string
         }
         Update: {
           card_payouts?: Json | null
@@ -146,6 +151,37 @@ export type Database = {
           total_expenses?: number
           total_payouts?: number
           total_sales?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      organization_rules: {
+        Row: {
+          created_at: string
+          id: string
+          organization_name: string
+          rules_content: string
+          startup_costs: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_name?: string
+          rules_content: string
+          startup_costs: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_name?: string
+          rules_content?: string
+          startup_costs?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -164,6 +200,7 @@ export type Database = {
           organization_total: number
           ticket_price: number
           tickets_sold: number
+          user_id: string
           week_id: string
           weekly_payout_amount: number
         }
@@ -181,6 +218,7 @@ export type Database = {
           organization_total: number
           ticket_price: number
           tickets_sold: number
+          user_id: string
           week_id: string
           weekly_payout_amount?: number
         }
@@ -198,6 +236,7 @@ export type Database = {
           organization_total?: number
           ticket_price?: number
           tickets_sold?: number
+          user_id?: string
           week_id?: string
           weekly_payout_amount?: number
         }
@@ -258,6 +297,7 @@ export type Database = {
           id: string
           slot_chosen: number | null
           start_date: string
+          user_id: string
           week_number: number
           weekly_payout: number
           weekly_sales: number
@@ -274,6 +314,7 @@ export type Database = {
           id?: string
           slot_chosen?: number | null
           start_date: string
+          user_id: string
           week_number: number
           weekly_payout?: number
           weekly_sales?: number
@@ -290,6 +331,7 @@ export type Database = {
           id?: string
           slot_chosen?: number | null
           start_date?: string
+          user_id?: string
           week_number?: number
           weekly_payout?: number
           weekly_sales?: number
