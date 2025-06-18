@@ -228,10 +228,12 @@ export function WeekManager({
           onOpenChange={setShowWinnerForm}
           weekId={week.id}
           gameId={game.id}
+          gameData={game}
           onComplete={() => {
             onWeekUpdated();
             setShowWinnerForm(false);
           }}
+          onOpenPayoutSlip={() => {}}
         />
       )}
 
