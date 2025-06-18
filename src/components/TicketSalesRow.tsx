@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
 
@@ -35,7 +34,6 @@ export function TicketSalesRow({
   onSuccess, 
   onCancel 
 }: TicketSalesRowProps) {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     date: new Date(),
     ticketsSold: '',
@@ -56,11 +54,6 @@ export function TicketSalesRow({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id) {
-      toast.error("You must be logged in to add ticket sales");
-      return;
-    }
-    
     setIsLoading(true);
 
     try {
@@ -93,7 +86,6 @@ export function TicketSalesRow({
         .insert({
           game_id: gameId,
           week_id: weekId,
-          user_id: user.id,
           date: formData.date.toISOString().split('T')[0],
           tickets_sold: ticketsSold,
           ticket_price: formData.ticketPrice,

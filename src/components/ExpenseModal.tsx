@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 
 interface ExpenseModalProps {
@@ -18,7 +17,6 @@ interface ExpenseModalProps {
 }
 
 export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseModalProps) {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [expenseData, setExpenseData] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -30,15 +28,6 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddExpense = async () => {
-    if (!user?.id) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to add expenses.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!expenseData.amount || parseFloat(expenseData.amount) <= 0) {
       toast({
         title: "Validation Error",
@@ -54,7 +43,6 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         .from('expenses')
         .insert({
           game_id: gameId,
-          user_id: user.id,
           date: selectedDate.toISOString().split('T')[0],
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,

@@ -64,16 +64,9 @@ TOTAL ESTIMATED START UP COSTS- $1,100.00`
   const fetchRulesData = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No authenticated user');
-        return;
-      }
-
       const { data, error } = await supabase
         .from('organization_rules')
         .select('*')
-        .eq('user_id', user.id)
         .limit(1)
         .maybeSingle();
         
@@ -100,13 +93,7 @@ TOTAL ESTIMATED START UP COSTS- $1,100.00`
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
-
       const saveData = {
-        user_id: user.id,
         organization_name: rulesData.organization_name,
         rules_content: rulesData.rules_content,
         startup_costs: rulesData.startup_costs,
@@ -119,7 +106,6 @@ TOTAL ESTIMATED START UP COSTS- $1,100.00`
           .from('organization_rules')
           .update(saveData)
           .eq('id', rulesData.id)
-          .eq('user_id', user.id)
           .select();
       } else {
         result = await supabase
