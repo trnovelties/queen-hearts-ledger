@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
 
 interface GameFormProps {
   open: boolean;
@@ -17,7 +16,6 @@ interface GameFormProps {
 }
 
 export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     ticketPrice: 2,
@@ -44,12 +42,6 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (!user?.id) {
-      toast.error("You must be logged in to create a game");
-      setIsLoading(false);
-      return;
-    }
 
     try {
       // Validation
@@ -85,7 +77,6 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         .insert({
           game_number: gameNumber,
           name: formData.name,
-          user_id: user.id,
           start_date: new Date().toISOString().split('T')[0],
           ticket_price: formData.ticketPrice,
           organization_percentage: formData.organizationPercentage,
