@@ -164,7 +164,7 @@ export type Database = {
           id: string
           organization_name: string
           rules_content: string
-          startup_costs: string
+          startup_costs: string | null
           updated_at: string
           user_id: string
         }
@@ -173,7 +173,7 @@ export type Database = {
           id?: string
           organization_name?: string
           rules_content: string
-          startup_costs: string
+          startup_costs?: string | null
           updated_at?: string
           user_id: string
         }
@@ -182,7 +182,7 @@ export type Database = {
           id?: string
           organization_name?: string
           rules_content?: string
-          startup_costs?: string
+          startup_costs?: string | null
           updated_at?: string
           user_id?: string
         }

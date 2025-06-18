@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAdmin } from "@/context/AdminContext";
 
 interface OrganizationRule {
   id: string;
@@ -15,6 +16,7 @@ interface OrganizationRule {
 }
 
 export function OrganizationRules() {
+  const { getCurrentUserId } = useAdmin();
   const [rules, setRules] = useState<OrganizationRule | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,15 +32,15 @@ export function OrganizationRules() {
 
   const fetchRules = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = getCurrentUserId();
+      if (!userId) return;
 
       // Try to get existing rules
       const { data, error } = await supabase
         .from('organization_rules')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching rules:', error);
@@ -67,7 +69,11 @@ export function OrganizationRules() {
 
         const { data: newRules, error: insertError } = await supabase
           .from('organization_rules')
-          .insert([{ ...defaultRules, user_id: user.id }])
+          .insert([{ 
+            ...defaultRules, 
+            user_id: userId,
+            startup_costs: '' // Provide empty string for the optional field
+          }])
           .select()
           .single();
 
@@ -87,16 +93,17 @@ export function OrganizationRules() {
 
   const handleSave = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = getCurrentUserId();
+      if (!userId) return;
 
       const { error } = await supabase
         .from('organization_rules')
         .upsert([
           {
             ...formData,
-            user_id: user.id,
-            updated_at: new Date().toISOString()
+            user_id: userId,
+            updated_at: new Date().toISOString(),
+            startup_costs: '' // Provide empty string for the optional field
           }
         ]);
 
