@@ -9,6 +9,25 @@ import { OrganizationRules } from "@/components/OrganizationRules";
 import { GameManagement } from "@/components/GameManagement";
 
 const Dashboard = () => {
+  // Mock data for components that require props
+  const mockSummary = {
+    totalSales: 0,
+    totalExpenses: 0,
+    totalDonations: 0,
+    netProfit: 0,
+    activeGames: 0,
+    completedGames: 0
+  };
+
+  const mockGames: any[] = [];
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -28,8 +47,8 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <FinancialOverview />
-            <FinancialCharts />
+            <FinancialOverview summary={mockSummary} formatCurrency={formatCurrency} />
+            <FinancialCharts games={mockGames} reportType="overview" />
           </TabsContent>
 
           <TabsContent value="games">
@@ -37,11 +56,11 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="detailed">
-            <DetailedFinancialTable />
+            <DetailedFinancialTable games={mockGames} formatCurrency={formatCurrency} />
           </TabsContent>
 
           <TabsContent value="comparison">
-            <GameComparisonTable />
+            <GameComparisonTable games={mockGames} formatCurrency={formatCurrency} />
           </TabsContent>
 
           <TabsContent value="config">

@@ -63,6 +63,12 @@ export function TicketSalesRow({
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to add ticket sales.");
+        return;
+      }
+
       const amountCollected = ticketsSold * formData.ticketPrice;
       const organizationTotal = amountCollected * (gameData.organization_percentage / 100);
       const jackpotTotal = amountCollected * (gameData.jackpot_percentage / 100);
@@ -95,7 +101,8 @@ export function TicketSalesRow({
           jackpot_total: jackpotTotal,
           jackpot_contributions_total: newJackpotContributions,
           displayed_jackpot_total: displayedJackpot,
-          ending_jackpot_total: displayedJackpot
+          ending_jackpot_total: displayedJackpot,
+          user_id: user.id
         });
 
       if (insertError) throw insertError;

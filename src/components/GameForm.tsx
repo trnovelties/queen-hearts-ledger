@@ -50,6 +50,12 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to create games.");
+        return;
+      }
+
       // Get current configuration including card payouts and version
       const { data: config, error: configError } = await supabase
         .from('configurations')
@@ -84,7 +90,8 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
           minimum_starting_jackpot: formData.minimumStartingJackpot,
           carryover_jackpot: carryoverJackpot,
           card_payouts: config.card_payouts,
-          configuration_version: config.version
+          configuration_version: config.version,
+          user_id: user.id
         });
 
       if (error) throw error;
