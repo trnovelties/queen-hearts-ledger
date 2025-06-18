@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { useAdmin } from "@/context/AdminContext";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
 import { 
@@ -59,7 +59,6 @@ export default function IncomeExpense() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { getCurrentUserId, viewingOrganization } = useAdmin();
   const [games, setGames] = useState<GameSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState<string>("all");
@@ -67,9 +66,6 @@ export default function IncomeExpense() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [reportType, setReportType] = useState<"weekly" | "game" | "cumulative">("cumulative");
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-
-  // Get the current user ID (either the logged-in user or the organization being viewed by admin)
-  const currentUserId = getCurrentUserId();
 
   // Set selected game from URL parameter
   useEffect(() => {
@@ -82,14 +78,13 @@ export default function IncomeExpense() {
   // Fetch all games and related data
   useEffect(() => {
     async function fetchFinancialData() {
-      if (!currentUserId) return;
+      if (!user) return;
       
       setLoading(true);
       try {
         const { data: gamesData, error: gamesError } = await supabase
           .from('games')
           .select('*')
-          .eq('user_id', currentUserId)
           .order('game_number', { ascending: false });
         
         if (gamesError) throw gamesError;
@@ -145,7 +140,7 @@ export default function IncomeExpense() {
     }
     
     fetchFinancialData();
-  }, [currentUserId, toast]);
+  }, [user, toast]);
 
   // Calculate summary data
   const calculateSummaryData = () => {
@@ -661,11 +656,6 @@ export default function IncomeExpense() {
           <div className="space-y-3">
             <h1 className="text-4xl font-bold text-[#1F4E4A] font-inter tracking-tight">
               Financial Analytics & Reporting
-              {viewingOrganization && (
-                <span className="block text-lg font-normal text-[#132E2C]/70 mt-2">
-                  for {viewingOrganization.organization_name || viewingOrganization.email}
-                </span>
-              )}
             </h1>
             <p className="text-lg text-[#132E2C]/70 font-medium">
               Comprehensive financial insights and performance analytics for Queen of Hearts fundraising

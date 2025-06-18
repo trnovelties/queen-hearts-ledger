@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { AdminViewIcon } from "./icons/AdminViewIcon";
-import { AdminViewingIndicator } from "./AdminViewingIndicator";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -206,9 +205,6 @@ function AppContent({
         </header>
 
         <main className="flex-1 overflow-auto p-6 bg-accent">
-          {/* Admin Viewing Indicator */}
-          <AdminViewingIndicator />
-          
           <Card className="overflow-hidden border-none shadow-md">
             <CardContent className="p-6">
               {children}
