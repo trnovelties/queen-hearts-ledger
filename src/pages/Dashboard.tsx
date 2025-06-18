@@ -53,7 +53,7 @@ export default function Dashboard() {
     try {
       const { data, error } = await supabase
         .from('organization_rules')
-        .select('rules')
+        .select('rules_content')
         .eq('user_id', currentUserId)
         .single();
 
@@ -63,8 +63,8 @@ export default function Dashboard() {
         return;
       }
 
-      setOrganizationRules(data?.rules || '');
-      setNewRules(data?.rules || '');
+      setOrganizationRules(data?.rules_content || '');
+      setNewRules(data?.rules_content || '');
     } catch (error: any) {
       console.error('Error fetching organization rules:', error);
       toast({
@@ -93,7 +93,7 @@ export default function Dashboard() {
         // Update existing rules
         const { error: updateError } = await supabase
           .from('organization_rules')
-          .update({ rules: newRules })
+          .update({ rules_content: newRules })
           .eq('user_id', currentUserId);
 
         if (updateError) throw updateError;
@@ -106,7 +106,12 @@ export default function Dashboard() {
         // Insert new rules
         const { error: insertError } = await supabase
           .from('organization_rules')
-          .insert([{ user_id: currentUserId, rules: newRules }]);
+          .insert([{ 
+            user_id: currentUserId, 
+            rules_content: newRules,
+            startup_costs: '',
+            organization_name: viewingOrganization?.organization_name || 'Organization'
+          }]);
 
         if (insertError) throw insertError;
 
@@ -255,12 +260,10 @@ export default function Dashboard() {
       // Add game details
       pdf.setFontSize(12);
       pdf.text(`Game Number: ${game.game_number}`, 10, 20);
-      pdf.text(`Week: ${game.week_id}`, 10, 26);
-      pdf.text(`Total Tickets Sold: ${game.total_tickets_sold}`, 10, 32);
-      pdf.text(`Total Sales: $${game.total_sales}`, 10, 38);
-      pdf.text(`Total Expenses: $${game.total_expenses}`, 10, 44);
-      pdf.text(`Net Profit: $${game.net_profit}`, 10, 50);
-      pdf.text(`Organization Net Profit: $${game.organization_net_profit}`, 10, 56);
+      pdf.text(`Name: ${game.name}`, 10, 26);
+      pdf.text(`Total Sales: $${game.total_sales}`, 10, 32);
+      pdf.text(`Total Expenses: $${game.total_expenses}`, 10, 38);
+      pdf.text(`Organization Net Profit: $${game.organization_net_profit}`, 10, 44);
 
       // Add ticket sales data
       pdf.addPage();
@@ -269,13 +272,13 @@ export default function Dashboard() {
 
       if (ticketSalesData && ticketSalesData.length > 0) {
         // Define table headers
-        const headers = ['Ticket Number', 'Amount Paid', 'Created At'];
+        const headers = ['Date', 'Tickets Sold', 'Amount Collected'];
 
         // Map ticket sales data to table rows
         const rows = ticketSalesData.map(sale => [
-          sale.ticket_number.toString(),
-          `$${sale.amount_paid.toFixed(2)}`,
-          format(new Date(sale.created_at), 'MMM d, yyyy h:mm a'),
+          format(new Date(sale.date), 'MMM d, yyyy'),
+          sale.tickets_sold.toString(),
+          `$${sale.amount_collected.toFixed(2)}`,
         ]);
 
         // Add table to the PDF
@@ -296,13 +299,13 @@ export default function Dashboard() {
 
       if (expensesData && expensesData.length > 0) {
         // Define table headers
-        const headers = ['Description', 'Amount', 'Created At'];
+        const headers = ['Date', 'Amount', 'Memo'];
 
         // Map expenses data to table rows
         const rows = expensesData.map(expense => [
-          expense.description,
+          format(new Date(expense.date), 'MMM d, yyyy'),
           `$${expense.amount.toFixed(2)}`,
-          format(new Date(expense.created_at), 'MMM d, yyyy h:mm a'),
+          expense.memo || 'No memo',
         ]);
 
         // Add table to the PDF
@@ -347,9 +350,19 @@ export default function Dashboard() {
     setIsAddingWeek(true);
 
     try {
+      // Calculate end date (7 days after start date)
+      const endDate = new Date(newWeekStartDate);
+      endDate.setDate(endDate.getDate() + 6);
+
       const { data, error } = await supabase
         .from('weeks')
-        .insert([{ user_id: currentUserId, start_date: newWeekStartDate }]);
+        .insert([{ 
+          user_id: currentUserId, 
+          start_date: format(newWeekStartDate, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+          game_id: '', // This would need to be set to a valid game_id
+          week_number: 1 // This would need to be calculated
+        }]);
 
       if (error) throw error;
 
@@ -499,8 +512,10 @@ export default function Dashboard() {
 
             <div className="flex items-center space-x-2">
               <DatePickerWithInput
-                onDateChange={setNewWeekStartDate}
                 date={newWeekStartDate}
+                setDate={setNewWeekStartDate}
+                label="Start Date"
+                placeholder="Select start date"
               />
               <Button onClick={handleAddWeek} disabled={isAddingWeek}>
                 {isAddingWeek ? 'Adding...' : 'Add Week'}
@@ -552,8 +567,7 @@ export default function Dashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead>Game #</TableHead>
-                <TableHead>Week</TableHead>
-                <TableHead>Tickets Sold</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Total Sales</TableHead>
                 <TableHead>Net Profit</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -562,24 +576,19 @@ export default function Dashboard() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">Loading...</TableCell>
+                  <TableCell colSpan={5} className="text-center py-4">Loading...</TableCell>
                 </TableRow>
               ) : games.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">No games found.</TableCell>
+                  <TableCell colSpan={5} className="text-center py-4">No games found.</TableCell>
                 </TableRow>
               ) : (
                 games.map((game: any) => (
                   <TableRow key={game.id}>
                     <TableCell>{game.game_number}</TableCell>
-                    <TableCell>
-                      {weeks.find((week: any) => week.id === game.week_id)?.start_date
-                        ? format(new Date(weeks.find((week: any) => week.id === game.week_id)?.start_date), 'MMM d, yyyy')
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>{game.total_tickets_sold}</TableCell>
+                    <TableCell>{game.name}</TableCell>
                     <TableCell>${game.total_sales}</TableCell>
-                    <TableCell>${game.net_profit}</TableCell>
+                    <TableCell>${game.organization_net_profit}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
                         <Button
@@ -631,34 +640,35 @@ export default function Dashboard() {
 
       {/* Winner Modal */}
       <WinnerForm
-        isOpen={isWinnerModalOpen}
-        onClose={handleCloseWinnerModal}
-        game={selectedGame}
-        fetchGames={fetchGames}
+        open={isWinnerModalOpen}
+        onOpenChange={setIsWinnerModalOpen}
+        gameId={selectedGame?.id}
+        weekId={null}
+        onComplete={fetchGames}
+        onOpenPayoutSlip={() => {}}
       />
 
       {/* Expense Modal */}
       <ExpenseModal
-        isOpen={isExpenseModalOpen}
-        onClose={handleCloseExpenseModal}
-        game={selectedGame}
-        fetchGames={fetchGames}
+        open={isExpenseModalOpen}
+        onOpenChange={setIsExpenseModalOpen}
+        gameId={selectedGame?.id || ''}
+        gameName={selectedGame?.name || ''}
       />
 
       {/* Payout Slip Modal */}
       <PayoutSlipModal
-        isOpen={isPayoutSlipModalOpen}
-        onClose={handleClosePayoutSlipModal}
-        game={selectedGame}
-        fetchGames={fetchGames}
+        open={isPayoutSlipModalOpen}
+        onOpenChange={setIsPayoutSlipModalOpen}
+        winnerData={null}
       />
 
       {/* Game Form Modal */}
       <GameForm
-        isOpen={gameFormOpen}
-        onClose={() => setGameFormOpen(false)}
-        fetchGames={fetchGames}
-        weeks={weeks}
+        open={gameFormOpen}
+        onOpenChange={setGameFormOpen}
+        games={games}
+        onComplete={fetchGames}
       />
 
       {/* Delete Confirmation Dialog */}
