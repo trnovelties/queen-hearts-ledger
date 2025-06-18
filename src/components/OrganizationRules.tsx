@@ -12,7 +12,6 @@ interface OrganizationRule {
   id: string;
   organization_name: string;
   rules_content: string;
-  startup_costs: string;
 }
 
 export function OrganizationRules() {
@@ -21,8 +20,7 @@ export function OrganizationRules() {
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     organization_name: '',
-    rules_content: '',
-    startup_costs: ''
+    rules_content: ''
   });
   const { toast } = useToast();
 
@@ -51,8 +49,7 @@ export function OrganizationRules() {
         setRules(data);
         setFormData({
           organization_name: data.organization_name,
-          rules_content: data.rules_content,
-          startup_costs: data.startup_costs
+          rules_content: data.rules_content
         });
       } else {
         // Create default rules if none exist
@@ -65,16 +62,7 @@ export function OrganizationRules() {
 5. If Queen of Hearts is picked, winner gets the jackpot.
 6. If any other card is picked, winner gets the amount shown on the card.
 7. Game continues until Queen of Hearts is drawn.
-8. New game starts the following week after jackpot is won.`,
-          startup_costs: `Initial Setup Costs:
-- Card Board: $XX
-- Tickets: $XX
-- Markers: $XX
-- Other supplies: $XX
-
-Weekly Operating Costs:
-- Weekly prizes: Variable
-- Administrative: $XX`
+8. New game starts the following week after jackpot is won.`
         };
 
         const { data: newRules, error: insertError } = await supabase
@@ -158,13 +146,6 @@ Weekly Operating Costs:
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-medium mb-2">Startup Costs:</h4>
-                <div className="whitespace-pre-line text-sm text-gray-700 bg-gray-50 p-4 rounded">
-                  {rules?.startup_costs || 'No startup costs information set yet.'}
-                </div>
-              </div>
-
               <Button onClick={() => setIsEditing(true)}>
                 Edit Rules
               </Button>
@@ -192,17 +173,6 @@ Weekly Operating Costs:
                 />
               </div>
 
-              <div>
-                <Label htmlFor="startup_costs">Startup Costs Information</Label>
-                <Textarea
-                  id="startup_costs"
-                  value={formData.startup_costs}
-                  onChange={(e) => setFormData({ ...formData, startup_costs: e.target.value })}
-                  placeholder="Enter startup costs information"
-                  rows={8}
-                />
-              </div>
-
               <div className="flex gap-2">
                 <Button onClick={handleSave}>
                   Save Changes
@@ -212,8 +182,7 @@ Weekly Operating Costs:
                   if (rules) {
                     setFormData({
                       organization_name: rules.organization_name,
-                      rules_content: rules.rules_content,
-                      startup_costs: rules.startup_costs
+                      rules_content: rules.rules_content
                     });
                   }
                 }}>
