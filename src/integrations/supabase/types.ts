@@ -20,6 +20,7 @@ export type Database = {
           penalty_to_organization: boolean
           ticket_price: number
           updated_at: string
+          user_id: string | null
           version: number | null
         }
         Insert: {
@@ -32,6 +33,7 @@ export type Database = {
           penalty_to_organization?: boolean
           ticket_price?: number
           updated_at?: string
+          user_id?: string | null
           version?: number | null
         }
         Update: {
@@ -44,6 +46,7 @@ export type Database = {
           penalty_to_organization?: boolean
           ticket_price?: number
           updated_at?: string
+          user_id?: string | null
           version?: number | null
         }
         Relationships: []

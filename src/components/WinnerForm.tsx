@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +63,9 @@ export function WinnerForm({
   useEffect(() => {
     const loadGameConfiguration = async () => {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
         // First try to get card distributions from the game data (game-specific)
         if (gameData?.card_payouts) {
           const distributionsData = gameData.card_payouts;
@@ -84,10 +86,11 @@ export function WinnerForm({
             setCardDistributions(distributionsArray);
           }
         } else {
-          // Fallback to current configuration if game doesn't have card distributions
+          // Fallback to current user-specific configuration if game doesn't have card distributions
           const { data: config, error } = await supabase
             .from('configurations')
             .select('*')
+            .eq('user_id', user.id)
             .limit(1)
             .single();
 
@@ -119,10 +122,11 @@ export function WinnerForm({
           setPenaltyPercentage(config?.penalty_percentage || 0);
         }
 
-        // Get penalty percentage from current configuration
+        // Get penalty percentage from current user-specific configuration
         const { data: config, error: configError } = await supabase
           .from('configurations')
           .select('penalty_percentage')
+          .eq('user_id', user.id)
           .limit(1)
           .single();
 

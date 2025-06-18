@@ -56,10 +56,11 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
-      // Get current configuration including card payouts and version
+      // Get current configuration including card payouts and version - now user-specific
       const { data: config, error: configError } = await supabase
         .from('configurations')
         .select('card_payouts, version')
+        .eq('user_id', user.id)
         .limit(1)
         .single();
 
