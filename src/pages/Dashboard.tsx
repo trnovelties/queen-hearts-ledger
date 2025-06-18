@@ -582,23 +582,23 @@ export default function Dashboard() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full">
               <TicketSalesRow
-                gameId={weeks[Object.keys(weeks).find(gameId => 
+                gameId={Object.keys(weeks).find(gameId => 
                   weeks[gameId].some(w => w.id === showTicketForm)
-                ) || ''] || ''}
+                ) || ''}
                 weekId={showTicketForm}
                 gameData={games.find(g => 
                   weeks[g.id]?.some(w => w.id === showTicketForm)
                 ) || games[0]}
                 previousEndingJackpot={getPreviousJackpotInfo(
-                  weeks[Object.keys(weeks).find(gameId => 
+                  Object.keys(weeks).find(gameId => 
                     weeks[gameId].some(w => w.id === showTicketForm)
-                  ) || ''] || '',
+                  ) || '',
                   showTicketForm
                 ).previousEndingJackpot}
                 previousJackpotContributions={getPreviousJackpotInfo(
-                  weeks[Object.keys(weeks).find(gameId => 
+                  Object.keys(weeks).find(gameId => 
                     weeks[gameId].some(w => w.id === showTicketForm)
-                  ) || ''] || '',
+                  ) || '',
                   showTicketForm
                 ).previousJackpotContributions}
                 onSuccess={() => {
@@ -616,9 +616,9 @@ export default function Dashboard() {
             open={!!showWinnerForm}
             onOpenChange={(open) => !open && setShowWinnerForm(null)}
             weekId={showWinnerForm}
-            gameId={games.find(g => 
-              weeks[g.id]?.some(w => w.id === showWinnerForm)
-            )?.id || ''}
+            gameId={Object.keys(weeks).find(gameId => 
+              weeks[gameId].some(w => w.id === showWinnerForm)
+            ) || ''}
             onComplete={() => {
               setShowWinnerForm(null);
               fetchGames();
