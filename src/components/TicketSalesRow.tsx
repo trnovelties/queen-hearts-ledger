@@ -8,6 +8,7 @@ import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
+import { useAuth } from "@/context/AuthContext";
 
 interface TicketSalesRowProps {
   gameId: string;
@@ -34,6 +35,7 @@ export function TicketSalesRow({
   onSuccess, 
   onCancel 
 }: TicketSalesRowProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     date: new Date(),
     ticketsSold: '',
@@ -55,6 +57,12 @@ export function TicketSalesRow({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (!user?.id) {
+      toast.error("You must be logged in to add ticket sales");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const ticketsSold = parseInt(formData.ticketsSold);
@@ -86,6 +94,7 @@ export function TicketSalesRow({
         .insert({
           game_id: gameId,
           week_id: weekId,
+          user_id: user.id,
           date: formData.date.toISOString().split('T')[0],
           tickets_sold: ticketsSold,
           ticket_price: formData.ticketPrice,
