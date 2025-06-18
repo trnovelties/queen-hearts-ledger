@@ -11,12 +11,15 @@ import { GameManagement } from "@/components/GameManagement";
 const Dashboard = () => {
   // Mock data for components that require props
   const mockSummary = {
+    totalTicketsSold: 0,
     totalSales: 0,
+    totalDistributions: 0,
     totalExpenses: 0,
     totalDonations: 0,
-    netProfit: 0,
-    activeGames: 0,
-    completedGames: 0
+    organizationTotalPortion: 0,
+    jackpotTotalPortion: 0,
+    organizationNetProfit: 0,
+    filteredGames: []
   };
 
   const mockGames: any[] = [];
@@ -48,7 +51,7 @@ const Dashboard = () => {
 
           <TabsContent value="overview" className="space-y-6">
             <FinancialOverview summary={mockSummary} formatCurrency={formatCurrency} />
-            <FinancialCharts games={mockGames} reportType="overview" />
+            <FinancialCharts games={mockGames} reportType="weekly" />
           </TabsContent>
 
           <TabsContent value="games">
