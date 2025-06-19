@@ -201,7 +201,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
             {isSubmitting ? "Saving..." : "Add"}
           </Button>
         </DialogFooter>
-      </Dialog>
+      </DialogContent>
     </Dialog>
   );
 }

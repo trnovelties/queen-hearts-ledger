@@ -186,7 +186,7 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
             {isSubmitting ? "Saving..." : "Add Donation"}
           </Button>
         </DialogFooter>
-      </Content>
+      </DialogContent>
     </Dialog>
   );
 }
