@@ -13,6 +13,7 @@ import { ExpenseModal } from "@/components/ExpenseModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
+import { DonationModal } from "@/components/DonationModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,6 +58,14 @@ export default function Dashboard() {
     amount: 0,
     memo: '',
     gameId: ''
+  });
+
+  // Add donation modal state
+  const [donationModalOpen, setDonationModalOpen] = useState(false);
+  const [donationModalData, setDonationModalData] = useState({
+    gameId: '',
+    gameName: '',
+    defaultDate: ''
   });
 
   useEffect(() => {
@@ -919,45 +928,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleDailyDonation = async (date: string, amount: number) => {
-    if (!currentGameId || amount <= 0) return;
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error('You must be logged in to add donations');
-      }
-
-      const { error } = await supabase.from('expenses').insert([{
-        game_id: currentGameId,
-        date: date,
-        amount: amount,
-        memo: 'Daily donation',
-        is_donation: true,
-        user_id: user.id
-      }]);
-      if (error) throw error;
-
-      const game = games.find(g => g.id === currentGameId);
-      if (game) {
-        await supabase.from('games').update({
-          total_donations: game.total_donations + amount,
-          organization_net_profit: game.organization_net_profit - amount
-        }).eq('id', currentGameId);
-      }
-      toast({
-        title: "Donation Added",
-        description: `Daily donation of ${formatCurrency(amount)} has been recorded.`
-      });
-    } catch (error: any) {
-      console.error('Error adding daily donation:', error);
-      toast({
-        title: "Error",
-        description: `Failed to add donation: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleDailyExpense = async () => {
     if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0) return;
     try {
@@ -1012,6 +982,15 @@ export default function Dashboard() {
       gameId: gameId
     });
     setDailyExpenseModalOpen(true);
+  };
+
+  const openDonationModal = (date: string, gameId: string, gameName: string) => {
+    setDonationModalData({
+      gameId: gameId,
+      gameName: gameName,
+      defaultDate: date
+    });
+    setDonationModalOpen(true);
   };
 
   if (loading) {
@@ -1251,10 +1230,7 @@ export default function Dashboard() {
                                                   <label className="text-xs font-medium text-gray-600">Quick Add</label>
                                                   <Select onValueChange={value => {
                                     if (value === 'donation') {
-                                      const amount = prompt('Enter donation amount:');
-                                      if (amount && !isNaN(parseFloat(amount))) {
-                                        handleDailyDonation(formatDateForDatabase(entryDate), parseFloat(amount));
-                                      }
+                                      openDonationModal(formatDateForDatabase(entryDate), game.id, game.name);
                                     } else if (value === 'expense') {
                                       openDailyExpenseModal(formatDateForDatabase(entryDate), game.id);
                                     }
@@ -1424,6 +1400,15 @@ export default function Dashboard() {
       <WinnerForm open={winnerFormOpen} onOpenChange={setWinnerFormOpen} gameId={currentGameId} weekId={currentWeekId} onComplete={handleWinnerComplete} onOpenPayoutSlip={handleOpenPayoutSlip} />
       
       <GameForm open={gameFormOpen} onOpenChange={setGameFormOpen} games={games} onComplete={handleGameComplete} />
+      
+      {/* Add Donation Modal */}
+      <DonationModal 
+        open={donationModalOpen} 
+        onOpenChange={setDonationModalOpen} 
+        gameId={donationModalData.gameId} 
+        gameName={donationModalData.gameName}
+        defaultDate={donationModalData.defaultDate}
+      />
       
       <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
         <DialogContent className="sm:max-w-md">
