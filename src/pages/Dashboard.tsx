@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
+import { formatDateForDatabase, addDaysToDate } from "@/lib/dateUtils";
 
 export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
@@ -177,17 +178,28 @@ export default function Dashboard() {
   const createWeek = async () => {
     if (!currentGameId) return;
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a week.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Calculate end date as 6 days after start date (7 days total)
-      const endDate = new Date(weekForm.startDate);
-      endDate.setDate(endDate.getDate() + 6);
+      const endDate = addDaysToDate(weekForm.startDate, 6);
       const {
         data,
         error
       } = await supabase.from('weeks').insert([{
         game_id: currentGameId,
         week_number: weekForm.weekNumber,
-        start_date: format(weekForm.startDate, 'yyyy-MM-dd'),
-        end_date: format(endDate, 'yyyy-MM-dd')
+        start_date: formatDateForDatabase(weekForm.startDate),
+        end_date: formatDateForDatabase(endDate),
+        user_id: user.id
       }]).select();
       if (error) throw error;
       toast({
@@ -212,6 +224,17 @@ export default function Dashboard() {
   const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
     if (!currentGameId) return;
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to update entries.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const game = games.find(g => g.id === currentGameId);
       if (!game) throw new Error("Game not found");
       const week = game.weeks.find((w: any) => w.id === weekId);
@@ -304,14 +327,15 @@ export default function Dashboard() {
               id: `temp-${Date.now()}`,
               game_id: currentGameId,
               week_id: weekId,
-              date: format(entryDate, 'yyyy-MM-dd'),
+              date: formatDateForDatabase(entryDate),
               tickets_sold: ticketsSold,
               ticket_price: ticketPrice,
               amount_collected: amountCollected,
               cumulative_collected: cumulativeCollected,
               organization_total: organizationTotal,
               jackpot_total: jackpotTotal,
-              ending_jackpot_total: endingJackpotTotal
+              ending_jackpot_total: endingJackpotTotal,
+              user_id: user.id
             }];
 
             // Recalculate week totals
@@ -331,7 +355,7 @@ export default function Dashboard() {
         const {
           error
         } = await supabase.from('ticket_sales').update({
-          date: format(entryDate, 'yyyy-MM-dd'),
+          date: formatDateForDatabase(entryDate),
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -348,14 +372,15 @@ export default function Dashboard() {
         } = await supabase.from('ticket_sales').insert([{
           game_id: currentGameId,
           week_id: weekId,
-          date: format(entryDate, 'yyyy-MM-dd'),
+          date: formatDateForDatabase(entryDate),
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
           cumulative_collected: cumulativeCollected,
           organization_total: organizationTotal,
           jackpot_total: jackpotTotal,
-          ending_jackpot_total: endingJackpotTotal
+          ending_jackpot_total: endingJackpotTotal,
+          user_id: user.id
         }]);
         if (error) throw error;
       }
@@ -466,14 +491,15 @@ export default function Dashboard() {
                 id: `temp-${Date.now()}`,
                 game_id: currentGameId,
                 week_id: weekId,
-                date: format(entryDate, 'yyyy-MM-dd'),
+                date: formatDateForDatabase(entryDate),
                 tickets_sold: ticketsSold,
                 ticket_price: 0,
                 amount_collected: 0,
                 cumulative_collected: 0,
                 organization_total: 0,
                 jackpot_total: 0,
-                ending_jackpot_total: 0
+                ending_jackpot_total: 0,
+                user_id: user.id
               }]
             };
           }
@@ -1432,7 +1458,7 @@ export default function Dashboard() {
               startDate: date
             }) : null} placeholder="Select start date" />
               <p className="text-xs text-muted-foreground">
-                End date will be automatically set to {weekForm.startDate ? format(new Date(weekForm.startDate.getTime() + 6 * 24 * 60 * 60 * 1000), 'MMM d, yyyy') : 'N/A'}
+                End date will be automatically set to {weekForm.startDate ? format(addDaysToDate(weekForm.startDate, 6), 'MMM d, yyyy') : 'N/A'}
               </p>
             </div>
           </div>
