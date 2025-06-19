@@ -37,6 +37,15 @@ export function parseDateFromDatabase(dateString: string): Date {
 }
 
 /**
+ * Gets today's date in YYYY-MM-DD format in user's local timezone
+ * This ensures the "today" date matches what the user expects to see
+ */
+export function getTodayDateString(): string {
+  const today = new Date();
+  return formatDateForDatabase(today);
+}
+
+/**
  * Gets the date for a specific day within a week
  * Used for calculating daily entry dates within a week
  */
@@ -66,4 +75,21 @@ export function formatDateForDisplay(dateString: string): string {
     day: 'numeric',
     timeZone: undefined // Use local timezone for display
   });
+}
+
+/**
+ * Validates that a date string is in the correct YYYY-MM-DD format
+ */
+export function isValidDateString(dateString: string): boolean {
+  if (!dateString || typeof dateString !== 'string') return false;
+  
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateString)) return false;
+  
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  
+  return date.getFullYear() === year && 
+         date.getMonth() === month - 1 && 
+         date.getDate() === day;
 }
