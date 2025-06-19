@@ -1,261 +1,190 @@
-
-import { useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
-import { format } from 'date-fns';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Printer } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from "@/integrations/supabase/client";
+import { format, isValid, parseISO } from "date-fns";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface PayoutSlipModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  winnerData: {
-    winnerName: string;
-    slotChosen: number;
-    cardSelected: string;
-    payoutAmount: number;
-    date: string;
-    gameNumber: number;
-    gameName: string;
-    weekNumber: number;
-    weekId: string;
-    weekStartDate: string;
-    weekEndDate: string;
-  } | null;
+  winnerData: any;
 }
 
-export function PayoutSlipModal({
-  open,
-  onOpenChange,
-  winnerData
-}: PayoutSlipModalProps) {
+export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipModalProps) {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const slipRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  const { profile } = useAuth();
-  const [authorizedName, setAuthorizedName] = useState<string>('');
-  
-  const handleGeneratePDF = async () => {
-    if (!winnerData || !slipRef.current) {
-      toast({
-        title: "Error",
-        description: "Winner data is not available. Please try again.",
-        variant: "destructive"
-      });
-      return;
+
+  if (!winnerData) return null;
+
+  // Safe date formatting function
+  const formatSafeDate = (dateValue: any, formatString: string = 'MMM d, yyyy') => {
+    if (!dateValue) return 'N/A';
+    
+    let date: Date;
+    if (typeof dateValue === 'string') {
+      date = parseISO(dateValue);
+    } else if (dateValue instanceof Date) {
+      date = dateValue;
+    } else {
+      return 'N/A';
     }
     
-    try {
-      // Save authorized signature name to database
-      if (authorizedName) {
-        const { error } = await supabase
-          .from('weeks')
-          .update({
-            authorized_signature_name: authorizedName
-          })
-          .eq('id', winnerData.weekId);
-          
-        if (error) {
-          console.error('Error saving authorized signature name:', error);
-          toast({
-            title: "Error",
-            description: "Failed to save authorized signature name.",
-            variant: "destructive"
-          });
-        }
-      }
-      
-      const canvas = await html2canvas(slipRef.current, {
-        scale: 2,
-        backgroundColor: 'white',
-        logging: false
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`distribution-slip-${winnerData.winnerName.replace(/\s+/g, '-')}.pdf`);
-      
-      toast({
-        title: "PDF Generated",
-        description: "The distribution slip has been generated and downloaded."
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate the PDF. Please try again.",
-        variant: "destructive"
-      });
-    }
+    return isValid(date) ? format(date, formatString) : 'N/A';
   };
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
+
+  const generatePDF = async () => {
+    setIsGeneratingPdf(true);
+    if (slipRef.current) {
+      try {
+        const canvas = await html2canvas(slipRef.current, {
+          scale: 2, // Increase scale for better resolution
+          useCORS: true, // Enable cross-origin resource loading if needed
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        pdf.save(`payout-slip-${winnerData.winnerName}-${winnerData.weekNumber}.pdf`);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] h-[90vh] max-w-4xl max-h-none overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-xl font-bold text-[#1F4E4A]">Winner Distribution Slip</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Payout Distribution Slip</DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col h-full overflow-hidden">
-          {!winnerData ? (
-            <div className="text-center p-4">
-              <p>No winner data available. Please try again.</p>
+        <div ref={slipRef} className="bg-white p-8 space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <img src="/logo.png" alt="Company Logo" className="h-8" />
             </div>
-          ) : (
-            <>
-              <div className="flex-shrink-0 bg-gray-50 p-4 rounded-lg mb-4">
-                <div className="flex flex-col sm:flex-row gap-4 items-end">
-                  <div className="flex-1">
-                    <Label htmlFor="authorizedSignatureName" className="mb-2 block text-sm font-medium text-[#1F4E4A]">
-                      Authorized Signature Name
-                    </Label>
-                    <Input
-                      id="authorizedSignatureName"
-                      placeholder="Enter name of authorized person signing"
-                      value={authorizedName}
-                      onChange={(e) => setAuthorizedName(e.target.value)}
-                      className="border-[#1F4E4A]/20 focus:border-[#A1E96C] focus:ring-[#A1E96C]"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleGeneratePDF} 
-                    className="bg-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90 font-medium px-6 py-2 h-10"
-                  >
-                    <Printer className="h-4 w-4 mr-2" /> Print Distribution Slip
-                  </Button>
+            <div className="text-right space-y-1">
+              <p className="font-semibold">Prepared By: Finance Department</p>
+              <p className="text-sm text-gray-600">Date Prepared: {formatSafeDate(new Date())}</p>
+            </div>
+          </div>
+          
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">PAYOUT DISTRIBUTION SLIP</h2>
+            <p className="text-lg">Week {winnerData.weekNumber}</p>
+            <p className="text-sm text-gray-600">
+              {formatSafeDate(winnerData.weekStartDate)} - {formatSafeDate(winnerData.weekEndDate)}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 text-sm">
+            <div className="space-y-3">
+              <div>
+                <span className="font-semibold">Winner Name:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {winnerData.winnerName || 'N/A'}
                 </div>
               </div>
-              
-              <div className="flex-1 overflow-y-auto bg-gray-50 p-4 rounded-lg">
-                <div 
-                  ref={slipRef} 
-                  className="bg-white p-8 border-2 border-gray-300 rounded-lg shadow-lg mx-auto max-w-3xl min-h-[600px]"
-                >
-                  {/* Header Section */}
-                  <div className="text-center mb-8 border-b-2 border-[#1F4E4A] pb-6">
-                    <div className="mb-4">
-                      <h1 className="text-3xl font-bold text-[#1F4E4A] mb-2">QUEEN OF HEARTS</h1>
-                      <h2 className="text-xl font-semibold text-gray-700">Winner Distribution Slip</h2>
-                    </div>
-                    <div className="bg-[#F7F8FC] px-4 py-2 rounded-lg inline-block">
-                      <span className="text-lg font-semibold text-[#1F4E4A]">
-                        {profile?.organization_name || 'Organization Name'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Game Information Section */}
-                  <div className="mb-8">
-                    <h3 className="text-lg font-bold text-[#1F4E4A] mb-4 border-b border-gray-300 pb-2">
-                      GAME INFORMATION
-                    </h3>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Game:</span>
-                          <span className="font-medium">{winnerData.gameName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Week:</span>
-                          <span className="font-medium">Week {winnerData.weekNumber}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Week Period:</span>
-                          <span className="font-medium">
-                            {format(new Date(winnerData.weekStartDate), 'MMM d')} - {format(new Date(winnerData.weekEndDate), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Drawing Date:</span>
-                          <span className="font-medium">{format(new Date(winnerData.date), 'MMMM d, yyyy')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Winner Information Section */}
-                  <div className="mb-8">
-                    <h3 className="text-lg font-bold text-[#1F4E4A] mb-4 border-b border-gray-300 pb-2">
-                      WINNER DETAILS
-                    </h3>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Winner Name:</span>
-                          <span className="font-bold text-lg">{winnerData.winnerName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Slot Chosen:</span>
-                          <span className="font-medium text-lg">#{winnerData.slotChosen}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-gray-600">Card Exposed:</span>
-                          <span className="font-bold text-lg text-red-600">{winnerData.cardSelected}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Distribution Amount Section */}
-                  <div className="mb-8">
-                    <div className="bg-[#A1E96C] rounded-lg p-6 text-center border-2 border-[#1F4E4A]">
-                      <h3 className="text-lg font-bold text-[#1F4E4A] mb-2">AMOUNT WON</h3>
-                      <div className="text-4xl font-bold text-[#1F4E4A]">
-                        {formatCurrency(winnerData.payoutAmount)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Signature Section */}
-                  <div className="mt-12 pt-8 border-t-2 border-gray-300">
-                    <div className="grid grid-cols-2 gap-12">
-                      <div className="text-center">
-                        <div className="border-b-2 border-gray-400 pb-1 mb-2 h-12 flex items-end justify-center">
-                          <span className="text-sm text-gray-500">Winner Signature</span>
-                        </div>
-                        <div className="text-sm font-medium text-gray-600">
-                          {winnerData.winnerName}
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="border-b-2 border-gray-400 pb-1 mb-2 h-12 flex items-end justify-center">
-                          <span className="text-sm text-gray-500">Authorized Signature</span>
-                        </div>
-                        <div className="text-sm font-medium text-gray-600">
-                          {authorizedName || 'Authorized Representative'}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center mt-6 text-xs text-gray-500">
-                      Generated on {format(new Date(), 'MMMM d, yyyy \'at\' h:mm a')}
-                    </div>
-                  </div>
+              <div>
+                <span className="font-semibold">Account Number:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {winnerData.accountNumber || 'N/A'}
                 </div>
               </div>
-            </>
-          )}
+              <div>
+                <span className="font-semibold">Bank Name:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {winnerData.bankName || 'N/A'}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <span className="font-semibold">Date:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {formatSafeDate(winnerData.date)}
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold">Amount Won:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {winnerData.amountWon ? `$${winnerData.amountWon.toLocaleString()}` : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold">Payment Method:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {winnerData.paymentMethod || 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-lg">Distribution Details:</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto border-collapse border border-gray-400">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-400 px-4 py-2">Item</th>
+                      <th className="border border-gray-400 px-4 py-2">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-400 px-4 py-2">Winnings</td>
+                      <td className="border border-gray-400 px-4 py-2">${winnerData.amountWon?.toLocaleString() || '0'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-400 px-4 py-2">Tax Withheld</td>
+                      <td className="border border-gray-400 px-4 py-2">${winnerData.taxWithheld?.toLocaleString() || '0'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-400 px-4 py-2">Other Deductions</td>
+                      <td className="border border-gray-400 px-4 py-2">${winnerData.otherDeductions?.toLocaleString() || '0'}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-400 px-4 py-2 font-semibold">Net Payout</td>
+                      <td className="border border-gray-400 px-4 py-2 font-semibold">${winnerData.netPayout?.toLocaleString() || '0'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-lg">Additional Notes:</h3>
+              <p className="text-sm">{winnerData.additionalNotes || 'N/A'}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-end text-sm">
+            <div className="space-y-1">
+              <p className="font-semibold">Authorized Signature:</p>
+              <div className="border-b border-gray-300 w-48"></div>
+              <p className="text-gray-600">Finance Manager</p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-semibold">Winner's Signature:</p>
+              <div className="border-b border-gray-300 w-48"></div>
+              <p className="text-gray-600">Date Received: {formatSafeDate(new Date())}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button onClick={generatePDF} disabled={isGeneratingPdf}>
+            {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
