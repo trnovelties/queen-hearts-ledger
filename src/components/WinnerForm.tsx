@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +10,13 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 
 interface WinnerFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  gameId: string;
-  weekId: string;
+  gameId: string | null;
+  weekId: string | null;
   gameData?: {
     ticket_price: number;
     organization_percentage: number;
@@ -62,6 +64,8 @@ export function WinnerForm({
 
   useEffect(() => {
     const loadGameConfiguration = async () => {
+      if (!gameId || !open) return;
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -139,16 +143,19 @@ export function WinnerForm({
       }
     };
 
-    if (open) {
-      loadGameConfiguration();
-    }
-  }, [open, gameData]);
+    loadGameConfiguration();
+  }, [open, gameData, gameId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      if (!gameId || !weekId) {
+        toast.error("Missing game or week information");
+        return;
+      }
+
       if (!formData.winnerName || !formData.cardSelected || !formData.authorizedSignatureName) {
         toast.error("Please fill out all fields");
         return;
@@ -211,7 +218,7 @@ export function WinnerForm({
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            end_date: new Date().toISOString().split('T')[0],
+            end_date: formatDateForDatabase(new Date()),
             carryover_jackpot: carryoverAmount,
             total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
@@ -250,13 +257,24 @@ export function WinnerForm({
         amountWon: finalDistribution,
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
-        weekId
+        weekId,
+        date: formatDateForDatabase(new Date())
       };
 
       toast.success("Winner details saved successfully!");
       onComplete();
       onOpenPayoutSlip(winnerData);
       onOpenChange(false);
+      
+      // Reset form
+      setFormData({
+        winnerName: '',
+        cardSelected: '',
+        slotChosen: 1,
+        winnerPresent: true,
+        authorizedSignatureName: ''
+      });
+      setSelectedDistribution(0);
     } catch (error) {
       console.error('Error saving winner details:', error);
       toast.error("Failed to save winner details");

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -1606,8 +1605,8 @@ export default function Dashboard() {
                 )}
               </Card>
             );
-          })
-        )}
+          })}
+        </div>
       </div>
       
       {/* Week Form Dialog */}
@@ -1701,22 +1700,17 @@ export default function Dashboard() {
       />
       
       {/* Winner Form */}
-      <WinnerForm
-        open={winnerFormOpen}
-        onOpenChange={setWinnerFormOpen}
-        gameId={currentGameId}
-        weekId={currentWeekId}
-        onComplete={handleWinnerComplete}
-        onOpenPayoutSlip={handleOpenPayoutSlip}
+      <WinnerForm 
+        open={winnerFormOpen} 
+        onOpenChange={setWinnerFormOpen} 
+        gameId={currentGameId} 
+        weekId={currentWeekId} 
+        onComplete={handleWinnerComplete} 
+        onOpenPayoutSlip={handleOpenPayoutSlip} 
       />
       
       {/* Game Form */}
-      <GameForm
-        open={gameFormOpen}
-        onOpenChange={setGameFormOpen}
-        games={games}
-        onComplete={handleGameComplete}
-      />
+      <GameForm open={gameFormOpen} onOpenChange={setGameFormOpen} games={games} onComplete={handleGameComplete} />
       
       {/* Daily Expense Modal */}
       <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
@@ -1731,32 +1725,18 @@ export default function Dashboard() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={dailyExpenseForm.amount || ''}
-                onChange={(e) => setDailyExpenseForm({
-                  ...dailyExpenseForm,
-                  amount: parseFloat(e.target.value) || 0
-                })}
-                placeholder="0.00"
-              />
+              <Input id="amount" type="number" step="0.01" min="0" value={dailyExpenseForm.amount || ''} onChange={e => setDailyExpenseForm({
+              ...dailyExpenseForm,
+              amount: parseFloat(e.target.value) || 0
+            })} placeholder="0.00" />
             </div>
             
             <div className="grid gap-2">
               <Label htmlFor="memo">Memo</Label>
-              <Textarea
-                id="memo"
-                value={dailyExpenseForm.memo}
-                onChange={(e) => setDailyExpenseForm({
-                  ...dailyExpenseForm,
-                  memo: e.target.value
-                })}
-                placeholder="Enter expense description..."
-                rows={3}
-              />
+              <Textarea id="memo" value={dailyExpenseForm.memo} onChange={e => setDailyExpenseForm({
+              ...dailyExpenseForm,
+              memo: e.target.value
+            })} placeholder="Enter expense description..." rows={3} />
             </div>
           </div>
           
