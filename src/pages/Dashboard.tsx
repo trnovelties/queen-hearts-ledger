@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -17,14 +18,13 @@ import { Separator } from "@/components/ui/separator";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TicketSalesRow } from "@/components/TicketSalesRow";
-import { ExpenseForm } from "@/components/ExpenseForm";
 import { format, parseISO, addDays } from 'date-fns';
 import { PlusCircle, Trash2, Edit, Save, X, DollarSign, Calendar, BarChart3, Settings, ChevronRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { formatDateForDatabase, addDaysToDate, getWeekDayDate, isSameDay } from "@/lib/dateUtils";
 
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
-  const { adminMode, currentOrganization } = useAdmin();
+  const { isAdminMode, currentOrganization } = useAdmin();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -61,14 +61,14 @@ export default function Dashboard() {
     }
     
     fetchGames();
-  }, [user, navigate, adminMode, currentOrganization]);
+  }, [user, navigate, isAdminMode, currentOrganization]);
 
   const fetchGames = async () => {
     try {
       setIsLoading(true);
       
       // Determine which user ID to use for fetching games
-      const targetUserId = adminMode && currentOrganization ? currentOrganization.id : user?.id;
+      const targetUserId = isAdminMode && currentOrganization ? currentOrganization.id : user?.id;
       
       if (!targetUserId) {
         throw new Error("No user ID available");
@@ -184,7 +184,7 @@ export default function Dashboard() {
       setIsSubmitting(true);
       
       // Determine which user ID to use for creating the game
-      const targetUserId = adminMode && currentOrganization ? currentOrganization.id : user?.id;
+      const targetUserId = isAdminMode && currentOrganization ? currentOrganization.id : user?.id;
       
       if (!targetUserId) {
         throw new Error("No user ID available");
@@ -194,6 +194,8 @@ export default function Dashboard() {
         .from('games')
         .insert([{
           name: gameForm.name,
+          game_number: 1, // Add required game_number
+          start_date: formatDateForDatabase(new Date()), // Add required start_date
           ticket_price: gameForm.ticketPrice,
           organization_percentage: gameForm.organizationPercentage,
           jackpot_percentage: gameForm.jackpotPercentage,
@@ -232,7 +234,7 @@ export default function Dashboard() {
   };
 
   const createWeek = async () => {
-    if (!currentGameId) return;
+    if (!currentGameId || !user?.id) return;
     try {
       // Calculate end date as 6 days after start date (7 days total) using timezone-neutral calculation
       const endDate = addDaysToDate(weekForm.startDate, 6);
@@ -243,7 +245,8 @@ export default function Dashboard() {
           game_id: currentGameId,
           week_number: weekForm.weekNumber,
           start_date: formatDateForDatabase(weekForm.startDate),
-          end_date: formatDateForDatabase(endDate)
+          end_date: formatDateForDatabase(endDate),
+          user_id: user.id // Add required user_id
         }])
         .select();
 
@@ -266,13 +269,13 @@ export default function Dashboard() {
   };
 
   const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
-    if (!currentGameId) return;
+    if (!currentGameId || !user?.id) return;
     
     try {
-      const game = games.find(g => g.id === currentGameId);
-      if (!game) throw new Error("Game not found");
+      const currentGame = games.find(g => g.id === currentGameId);
+      if (!currentGame) throw new Error("Game not found");
       
-      const week = game.weeks.find((w: any) => w.id === weekId);
+      const week = currentGame.weeks.find((w: any) => w.id === weekId);
       if (!week) throw new Error("Week not found");
 
       // Calculate the date for this day using timezone-neutral method
@@ -285,10 +288,10 @@ export default function Dashboard() {
       });
 
       // Calculate the basic values
-      const ticketPrice = game.ticket_price;
+      const ticketPrice = currentGame.ticket_price;
       const amountCollected = ticketsSold * ticketPrice;
-      const organizationPercentage = game.organization_percentage;
-      const jackpotPercentage = game.jackpot_percentage;
+      const organizationPercentage = currentGame.organization_percentage;
+      const jackpotPercentage = currentGame.jackpot_percentage;
       const organizationTotal = amountCollected * (organizationPercentage / 100);
       const jackpotTotal = amountCollected * (jackpotPercentage / 100);
 
@@ -302,7 +305,7 @@ export default function Dashboard() {
       if (salesError) throw salesError;
 
       // Calculate cumulative collected up to this date (excluding current entry if updating)
-      let cumulativeCollected = game.carryover_jackpot || 0;
+      let cumulativeCollected = currentGame.carryover_jackpot || 0;
       if (allGameSales) {
         for (const sale of allGameSales) {
           const saleDate = new Date(sale.date + 'T00:00:00'); // Ensure local timezone
@@ -317,7 +320,7 @@ export default function Dashboard() {
       cumulativeCollected += amountCollected;
 
       // Calculate ending jackpot total
-      let previousJackpotTotal = game.carryover_jackpot || 0;
+      let previousJackpotTotal = currentGame.carryover_jackpot || 0;
       if (allGameSales && allGameSales.length > 0) {
         const previousEntries = allGameSales.filter(sale => {
           const saleDate = new Date(sale.date + 'T00:00:00'); // Ensure local timezone
@@ -414,7 +417,8 @@ export default function Dashboard() {
             cumulative_collected: cumulativeCollected,
             organization_total: organizationTotal,
             jackpot_total: jackpotTotal,
-            ending_jackpot_total: endingJackpotTotal
+            ending_jackpot_total: endingJackpotTotal,
+            user_id: user.id // Add required user_id
           }]);
         
         if (error) throw error;
@@ -460,7 +464,7 @@ export default function Dashboard() {
       if (expensesError) throw expensesError;
       
       const totalExpenses = expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
-      const organizationNetProfit = (gameTotalSales * (game.organization_percentage / 100)) - totalExpenses;
+      const organizationNetProfit = (gameTotalSales * (currentGame.organization_percentage / 100)) - totalExpenses;
       
       const { error: gameUpdateError } = await supabase
         .from('games')
@@ -502,8 +506,8 @@ export default function Dashboard() {
     if (!currentGameId) return;
     
     try {
-      const game = games.find(g => g.id === currentGameId);
-      if (!game) throw new Error("Game not found");
+      const currentGame = games.find(g => g.id === currentGameId);
+      if (!currentGame) throw new Error("Game not found");
       
       // Create an expense with negative amount (donation)
       const { error } = await supabase
@@ -511,7 +515,7 @@ export default function Dashboard() {
         .insert([{
           game_id: currentGameId,
           date: date,
-          description: 'Donation',
+          memo: 'Donation',
           amount: -amount, // Negative amount for donation
           user_id: user?.id
         }]);
@@ -645,7 +649,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {adminMode && currentOrganization && (
+      {isAdminMode && currentOrganization && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -922,7 +926,7 @@ export default function Dashboard() {
                                               handleDailyDonation(formatDateForDatabase(entryDate), parseFloat(amount));
                                             }
                                           } else if (value === 'expense') {
-                                            openDailyExpenseModal(formatDateForDatabase(entryDate), game.id);
+                                            openDailyExpenseModal(formatDateForDatabase(entryDate), currentGame.id);
                                           }
                                         }}>
                                           <SelectTrigger className="w-32">
@@ -1134,7 +1138,29 @@ export default function Dashboard() {
               Record an expense for {dailyExpenseDate ? formatDate(dailyExpenseDate) : 'this day'}.
             </DialogDescription>
           </DialogHeader>
-          <ExpenseForm onSubmit={handleExpenseSubmit} onCancel={() => setDailyExpenseModalOpen(false)} />
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="memo">Description</Label>
+              <Input
+                id="memo"
+                placeholder="Enter expense description..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDailyExpenseModalOpen(false)}>Cancel</Button>
+            <Button onClick={() => setDailyExpenseModalOpen(false)}>Add Expense</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
