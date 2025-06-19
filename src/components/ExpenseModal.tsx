@@ -23,10 +23,16 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
     type: "expense", // "expense" or "donation"
   });
   
-  // Use simple date string for HTML date input
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  // Get today's date in YYYY-MM-DD format in user's local timezone
+  const getTodayString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddExpense = async () => {
@@ -51,12 +57,12 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         return;
       }
 
-      // Use the date string directly - no conversion needed
+      // Save the date string directly without any conversion
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: selectedDate, // Save date string directly
+          date: selectedDate, // This is already a YYYY-MM-DD string
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,
           is_donation: expenseData.type === "donation",
@@ -98,7 +104,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         memo: "",
         type: "expense",
       });
-      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setSelectedDate(getTodayString());
       
       onOpenChange(false);
     } catch (error: any) {

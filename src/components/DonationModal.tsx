@@ -23,9 +23,17 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
     memo: "",
   });
   
-  // Use simple date string for HTML date input
+  // Get today's date in YYYY-MM-DD format in user's local timezone
+  const getTodayString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   const [selectedDate, setSelectedDate] = useState<string>(
-    defaultDate || new Date().toISOString().split('T')[0]
+    defaultDate || getTodayString()
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,12 +59,12 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         return;
       }
 
-      // Use the date string directly - no conversion needed
+      // Save the date string directly without any conversion
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: selectedDate, // Save date string directly
+          date: selectedDate, // This is already a YYYY-MM-DD string
           amount: parseFloat(donationData.amount),
           memo: donationData.memo || null,
           is_donation: true,
@@ -97,7 +105,7 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
       });
       
       // Reset to default date or today
-      setSelectedDate(defaultDate || new Date().toISOString().split('T')[0]);
+      setSelectedDate(defaultDate || getTodayString());
       
       onOpenChange(false);
     } catch (error: any) {
