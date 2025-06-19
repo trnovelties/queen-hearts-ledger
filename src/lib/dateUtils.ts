@@ -49,3 +49,25 @@ export function formatDateStringForDisplay(dateString: string): string {
   
   return `${monthNames[month - 1]} ${day}, ${year}`;
 }
+
+/**
+ * Legacy function for backward compatibility
+ * Formats a Date object to YYYY-MM-DD string for database storage
+ * Note: This may cause timezone issues, prefer using date strings directly
+ */
+export function formatDateForDatabase(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Legacy function for backward compatibility
+ * Parses a YYYY-MM-DD string from database to Date object
+ * Note: This may cause timezone issues, prefer working with date strings directly
+ */
+export function parseDateFromDatabase(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
