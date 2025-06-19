@@ -41,6 +41,18 @@ const formatDateForDisplay = (date: Date, formatType: 'long' | 'short' = 'long')
   }
 };
 
+// Helper function to create timezone-neutral date
+const createTimezoneNeutralDate = (date: Date | undefined): Date | undefined => {
+  if (!date) return undefined;
+  
+  // Create a new date using the local date components to avoid timezone shifts
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  
+  return new Date(year, month, day);
+};
+
 export function DatePicker({
   date,
   setDate,
@@ -50,6 +62,12 @@ export function DatePicker({
   disabled = false,
   disabledDates,
 }: DatePickerProps) {
+  // Timezone-neutral date selection handler
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    const neutralDate = createTimezoneNeutralDate(selectedDate);
+    setDate(neutralDate);
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
       {label && <label className="text-sm font-medium">{label}</label>}
@@ -72,7 +90,7 @@ export function DatePicker({
           <Calendar
             mode="single"
             selected={date}
-            onSelect={setDate}
+            onSelect={handleDateSelect}
             disabled={disabledDates}
             initialFocus
             className="pointer-events-auto"
@@ -92,6 +110,12 @@ export function DatePickerWithInput({
   disabled = false,
   disabledDates,
 }: DatePickerProps) {
+  // Timezone-neutral date selection handler
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    const neutralDate = createTimezoneNeutralDate(selectedDate);
+    setDate(neutralDate);
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
       {label && <label className="text-sm font-semibold text-[#132E2C]">{label}</label>}
@@ -114,7 +138,7 @@ export function DatePickerWithInput({
           <Calendar
             mode="single"
             selected={date}
-            onSelect={setDate}
+            onSelect={handleDateSelect}
             disabled={disabledDates}
             initialFocus
             className="pointer-events-auto"
