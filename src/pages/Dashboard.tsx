@@ -6,19 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 import { CalendarIcon, ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { ExpenseModal } from "@/components/ExpenseModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
-import { DonationModal } from "@/components/DonationModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
-import { formatDateForDatabase, addDaysToDate } from "@/lib/dateUtils";
 
 export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
@@ -46,22 +44,24 @@ export default function Dashboard() {
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [currentGameName, setCurrentGameName] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
   const [tempTicketInputs, setTempTicketInputs] = useState<{
     [key: string]: string;
   }>({});
 
-  // New state for donation modal
-  const [donationModalOpen, setDonationModalOpen] = useState(false);
+  const [dailyExpenseModalOpen, setDailyExpenseModalOpen] = useState(false);
+  const [dailyExpenseForm, setDailyExpenseForm] = useState({
+    date: '',
+    amount: 0,
+    memo: '',
+    gameId: ''
+  });
 
   useEffect(() => {
     fetchGames();
 
-    // Set up real-time subscription for games table
     const gamesSubscription = supabase.channel('public:games').on('postgres_changes', {
       event: '*',
       schema: 'public',
@@ -71,7 +71,6 @@ export default function Dashboard() {
       fetchGames();
     }).subscribe();
 
-    // Set up real-time subscription for weeks table
     const weeksSubscription = supabase.channel('public:weeks').on('postgres_changes', {
       event: '*',
       schema: 'public',
@@ -81,7 +80,6 @@ export default function Dashboard() {
       fetchGames();
     }).subscribe();
 
-    // Set up real-time subscription for ticket_sales table
     const ticketSalesSubscription = supabase.channel('public:ticket_sales').on('postgres_changes', {
       event: '*',
       schema: 'public',
@@ -91,7 +89,6 @@ export default function Dashboard() {
       fetchGames();
     }).subscribe();
 
-    // Set up real-time subscription for expenses table
     const expensesSubscription = supabase.channel('public:expenses').on('postgres_changes', {
       event: '*',
       schema: 'public',
@@ -111,38 +108,23 @@ export default function Dashboard() {
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const {
-        data: gamesData,
-        error: gamesError
-      } = await supabase.from('games').select('*').order('game_number', {
+      const { data: gamesData, error: gamesError } = await supabase.from('games').select('*').order('game_number', {
         ascending: true
       });
       if (gamesError) throw gamesError;
       const gamesWithDetails = await Promise.all(gamesData.map(async game => {
-        // Get weeks for this game
-        const {
-          data: weeksData,
-          error: weeksError
-        } = await supabase.from('weeks').select('*').eq('game_id', game.id).order('week_number', {
+        const { data: weeksData, error: weeksError } = await supabase.from('weeks').select('*').eq('game_id', game.id).order('week_number', {
           ascending: true
         });
         if (weeksError) throw weeksError;
 
-        // Get expenses for this game
-        const {
-          data: expensesData,
-          error: expensesError
-        } = await supabase.from('expenses').select('*').eq('game_id', game.id).order('date', {
+        const { data: expensesData, error: expensesError } = await supabase.from('expenses').select('*').eq('game_id', game.id).order('date', {
           ascending: false
         });
         if (expensesError) throw expensesError;
 
-        // Get detailed week data with ticket sales
         const weeksWithDetails = await Promise.all(weeksData.map(async week => {
-          const {
-            data: salesData,
-            error: salesError
-          } = await supabase.from('ticket_sales').select('*').eq('week_id', week.id).order('date', {
+          const { data: salesData, error: salesError } = await supabase.from('ticket_sales').select('*').eq('week_id', week.id).order('date', {
             ascending: true
           });
           if (salesError) throw salesError;
@@ -170,7 +152,6 @@ export default function Dashboard() {
     }
   };
 
-  // Filter games based on active tab
   const currentGames = games.filter(game => !game.end_date);
   const archivedGames = games.filter(game => game.end_date);
   const displayGames = activeTab === 'current' ? currentGames : archivedGames;
@@ -178,23 +159,14 @@ export default function Dashboard() {
   const createWeek = async () => {
     if (!currentGameId) return;
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a week.",
-          variant: "destructive"
-        });
-        return;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('You must be logged in to create a week');
       }
 
-      // Calculate end date as 6 days after start date (7 days total)
-      const endDate = addDaysToDate(weekForm.startDate, 6);
-      const {
-        data,
-        error
-      } = await supabase.from('weeks').insert([{
+      const endDate = new Date(weekForm.startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      const { data, error } = await supabase.from('weeks').insert([{
         game_id: currentGameId,
         week_number: weekForm.weekNumber,
         start_date: formatDateForDatabase(weekForm.startDate),
@@ -224,15 +196,9 @@ export default function Dashboard() {
   const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
     if (!currentGameId) return;
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to update entries.",
-          variant: "destructive"
-        });
-        return;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('You must be logged in to update entries');
       }
 
       const game = games.find(g => g.id === currentGameId);
@@ -240,18 +206,15 @@ export default function Dashboard() {
       const week = game.weeks.find((w: any) => w.id === weekId);
       if (!week) throw new Error("Week not found");
 
-      // Calculate the date for this day
       const weekStartDate = new Date(week.start_date);
       const entryDate = new Date(weekStartDate);
       entryDate.setDate(entryDate.getDate() + dayIndex);
 
-      // Find existing entry for this specific date
       const existingEntry = week.ticket_sales.find((entry: any) => {
         const existingDate = new Date(entry.date);
         return existingDate.toDateString() === entryDate.toDateString();
       });
 
-      // Calculate the basic values
       const ticketPrice = game.ticket_price;
       const amountCollected = ticketsSold * ticketPrice;
       const organizationPercentage = game.organization_percentage;
@@ -259,23 +222,16 @@ export default function Dashboard() {
       const organizationTotal = amountCollected * (organizationPercentage / 100);
       const jackpotTotal = amountCollected * (jackpotPercentage / 100);
 
-      // Get all ticket sales for this game to calculate cumulative correctly
-      const {
-        data: allGameSales,
-        error: salesError
-      } = await supabase.from('ticket_sales').select('*').eq('game_id', currentGameId).order('date', {
+      const { data: allGameSales, error: salesError } = await supabase.from('ticket_sales').select('*').eq('game_id', currentGameId).order('date', {
         ascending: true
       });
       if (salesError) throw salesError;
 
-      // Calculate cumulative collected up to this date (excluding current entry if updating)
       let cumulativeCollected = game.carryover_jackpot || 0;
       if (allGameSales) {
         for (const sale of allGameSales) {
           const saleDate = new Date(sale.date);
           const currentEntryDate = new Date(entryDate);
-
-          // Include all sales before this date, and this date if it's not the current entry being updated
           if (saleDate < currentEntryDate || saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id) {
             cumulativeCollected += sale.amount_collected;
           }
@@ -283,11 +239,8 @@ export default function Dashboard() {
       }
       cumulativeCollected += amountCollected;
 
-      // Calculate ending jackpot total
-      // Get the previous ending jackpot total (from the most recent entry before this one)
       let previousJackpotTotal = game.carryover_jackpot || 0;
       if (allGameSales && allGameSales.length > 0) {
-        // Find the most recent entry before this date
         const previousEntries = allGameSales.filter(sale => {
           const saleDate = new Date(sale.date);
           const currentEntryDate = new Date(entryDate);
@@ -300,7 +253,6 @@ export default function Dashboard() {
       }
       const endingJackpotTotal = previousJackpotTotal + jackpotTotal;
 
-      // Optimistically update local state first
       setGames(prevGames => prevGames.map(g => {
         if (g.id !== currentGameId) return g;
         return {
@@ -334,11 +286,9 @@ export default function Dashboard() {
               cumulative_collected: cumulativeCollected,
               organization_total: organizationTotal,
               jackpot_total: jackpotTotal,
-              ending_jackpot_total: endingJackpotTotal,
-              user_id: user.id
+              ending_jackpot_total: endingJackpotTotal
             }];
 
-            // Recalculate week totals
             const weekTotalTickets = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
             const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
             return {
@@ -351,10 +301,7 @@ export default function Dashboard() {
         };
       }));
       if (existingEntry) {
-        // Update existing entry
-        const {
-          error
-        } = await supabase.from('ticket_sales').update({
+        const { error } = await supabase.from('ticket_sales').update({
           date: formatDateForDatabase(entryDate),
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
@@ -366,10 +313,7 @@ export default function Dashboard() {
         }).eq('id', existingEntry.id);
         if (error) throw error;
       } else {
-        // Insert new entry
-        const {
-          error
-        } = await supabase.from('ticket_sales').insert([{
+        const { error } = await supabase.from('ticket_sales').insert([{
           game_id: currentGameId,
           week_id: weekId,
           date: formatDateForDatabase(entryDate),
@@ -385,10 +329,7 @@ export default function Dashboard() {
         if (error) throw error;
       }
 
-      // Recalculate and update week totals
-      const {
-        data: weekSales
-      } = await supabase.from('ticket_sales').select('*').eq('week_id', weekId);
+      const { data: weekSales } = await supabase.from('ticket_sales').select('*').eq('week_id', weekId);
       if (weekSales) {
         const weekTotalTickets = weekSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
         const weekTotalSales = weekSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
@@ -398,18 +339,12 @@ export default function Dashboard() {
         }).eq('id', weekId);
       }
 
-      // Recalculate and update game totals
-      const {
-        data: gameSales
-      } = await supabase.from('ticket_sales').select('*').eq('game_id', currentGameId);
+      const { data: gameSales } = await supabase.from('ticket_sales').select('*').eq('game_id', currentGameId);
       if (gameSales) {
         const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
         const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
 
-        // Get total expenses and donations
-        const {
-          data: expenses
-        } = await supabase.from('expenses').select('*').eq('game_id', currentGameId);
+        const { data: expenses } = await supabase.from('expenses').select('*').eq('game_id', currentGameId);
         const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
         const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
         const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
@@ -422,7 +357,6 @@ export default function Dashboard() {
       }
     } catch (error: any) {
       console.error('Error updating daily entry:', error);
-      // Revert optimistic update on error
       fetchGames();
       toast({
         title: "Error",
@@ -432,7 +366,6 @@ export default function Dashboard() {
     }
   };
 
-  // Handle input change for ticket sold (store temporarily)
   const handleTicketInputChange = (weekId: string, dayIndex: number, value: string) => {
     const key = `${weekId}-${dayIndex}`;
     setTempTicketInputs(prev => ({
@@ -441,11 +374,9 @@ export default function Dashboard() {
     }));
   };
 
-  // Handle Enter key press to submit the ticket input
   const handleTicketInputSubmit = (weekId: string, dayIndex: number, value: string) => {
     const ticketsSold = parseInt(value) || 0;
 
-    // Clear the temporary input immediately to show updated value
     const key = `${weekId}-${dayIndex}`;
     setTempTicketInputs(prev => {
       const newInputs = {
@@ -455,7 +386,6 @@ export default function Dashboard() {
       return newInputs;
     });
 
-    // Immediately update the local state to show the new value
     setGames(prevGames => prevGames.map(g => {
       if (g.id !== currentGameId) return g;
       return {
@@ -484,7 +414,6 @@ export default function Dashboard() {
               })
             };
           } else {
-            // For new entries, we'll add a placeholder that will be updated by the database call
             return {
               ...w,
               ticket_sales: [...w.ticket_sales, {
@@ -498,8 +427,7 @@ export default function Dashboard() {
                 cumulative_collected: 0,
                 organization_total: 0,
                 jackpot_total: 0,
-                ending_jackpot_total: 0,
-                user_id: user.id
+                ending_jackpot_total: 0
               }]
             };
           }
@@ -507,7 +435,6 @@ export default function Dashboard() {
       };
     }));
 
-    // Then update the database
     updateDailyEntry(weekId, dayIndex, ticketsSold);
   };
 
@@ -526,7 +453,6 @@ export default function Dashboard() {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
 
-    // Find the last week number for this game
     const lastWeekNumber = game.weeks.length > 0 ? Math.max(...game.weeks.map((w: any) => w.week_number)) : 0;
     setWeekForm({
       weekNumber: lastWeekNumber + 1,
@@ -553,69 +479,51 @@ export default function Dashboard() {
     try {
       console.log(`Starting deletion of ${deleteType} with ID: ${deleteItemId}`);
       if (deleteType === 'game') {
-        // First, check if the game exists
-        const {
-          data: gameCheck,
-          error: gameCheckError
-        } = await supabase.from('games').select('id, name').eq('id', deleteItemId).single();
+        const { data: gameCheck, error: gameCheckError } = await supabase.from('games').select('id, name').eq('id', deleteItemId).single();
         if (gameCheckError) {
           console.error('Game not found:', gameCheckError);
           throw new Error(`Game not found: ${gameCheckError.message}`);
         }
         console.log('Game found:', gameCheck);
 
-        // Delete all ticket_sales for this game first
         console.log('Deleting ticket sales...');
-        const {
-          error: ticketSalesError
-        } = await supabase.from('ticket_sales').delete().eq('game_id', deleteItemId);
+        const { error: ticketSalesError } = await supabase.from('ticket_sales').delete().eq('game_id', deleteItemId);
         if (ticketSalesError) {
           console.error('Error deleting ticket sales:', ticketSalesError);
           throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
         }
         console.log('Ticket sales deleted successfully');
 
-        // Delete all weeks for this game
         console.log('Deleting weeks...');
-        const {
-          error: weeksError
-        } = await supabase.from('weeks').delete().eq('game_id', deleteItemId);
+        const { error: weeksError } = await supabase.from('weeks').delete().eq('game_id', deleteItemId);
         if (weeksError) {
           console.error('Error deleting weeks:', weeksError);
           throw new Error(`Failed to delete weeks: ${weeksError.message}`);
         }
         console.log('Weeks deleted successfully');
 
-        // Delete all expenses for this game
         console.log('Deleting expenses...');
-        const {
-          error: expensesError
-        } = await supabase.from('expenses').delete().eq('game_id', deleteItemId);
+        const { error: expensesError } = await supabase.from('expenses').delete().eq('game_id', deleteItemId);
         if (expensesError) {
           console.error('Error deleting expenses:', expensesError);
           throw new Error(`Failed to delete expenses: ${expensesError.message}`);
         }
         console.log('Expenses deleted successfully');
 
-        // Finally delete the game itself
         console.log('Deleting game...');
-        const {
-          error: gameError
-        } = await supabase.from('games').delete().eq('id', deleteItemId);
+        const { error: gameError } = await supabase.from('games').delete().eq('id', deleteItemId);
         if (gameError) {
           console.error('Error deleting game:', gameError);
           throw new Error(`Failed to delete game: ${gameError.message}`);
         }
         console.log('Game deleted successfully');
 
-        // Update local state immediately
         setGames(prevGames => {
           const updatedGames = prevGames.filter(game => game.id !== deleteItemId);
           console.log('Updated local games state, remaining games:', updatedGames.length);
           return updatedGames;
         });
 
-        // Reset expanded states
         if (expandedGame === deleteItemId) {
           setExpandedGame(null);
         }
@@ -627,16 +535,11 @@ export default function Dashboard() {
           description: `Game "${gameCheck.name}" and all associated data have been deleted successfully.`
         });
       } else if (deleteType === 'week') {
-        // Delete ticket sales first, then the week
-        const {
-          error: ticketSalesError
-        } = await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId);
+        const { error: ticketSalesError } = await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId);
         if (ticketSalesError) {
           throw new Error(`Failed to delete ticket sales: ${ticketSalesError.message}`);
         }
-        const {
-          error: weekError
-        } = await supabase.from('weeks').delete().eq('id', deleteItemId);
+        const { error: weekError } = await supabase.from('weeks').delete().eq('id', deleteItemId);
         if (weekError) {
           throw new Error(`Failed to delete week: ${weekError.message}`);
         }
@@ -648,37 +551,21 @@ export default function Dashboard() {
           description: "Week and all associated entries have been deleted."
         });
 
-        // Refresh data to update game totals
         fetchGames();
       } else if (deleteType === 'entry') {
-        // Get the entry details before deletion for recalculation
-        const {
-          data: entry,
-          error: entryFetchError
-        } = await supabase.from('ticket_sales').select('*').eq('id', deleteItemId).single();
+        const { data: entry, error: entryFetchError } = await supabase.from('ticket_sales').select('*').eq('id', deleteItemId).single();
         if (entryFetchError) {
           throw new Error(`Failed to fetch entry: ${entryFetchError.message}`);
         }
         if (entry) {
-          const {
-            game_id,
-            week_id,
-            amount_collected,
-            tickets_sold
-          } = entry;
+          const { game_id, week_id, amount_collected, tickets_sold } = entry;
 
-          // Delete the entry
-          const {
-            error
-          } = await supabase.from('ticket_sales').delete().eq('id', deleteItemId);
+          const { error } = await supabase.from('ticket_sales').delete().eq('id', deleteItemId);
           if (error) {
             throw new Error(`Failed to delete entry: ${error.message}`);
           }
 
-          // Recalculate week totals
-          const {
-            data: remainingWeekSales
-          } = await supabase.from('ticket_sales').select('*').eq('week_id', week_id);
+          const { data: remainingWeekSales } = await supabase.from('ticket_sales').select('*').eq('week_id', week_id);
           const weekTotalTickets = remainingWeekSales?.reduce((sum, sale) => sum + sale.tickets_sold, 0) || 0;
           const weekTotalSales = remainingWeekSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
           await supabase.from('weeks').update({
@@ -686,17 +573,11 @@ export default function Dashboard() {
             weekly_tickets_sold: weekTotalTickets
           }).eq('id', week_id);
 
-          // Recalculate game totals
-          const {
-            data: remainingGameSales
-          } = await supabase.from('ticket_sales').select('*').eq('game_id', game_id);
+          const { data: remainingGameSales } = await supabase.from('ticket_sales').select('*').eq('game_id', game_id);
           const gameTotalSales = remainingGameSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
           const gameTotalOrganization = remainingGameSales?.reduce((sum, sale) => sum + sale.organization_total, 0) || 0;
 
-          // Get total expenses and donations
-          const {
-            data: expenses
-          } = await supabase.from('expenses').select('*').eq('game_id', game_id);
+          const { data: expenses } = await supabase.from('expenses').select('*').eq('game_id', game_id);
           const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0) || 0;
           const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0) || 0;
           const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
@@ -710,38 +591,24 @@ export default function Dashboard() {
           });
         }
       } else if (deleteType === 'expense') {
-        // Get the expense details before deletion
-        const {
-          data: expense,
-          error: expenseFetchError
-        } = await supabase.from('expenses').select('*').eq('id', deleteItemId).single();
+        const { data: expense, error: expenseFetchError } = await supabase.from('expenses').select('*').eq('id', deleteItemId).single();
         if (expenseFetchError) {
           throw new Error(`Failed to fetch expense: ${expenseFetchError.message}`);
         }
         if (expense) {
-          const {
-            game_id,
-            amount,
-            is_donation
-          } = expense;
+          const { game_id, amount, is_donation } = expense;
 
-          // Delete the expense
-          const {
-            error
-          } = await supabase.from('expenses').delete().eq('id', deleteItemId);
+          const { error } = await supabase.from('expenses').delete().eq('id', deleteItemId);
           if (error) {
             throw new Error(`Failed to delete expense: ${error.message}`);
           }
 
-          // Get the game and recalculate totals
-          const {
-            data: game
-          } = await supabase.from('games').select('*').eq('id', game_id).single();
+          const { data: game } = await supabase.from('games').select('*').eq('id', game_id).single();
           if (game) {
             const updatedValues = {
               total_expenses: is_donation ? game.total_expenses : game.total_expenses - amount,
               total_donations: is_donation ? game.total_donations - amount : game.total_donations,
-              organization_net_profit: game.organization_net_profit + amount // Adding back since we're removing an expense/donation
+              organization_net_profit: game.organization_net_profit + amount
             };
             await supabase.from('games').update(updatedValues).eq('id', game_id);
           }
@@ -752,7 +619,6 @@ export default function Dashboard() {
         }
       }
 
-      // Force a complete refresh of data after any deletion
       console.log('Forcing data refresh...');
       setTimeout(() => {
         fetchGames();
@@ -775,20 +641,16 @@ export default function Dashboard() {
     setCurrentGameName(gameName);
     setExpenseModalOpen(true);
   };
-
   const handleOpenPayoutSlip = (winnerData: any) => {
     setPayoutSlipData(winnerData);
     setPayoutSlipOpen(true);
   };
-
   const handleWinnerComplete = () => {
     fetchGames();
   };
-
   const handleGameComplete = () => {
     fetchGames();
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -804,13 +666,11 @@ export default function Dashboard() {
         description: `Creating report for ${game.name}...`
       });
 
-      // Create a new PDF document
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPosition = 20;
 
-      // Add title and report information
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
       doc.text(`${game.name} - Detailed Report`, pageWidth / 2, yPosition, {
@@ -819,20 +679,19 @@ export default function Dashboard() {
       yPosition += 10;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
-      doc.text(`Report Date: ${format(new Date(), 'MMM d, yyyy')}`, 20, yPosition);
+      doc.text(`Report Date: ${formatDateForDatabase(new Date())}`, 20, yPosition);
       yPosition += 10;
 
-      // Game details section
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text('Game Information', 20, yPosition);
       yPosition += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.text(`Start Date: ${format(new Date(game.start_date), 'MMM d, yyyy')}`, 20, yPosition);
+      doc.text(`Start Date: ${formatDateForDatabase(new Date(game.start_date))}`, 20, yPosition);
       yPosition += 7;
       if (game.end_date) {
-        doc.text(`End Date: ${format(new Date(game.end_date), 'MMM d, yyyy')}`, 20, yPosition);
+        doc.text(`End Date: ${formatDateForDatabase(new Date(game.end_date))}`, 20, yPosition);
         yPosition += 7;
       }
       doc.text(`Ticket Price: ${formatCurrency(game.ticket_price)}`, 20, yPosition);
@@ -844,13 +703,11 @@ export default function Dashboard() {
       doc.text(`Carryover Jackpot: ${formatCurrency(game.carryover_jackpot)}`, 20, yPosition);
       yPosition += 15;
 
-      // Summary section
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text('Financial Summary', 20, yPosition);
       yPosition += 10;
 
-      // Summary table
       const summaryData = [{
         label: 'Total Sales',
         value: formatCurrency(game.total_sales)
@@ -890,7 +747,6 @@ export default function Dashboard() {
       });
       yPosition += 15;
 
-      // Weeks section
       if (game.weeks && game.weeks.length > 0) {
         if (yPosition > pageHeight - 40) {
           doc.addPage();
@@ -901,7 +757,6 @@ export default function Dashboard() {
         doc.text('Weekly Details', 20, yPosition);
         yPosition += 10;
 
-        // Loop through each week
         for (let i = 0; i < game.weeks.length; i++) {
           const week = game.weeks[i];
           if (yPosition > pageHeight - 40) {
@@ -910,7 +765,7 @@ export default function Dashboard() {
           }
           doc.setFont("helvetica", "bold");
           doc.setFontSize(12);
-          doc.text(`Week ${week.week_number} (${format(new Date(week.start_date), 'MMM d')} - ${format(new Date(week.end_date), 'MMM d, yyyy')})`, 20, yPosition);
+          doc.text(`Week ${week.week_number} (${formatDateForDatabase(new Date(week.start_date))} - ${formatDateForDatabase(new Date(week.end_date))})`, 20, yPosition);
           yPosition += 8;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(10);
@@ -929,7 +784,6 @@ export default function Dashboard() {
             yPosition += 6;
           }
 
-          // If week has ticket sales entries, add a small table
           if (week.ticket_sales && week.ticket_sales.length > 0) {
             if (yPosition > pageHeight - 40) {
               doc.addPage();
@@ -939,7 +793,6 @@ export default function Dashboard() {
             doc.text("Daily Entries:", 25, yPosition);
             yPosition += 8;
 
-            // Table headers
             doc.setFont("helvetica", "bold");
             let xPos = 25;
             const headers = ['Date', 'Tickets', 'Amount', 'Organization', 'Jackpot'];
@@ -950,7 +803,6 @@ export default function Dashboard() {
             });
             yPosition += 6;
 
-            // Table rows
             doc.setFont("helvetica", "normal");
             doc.setFontSize(8);
             week.ticket_sales.forEach(entry => {
@@ -958,7 +810,6 @@ export default function Dashboard() {
                 doc.addPage();
                 yPosition = 20;
 
-                // Redraw headers on new page
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(10);
                 let xPos = 25;
@@ -971,7 +822,7 @@ export default function Dashboard() {
                 doc.setFontSize(8);
               }
               xPos = 25;
-              doc.text(format(new Date(entry.date), 'MM/dd/yyyy'), xPos, yPosition);
+              doc.text(formatDateForDatabase(new Date(entry.date)), xPos, yPosition);
               xPos += colWidths[0];
               doc.text(entry.tickets_sold.toString(), xPos, yPosition);
               xPos += colWidths[1];
@@ -982,13 +833,11 @@ export default function Dashboard() {
               doc.text(formatCurrency(entry.jackpot_total), xPos, yPosition);
               yPosition += 6;
             });
-            yPosition += 6;
+            yPosition += 10;
           }
-          yPosition += 10;
         }
       }
 
-      // Expenses section
       if (game.expenses && game.expenses.length > 0) {
         if (yPosition > pageHeight - 40) {
           doc.addPage();
@@ -1001,7 +850,6 @@ export default function Dashboard() {
         const expenseHeaders = ['Date', 'Type', 'Amount', 'Memo'];
         const expenseColWidths = [25, 25, 25, 60];
 
-        // Table headers
         doc.setFontSize(10);
         let xPos = 20;
         expenseHeaders.forEach((header, index) => {
@@ -1010,12 +858,10 @@ export default function Dashboard() {
         });
         yPosition += 5;
 
-        // Draw a line
         doc.setDrawColor(200, 200, 200);
         doc.line(20, yPosition, xPos - 60, yPosition);
         yPosition += 5;
 
-        // Table rows
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         game.expenses.forEach(expense => {
@@ -1023,7 +869,6 @@ export default function Dashboard() {
             doc.addPage();
             yPosition = 20;
 
-            // Redraw headers on new page
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
             let xPos = 20;
@@ -1038,14 +883,13 @@ export default function Dashboard() {
             doc.setFontSize(9);
           }
           xPos = 20;
-          doc.text(format(new Date(expense.date), 'MM/dd/yyyy'), xPos, yPosition);
+          doc.text(formatDateForDatabase(new Date(expense.date)), xPos, yPosition);
           xPos += expenseColWidths[0];
           doc.text(expense.is_donation ? 'Donation' : 'Expense', xPos, yPosition);
           xPos += expenseColWidths[1];
           doc.text(formatCurrency(expense.amount), xPos, yPosition);
           xPos += expenseColWidths[2];
 
-          // Truncate long memos
           const memo = expense.memo || '-';
           const truncatedMemo = memo.length > 30 ? memo.substring(0, 27) + '...' : memo;
           doc.text(truncatedMemo, xPos, yPosition);
@@ -1053,14 +897,12 @@ export default function Dashboard() {
         });
       }
 
-      // Add footer
       doc.setFont("helvetica", "italic");
       doc.setFontSize(8);
-      doc.text(`Generated on ${format(new Date(), 'MMM d, yyyy h:mm a')}`, pageWidth - 20, pageHeight - 10, {
+      doc.text(`Generated on ${formatDateForDatabase(new Date())}`, pageWidth - 20, pageHeight - 10, {
         align: 'right'
       });
 
-      // Save the PDF
       const fileName = `${game.name.replace(/\s+/g, '-')}-report-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
       toast({
@@ -1077,10 +919,99 @@ export default function Dashboard() {
     }
   };
 
-  const openDonationModal = (gameId: string, gameName: string, defaultDate?: string) => {
-    setCurrentGameId(gameId);
-    setCurrentGameName(gameName);
-    setDonationModalOpen(true);
+  const handleDailyDonation = async (date: string, amount: number) => {
+    if (!currentGameId || amount <= 0) return;
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('You must be logged in to add donations');
+      }
+
+      const { error } = await supabase.from('expenses').insert([{
+        game_id: currentGameId,
+        date: date,
+        amount: amount,
+        memo: 'Daily donation',
+        is_donation: true,
+        user_id: user.id
+      }]);
+      if (error) throw error;
+
+      const game = games.find(g => g.id === currentGameId);
+      if (game) {
+        await supabase.from('games').update({
+          total_donations: game.total_donations + amount,
+          organization_net_profit: game.organization_net_profit - amount
+        }).eq('id', currentGameId);
+      }
+      toast({
+        title: "Donation Added",
+        description: `Daily donation of ${formatCurrency(amount)} has been recorded.`
+      });
+    } catch (error: any) {
+      console.error('Error adding daily donation:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add donation: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDailyExpense = async () => {
+    if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0) return;
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('You must be logged in to add expenses');
+      }
+
+      const { error } = await supabase.from('expenses').insert([{
+        game_id: dailyExpenseForm.gameId,
+        date: dailyExpenseForm.date,
+        amount: dailyExpenseForm.amount,
+        memo: dailyExpenseForm.memo,
+        is_donation: false,
+        user_id: user.id
+      }]);
+      if (error) throw error;
+
+      const game = games.find(g => g.id === dailyExpenseForm.gameId);
+      if (game) {
+        await supabase.from('games').update({
+          total_expenses: game.total_expenses + dailyExpenseForm.amount,
+          organization_net_profit: game.organization_net_profit - dailyExpenseForm.amount
+        }).eq('id', dailyExpenseForm.gameId);
+      }
+      toast({
+        title: "Expense Added",
+        description: `Daily expense of ${formatCurrency(dailyExpenseForm.amount)} has been recorded.`
+      });
+      setDailyExpenseModalOpen(false);
+      setDailyExpenseForm({
+        date: '',
+        amount: 0,
+        memo: '',
+        gameId: ''
+      });
+    } catch (error: any) {
+      console.error('Error adding daily expense:', error);
+      toast({
+        title: "Error",
+        description: `Failed to add expense: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openDailyExpenseModal = (date: string, gameId: string) => {
+    setDailyExpenseForm({
+      date: date,
+      amount: 0,
+      memo: '',
+      gameId: gameId
+    });
+    setDailyExpenseModalOpen(true);
   };
 
   if (loading) {
@@ -1097,7 +1028,6 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <button onClick={() => setActiveTab('current')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'current' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
           Current Game
@@ -1115,7 +1045,6 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card> : displayGames.map(game => {
-        // Calculate actual start and end dates from weeks data
         const gameStartDate = game.weeks.length > 0 ? game.weeks.reduce((earliest: any, week: any) => new Date(week.start_date) < new Date(earliest.start_date) ? week : earliest).start_date : game.start_date;
         const gameEndDate = game.weeks.length > 0 ? game.weeks.reduce((latest: any, week: any) => new Date(week.end_date) > new Date(latest.end_date) ? week : latest).end_date : game.end_date;
         return <Card key={game.id} className="overflow-hidden">
@@ -1128,9 +1057,9 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-4">
                       <div className="text-sm hidden md:flex space-x-4">
                         <div>
-                          <span className="text-muted-foreground">Start:</span> {format(new Date(gameStartDate), 'MMM d, yyyy')}
+                          <span className="text-muted-foreground">Start:</span> {formatDateForDatabase(new Date(gameStartDate))}
                           {gameEndDate && <>
-                              <span className="ml-4 text-muted-foreground">End:</span> {format(new Date(gameEndDate), 'MMM d, yyyy')}
+                              <span className="ml-4 text-muted-foreground">End:</span> {formatDateForDatabase(new Date(gameEndDate))}
                             </>}
                         </div>
                         <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
@@ -1156,7 +1085,7 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">Weeks</h3>
                         <div className="flex space-x-2">
-                          <Button onClick={() => generateGamePdfReport(game)} variant="secondary" size="sm" className="flex items-center gap-2">
+                          <Button onClick={() => generateGamePdfReport(game)} variant="outline" size="sm" className="flex items-center gap-2">
                             <Download className="h-4 w-4" /> Export Game PDF
                           </Button>
                           <Button onClick={() => openWeekForm(game.id)} size="sm" className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] flex items-center gap-2">
@@ -1166,40 +1095,32 @@ export default function Dashboard() {
                       </div>
                       
                       {game.weeks.length === 0 ? <p className="text-muted-foreground text-sm">No weeks added yet.</p> : <div className="space-y-4">
-                          {/* Week Calendar-style Layout */}
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[5px]">
                             {game.weeks.map((week: any) => <div key={week.id} className="space-y-2">
-                                {/* Week Button */}
                                 <Button onClick={() => {
                       toggleWeek(week.id);
                       setCurrentGameId(game.id);
                     }} variant="outline" className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${expandedWeek === week.id ? 'bg-[#4A7C59] border-[#4A7C59] text-white shadow-md' : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'}`}>
                                   Week {week.week_number}
                                 </Button>
-                                
-                                {/* Delete Button */}
-                                
                               </div>)}
                           </div>
                           
-                          {/* Expanded Week Details */}
                           {expandedWeek && game.weeks.find((w: any) => w.id === expandedWeek) && <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
                               {(() => {
                     const week = game.weeks.find((w: any) => w.id === expandedWeek);
 
-                    // Calculate week totals from daily entries
                     const weekTotalTickets = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
                     const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
                     const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
                     const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
                     return <div>
-                                    {/* Week Details Header */}
                                     <div className="pb-6 border-b border-gray-200">
                                       <div className="flex justify-between items-start mb-4">
                                         <div>
                                           <h4 className="text-2xl font-bold text-[#1F4E4A] mb-2">Week {week.week_number}</h4>
                                           <p className="text-gray-600 text-lg">
-                                            {format(new Date(week.start_date), 'MMMM d')} - {format(new Date(week.end_date), 'MMMM d, yyyy')}
+                                            {formatDateForDatabase(new Date(week.start_date))} - {formatDateForDatabase(new Date(week.end_date))}
                                           </p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -1212,7 +1133,6 @@ export default function Dashboard() {
                                         </div>
                                       </div>
                                       
-                                      {/* Week Summary Stats */}
                                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                                         <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                                           <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
@@ -1232,7 +1152,6 @@ export default function Dashboard() {
                                         </div>
                                       </div>
                                       
-                                      {/* Winner Information */}
                                       {week.winner_name && <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
                                           <h5 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
                                             🏆 Winner Information
@@ -1288,7 +1207,6 @@ export default function Dashboard() {
                                         </div>}
                                     </div>
                                     
-                                    {/* 7 Daily Entries */}
                                     <div className="pt-6">
                                       <h5 className="text-lg font-semibold mb-4 text-[#1F4E4A]">Daily Entries (7 Days)</h5>
                                       
@@ -1300,7 +1218,6 @@ export default function Dashboard() {
                             const entryDate = new Date(weekStartDate);
                             entryDate.setDate(entryDate.getDate() + dayIndex);
 
-                            // Find existing entry for this specific date
                             const existingEntry = week.ticket_sales.find((entry: any) => {
                               const existingDate = new Date(entry.date);
                               return existingDate.toDateString() === entryDate.toDateString();
@@ -1314,7 +1231,7 @@ export default function Dashboard() {
                                                   Day {dayIndex + 1}
                                                 </div>
                                                 <div className="text-sm text-gray-600">
-                                                  {format(entryDate, 'EEEE, MMMM d, yyyy')}
+                                                  {formatDateForDatabase(entryDate)}
                                                 </div>
                                               </div>
                                               
@@ -1326,18 +1243,20 @@ export default function Dashboard() {
                                       handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
                                     }
                                   }} onBlur={e => {
-                                    // Submit on blur as well
                                     handleTicketInputSubmit(week.id, dayIndex, e.target.value);
                                   }} className="w-28 h-9 text-center font-medium" placeholder="0" />
                                                 </div>
                                                 
                                                 <div className="flex flex-col gap-1">
                                                   <label className="text-xs font-medium text-gray-600">Quick Add</label>
-                                                  <Select onValueChange={(value) => {
+                                                  <Select onValueChange={value => {
                                     if (value === 'donation') {
-                                      openDonationModal(game.id, game.name, format(entryDate, 'yyyy-MM-dd'));
+                                      const amount = prompt('Enter donation amount:');
+                                      if (amount && !isNaN(parseFloat(amount))) {
+                                        handleDailyDonation(formatDateForDatabase(entryDate), parseFloat(amount));
+                                      }
                                     } else if (value === 'expense') {
-                                      openExpenseModal(game.id, game.name);
+                                      openDailyExpenseModal(formatDateForDatabase(entryDate), game.id);
                                     }
                                   }}>
                                                     <SelectTrigger className="w-24 h-9">
@@ -1382,7 +1301,6 @@ export default function Dashboard() {
                         </div>}
                     </div>
 
-                    {/* Expenses & Donations Section */}
                     <div className="p-4 border-t">
                       <div className="flex justify-between items-center mb-4 cursor-pointer" onClick={() => toggleExpenses(game.id)}>
                         <h3 className="text-lg font-semibold flex items-center">
@@ -1413,7 +1331,7 @@ export default function Dashboard() {
                                 </TableHeader>
                                 <TableBody>
                                   {game.expenses.map((expense: any) => <TableRow key={expense.id}>
-                                      <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                                      <TableCell>{formatDateForDatabase(new Date(expense.date))}</TableCell>
                                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                                       <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
                                       <TableCell>{expense.memo}</TableCell>
@@ -1433,7 +1351,6 @@ export default function Dashboard() {
       })}
       </div>
       
-      {/* Week Form Dialog */}
       <Dialog open={weekFormOpen} onOpenChange={setWeekFormOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1458,7 +1375,7 @@ export default function Dashboard() {
               startDate: date
             }) : null} placeholder="Select start date" />
               <p className="text-xs text-muted-foreground">
-                End date will be automatically set to {weekForm.startDate ? format(addDaysToDate(weekForm.startDate, 6), 'MMM d, yyyy') : 'N/A'}
+                End date will be automatically set to {weekForm.startDate ? formatDateForDatabase(new Date(weekForm.startDate.getTime() + 6 * 24 * 60 * 60 * 1000)) : 'N/A'}
               </p>
             </div>
           </div>
@@ -1474,7 +1391,6 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirm Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1501,19 +1417,50 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
       
-      {/* Expense Modal */}
       <ExpenseModal open={expenseModalOpen} onOpenChange={setExpenseModalOpen} gameId={currentGameId || ''} gameName={currentGameName} />
       
-      {/* Donation Modal */}
-      <DonationModal open={donationModalOpen} onOpenChange={setDonationModalOpen} gameId={currentGameId || ''} gameName={currentGameName} />
-      
-      {/* Payout Slip Modal */}
       <PayoutSlipModal open={payoutSlipOpen} onOpenChange={setPayoutSlipOpen} winnerData={payoutSlipData} />
       
-      {/* Winner Form */}
       <WinnerForm open={winnerFormOpen} onOpenChange={setWinnerFormOpen} gameId={currentGameId} weekId={currentWeekId} onComplete={handleWinnerComplete} onOpenPayoutSlip={handleOpenPayoutSlip} />
       
-      {/* Game Form */}
       <GameForm open={gameFormOpen} onOpenChange={setGameFormOpen} games={games} onComplete={handleGameComplete} />
+      
+      <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Daily Expense</DialogTitle>
+            <DialogDescription>
+              Enter the expense details for {dailyExpenseForm.date && formatDateForDatabase(new Date(dailyExpenseForm.date))}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input id="amount" type="number" step="0.01" min="0" value={dailyExpenseForm.amount || ''} onChange={e => setDailyExpenseForm({
+              ...dailyExpenseForm,
+              amount: parseFloat(e.target.value) || 0
+            })} placeholder="0.00" />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="memo">Memo</Label>
+              <Textarea id="memo" value={dailyExpenseForm.memo} onChange={e => setDailyExpenseForm({
+              ...dailyExpenseForm,
+              memo: e.target.value
+            })} placeholder="Enter expense description..." rows={3} />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setDailyExpenseModalOpen(false)} variant="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleDailyExpense} type="submit" variant="default" disabled={dailyExpenseForm.amount <= 0}>
+              Add Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>;
 }
