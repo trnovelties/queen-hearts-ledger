@@ -23,11 +23,17 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
     type: "expense", // "expense" or "donation"
   });
   
-  // Use empty string - let HTML date input handle the default
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddExpense = async () => {
+    console.log("=== EXPENSE DEBUG START ===");
+    console.log("Raw selectedDate from input:", selectedDate);
+    console.log("Type of selectedDate:", typeof selectedDate);
+    console.log("User timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log("Current date for reference:", new Date().toISOString());
+    console.log("Current local date string:", new Date().toLocaleDateString());
+
     if (!expenseData.amount || parseFloat(expenseData.amount) <= 0) {
       toast({
         title: "Validation Error",
@@ -58,19 +64,29 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         return;
       }
 
-      // Save the exact date string that user selected - no conversions at all
-      const { error } = await supabase
+      console.log("About to insert to database with date:", selectedDate);
+      
+      const insertData = {
+        game_id: gameId,
+        date: selectedDate,
+        amount: parseFloat(expenseData.amount),
+        memo: expenseData.memo || null,
+        is_donation: expenseData.type === "donation",
+        user_id: user.id,
+      };
+      
+      console.log("Full insert data:", insertData);
+
+      const { data: insertResult, error } = await supabase
         .from('expenses')
-        .insert({
-          game_id: gameId,
-          date: selectedDate, // Exact string from HTML date input
-          amount: parseFloat(expenseData.amount),
-          memo: expenseData.memo || null,
-          is_donation: expenseData.type === "donation",
-          user_id: user.id,
-        });
+        .insert(insertData)
+        .select('*');
       
       if (error) throw error;
+      
+      console.log("Database insert result:", insertResult);
+      console.log("Date that was actually saved:", insertResult?.[0]?.date);
+      console.log("=== EXPENSE DEBUG END ===");
       
       // Update game totals
       const { data: game } = await supabase
@@ -137,7 +153,10 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
               id="expenseDate"
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                console.log("Date input changed to:", e.target.value);
+                setSelectedDate(e.target.value);
+              }}
               className="col-span-3"
             />
           </div>

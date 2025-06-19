@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,11 +23,17 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
     memo: "",
   });
   
-  // Use empty string or defaultDate - let HTML date input handle the default
   const [selectedDate, setSelectedDate] = useState<string>(defaultDate || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddDonation = async () => {
+    console.log("=== DONATION DEBUG START ===");
+    console.log("Raw selectedDate from input:", selectedDate);
+    console.log("Type of selectedDate:", typeof selectedDate);
+    console.log("User timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log("Current date for reference:", new Date().toISOString());
+    console.log("Current local date string:", new Date().toLocaleDateString());
+
     if (!donationData.amount || parseFloat(donationData.amount) <= 0) {
       toast({
         title: "Validation Error",
@@ -57,19 +64,29 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         return;
       }
 
-      // Save the exact date string that user selected - no conversions at all
-      const { error } = await supabase
+      console.log("About to insert to database with date:", selectedDate);
+      
+      const insertData = {
+        game_id: gameId,
+        date: selectedDate,
+        amount: parseFloat(donationData.amount),
+        memo: donationData.memo || null,
+        is_donation: true,
+        user_id: user.id,
+      };
+      
+      console.log("Full insert data:", insertData);
+
+      const { data: insertResult, error } = await supabase
         .from('expenses')
-        .insert({
-          game_id: gameId,
-          date: selectedDate, // Exact string from HTML date input
-          amount: parseFloat(donationData.amount),
-          memo: donationData.memo || null,
-          is_donation: true,
-          user_id: user.id,
-        });
+        .insert(insertData)
+        .select('*');
       
       if (error) throw error;
+      
+      console.log("Database insert result:", insertResult);
+      console.log("Date that was actually saved:", insertResult?.[0]?.date);
+      console.log("=== DONATION DEBUG END ===");
       
       // Update game totals
       const { data: game } = await supabase
@@ -102,7 +119,6 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         memo: "",
       });
       
-      // Reset to default date or empty string
       setSelectedDate(defaultDate || "");
       
       onOpenChange(false);
@@ -135,7 +151,10 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
               id="donationDate"
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                console.log("Date input changed to:", e.target.value);
+                setSelectedDate(e.target.value);
+              }}
               className="col-span-3"
             />
           </div>
