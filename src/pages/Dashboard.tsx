@@ -173,31 +173,40 @@ export default function Dashboard() {
         throw new Error('You must be logged in to create a week');
       }
 
-      console.log('🔄 Creating week with start date:', weekForm.startDate);
+      console.log('🔄 Creating week with start date (direct string):', weekForm.startDate);
       console.log('🔄 Browser timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-      // Calculate end date by adding 6 days to the start date string
+      // Calculate end date by parsing the start date string and adding 6 days
+      // Use direct string manipulation to avoid timezone issues
       const startDateParts = weekForm.startDate.split('-');
       const startYear = parseInt(startDateParts[0]);
-      const startMonth = parseInt(startDateParts[1]) - 1; // Month is 0-indexed
+      const startMonth = parseInt(startDateParts[1]) - 1; // Month is 0-indexed in Date constructor
       const startDay = parseInt(startDateParts[2]);
       
-      const endDate = new Date(startYear, startMonth, startDay + 6);
-      const endDateString = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+      // Create a date in local timezone and add 6 days
+      const startDateLocal = new Date(startYear, startMonth, startDay);
+      const endDateLocal = new Date(startYear, startMonth, startDay + 6);
       
-      console.log('🔄 Calculated end date string:', endDateString);
+      // Convert back to YYYY-MM-DD string format
+      const endDateString = `${endDateLocal.getFullYear()}-${String(endDateLocal.getMonth() + 1).padStart(2, '0')}-${String(endDateLocal.getDate()).padStart(2, '0')}`;
+      
+      console.log('🔄 Calculated end date string (local):', endDateString);
+      console.log('🔄 About to save to database:', {
+        start_date: weekForm.startDate,
+        end_date: endDateString
+      });
 
       const { data, error } = await supabase.from('weeks').insert([{
         game_id: currentGameId,
         week_number: weekForm.weekNumber,
-        start_date: weekForm.startDate,
-        end_date: endDateString,
+        start_date: weekForm.startDate, // Save exact string from input
+        end_date: endDateString, // Save calculated string
         user_id: user.id
       }]).select();
       
       if (error) throw error;
       
-      console.log('✅ Week created successfully with dates:', {
+      console.log('✅ Week created successfully with exact dates:', {
         start_date: weekForm.startDate,
         end_date: endDateString
       });
@@ -234,13 +243,20 @@ export default function Dashboard() {
       const week = game.weeks.find((w: any) => w.id === weekId);
       if (!week) throw new Error("Week not found");
 
-      const weekStartDate = new Date(week.start_date);
-      const entryDate = new Date(weekStartDate);
-      entryDate.setDate(entryDate.getDate() + dayIndex);
+      // Parse week start date and calculate entry date using local timezone
+      const weekStartParts = week.start_date.split('-');
+      const weekStartYear = parseInt(weekStartParts[0]);
+      const weekStartMonth = parseInt(weekStartParts[1]) - 1;
+      const weekStartDay = parseInt(weekStartParts[2]);
+      
+      const entryDateLocal = new Date(weekStartYear, weekStartMonth, weekStartDay + dayIndex);
+      const entryDateString = `${entryDateLocal.getFullYear()}-${String(entryDateLocal.getMonth() + 1).padStart(2, '0')}-${String(entryDateLocal.getDate()).padStart(2, '0')}`;
+
+      console.log('🔄 Updating daily entry for date:', entryDateString);
 
       const existingEntry = week.ticket_sales.find((entry: any) => {
-        const existingDate = new Date(entry.date);
-        return existingDate.toDateString() === entryDate.toDateString();
+        // Compare date strings directly instead of using Date objects
+        return entry.date === entryDateString;
       });
 
       const ticketPrice = game.ticket_price;
@@ -259,8 +275,8 @@ export default function Dashboard() {
       if (allGameSales) {
         for (const sale of allGameSales) {
           const saleDate = new Date(sale.date);
-          const currentEntryDate = new Date(entryDate);
-          if (saleDate < currentEntryDate || saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id) {
+          const currentEntryDate = new Date(entryDateLocal);
+          if (saleDate < currentEntryDate || sale.date === entryDateString && sale.id !== existingEntry?.id) {
             cumulativeCollected += sale.amount_collected;
           }
         }
@@ -271,8 +287,8 @@ export default function Dashboard() {
       if (allGameSales && allGameSales.length > 0) {
         const previousEntries = allGameSales.filter(sale => {
           const saleDate = new Date(sale.date);
-          const currentEntryDate = new Date(entryDate);
-          return saleDate < currentEntryDate || saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id;
+          const currentEntryDate = new Date(entryDateLocal);
+          return saleDate < currentEntryDate || sale.date === entryDateString && sale.id !== existingEntry?.id;
         });
         if (previousEntries.length > 0) {
           const lastEntry = previousEntries[previousEntries.length - 1];
@@ -288,10 +304,7 @@ export default function Dashboard() {
           weeks: g.weeks.map((w: any) => {
             if (w.id !== weekId) return w;
             const updatedTicketSales = existingEntry ? w.ticket_sales.map((entry: any) => {
-              const entryDate = new Date(entry.date);
-              const targetDate = new Date(weekStartDate);
-              targetDate.setDate(targetDate.getDate() + dayIndex);
-              if (entryDate.toDateString() === targetDate.toDateString()) {
+              if (entry.date === entryDateString) {
                 return {
                   ...entry,
                   tickets_sold: ticketsSold,
@@ -307,7 +320,7 @@ export default function Dashboard() {
               id: `temp-${Date.now()}`,
               game_id: currentGameId,
               week_id: weekId,
-              date: entryDate.toISOString().split('T')[0],
+              date: entryDateString,
               tickets_sold: ticketsSold,
               ticket_price: ticketPrice,
               amount_collected: amountCollected,
@@ -330,7 +343,7 @@ export default function Dashboard() {
       }));
       if (existingEntry) {
         const { error } = await supabase.from('ticket_sales').update({
-          date: entryDate.toISOString().split('T')[0],
+          date: entryDateString, // Use exact string
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -344,7 +357,7 @@ export default function Dashboard() {
         const { error } = await supabase.from('ticket_sales').insert([{
           game_id: currentGameId,
           week_id: weekId,
-          date: entryDate.toISOString().split('T')[0],
+          date: entryDateString, // Use exact string
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -420,19 +433,25 @@ export default function Dashboard() {
         ...g,
         weeks: g.weeks.map((w: any) => {
           if (w.id !== weekId) return w;
-          const weekStartDate = new Date(w.start_date);
-          const entryDate = new Date(weekStartDate);
-          entryDate.setDate(entryDate.getDate() + dayIndex);
+          
+          // Parse week start date and calculate entry date using local timezone
+          const weekStartParts = w.start_date.split('-');
+          const weekStartYear = parseInt(weekStartParts[0]);
+          const weekStartMonth = parseInt(weekStartParts[1]) - 1;
+          const weekStartDay = parseInt(weekStartParts[2]);
+          
+          const entryDateLocal = new Date(weekStartYear, weekStartMonth, weekStartDay + dayIndex);
+          const entryDateString = `${entryDateLocal.getFullYear()}-${String(entryDateLocal.getMonth() + 1).padStart(2, '0')}-${String(entryDateLocal.getDate()).padStart(2, '0')}`;
+
           const existingEntry = w.ticket_sales.find((entry: any) => {
-            const existingDate = new Date(entry.date);
-            return existingDate.toDateString() === entryDate.toDateString();
+            return entry.date === entryDateString;
           });
+          
           if (existingEntry) {
             return {
               ...w,
               ticket_sales: w.ticket_sales.map((entry: any) => {
-                const entryDateCheck = new Date(entry.date);
-                if (entryDateCheck.toDateString() === entryDate.toDateString()) {
+                if (entry.date === entryDateString) {
                   return {
                     ...entry,
                     tickets_sold: ticketsSold
@@ -448,7 +467,7 @@ export default function Dashboard() {
                 id: `temp-${Date.now()}`,
                 game_id: currentGameId,
                 week_id: weekId,
-                date: entryDate.toISOString().split('T')[0],
+                date: entryDateString,
                 tickets_sold: ticketsSold,
                 ticket_price: 0,
                 amount_collected: 0,
@@ -1212,13 +1231,17 @@ export default function Dashboard() {
                                         {Array.from({
                             length: 7
                           }, (_, dayIndex) => {
-                            const weekStartDate = new Date(week.start_date);
-                            const entryDate = new Date(weekStartDate);
-                            entryDate.setDate(entryDate.getDate() + dayIndex);
+                            // Parse week start date and calculate entry date using local timezone
+                            const weekStartParts = week.start_date.split('-');
+                            const weekStartYear = parseInt(weekStartParts[0]);
+                            const weekStartMonth = parseInt(weekStartParts[1]) - 1;
+                            const weekStartDay = parseInt(weekStartParts[2]);
+                            
+                            const entryDateLocal = new Date(weekStartYear, weekStartMonth, weekStartDay + dayIndex);
+                            const entryDateString = `${entryDateLocal.getFullYear()}-${String(entryDateLocal.getMonth() + 1).padStart(2, '0')}-${String(entryDateLocal.getDate()).padStart(2, '0')}`;
 
                             const existingEntry = week.ticket_sales.find((entry: any) => {
-                              const existingDate = new Date(entry.date);
-                              return existingDate.toDateString() === entryDate.toDateString();
+                              return entry.date === entryDateString;
                             });
                             const inputKey = `${week.id}-${dayIndex}`;
                             const tempValue = tempTicketInputs[inputKey];
@@ -1229,31 +1252,40 @@ export default function Dashboard() {
                                                   Day {dayIndex + 1}
                                                 </div>
                                                 <div className="text-sm text-gray-600">
-                                                  {entryDate.toISOString().split('T')[0]}
+                                                  {entryDateString}
                                                 </div>
                                               </div>
                                               
                                               <div className="flex items-center gap-3">
                                                 <div className="flex flex-col gap-1">
                                                   <label className="text-xs font-medium text-gray-600">Tickets Sold</label>
-                                                  <Input type="number" min="0" value={currentValue} onChange={e => handleTicketInputChange(week.id, dayIndex, e.target.value)} onKeyDown={e => {
-                                    if (e.key === 'Enter') {
-                                      handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
-                                    }
-                                  }} onBlur={e => {
-                                    handleTicketInputSubmit(week.id, dayIndex, e.target.value);
-                                  }} className="w-28 h-9 text-center font-medium" placeholder="0" />
+                                                  <Input 
+                                                    type="number" 
+                                                    min="0" 
+                                                    value={currentValue} 
+                                                    onChange={e => handleTicketInputChange(week.id, dayIndex, e.target.value)} 
+                                                    onKeyDown={e => {
+                                                      if (e.key === 'Enter') {
+                                                        handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value);
+                                                      }
+                                                    }} 
+                                                    onBlur={e => {
+                                                      handleTicketInputSubmit(week.id, dayIndex, e.target.value);
+                                                    }} 
+                                                    className="w-28 h-9 text-center font-medium" 
+                                                    placeholder="0" 
+                                                  />
                                                 </div>
                                                 
                                                 <div className="flex flex-col gap-1">
                                                   <label className="text-xs font-medium text-gray-600">Quick Add</label>
                                                   <Select onValueChange={value => {
-                                    if (value === 'donation') {
-                                      openDonationModal(entryDate.toISOString().split('T')[0], game.id, game.name);
-                                    } else if (value === 'expense') {
-                                      openDailyExpenseModal(entryDate.toISOString().split('T')[0], game.id);
-                                    }
-                                  }}>
+                                                    if (value === 'donation') {
+                                                      openDonationModal(entryDateString, game.id, game.name);
+                                                    } else if (value === 'expense') {
+                                                      openDailyExpenseModal(entryDateString, game.id);
+                                                    }
+                                                  }}>
                                                     <SelectTrigger className="w-24 h-9">
                                                       <SelectValue placeholder="+" />
                                                     </SelectTrigger>
