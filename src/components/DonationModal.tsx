@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,18 +22,8 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
     memo: "",
   });
   
-  // Get today's date in YYYY-MM-DD format in user's local timezone
-  const getTodayString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  
-  const [selectedDate, setSelectedDate] = useState<string>(
-    defaultDate || getTodayString()
-  );
+  // Use empty string or defaultDate - let HTML date input handle the default
+  const [selectedDate, setSelectedDate] = useState<string>(defaultDate || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddDonation = async () => {
@@ -42,6 +31,15 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
       toast({
         title: "Validation Error",
         description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date.",
         variant: "destructive",
       });
       return;
@@ -59,12 +57,12 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         return;
       }
 
-      // Save the date string directly without any conversion
+      // Save the exact date string that user selected - no conversions at all
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: selectedDate, // This is already a YYYY-MM-DD string
+          date: selectedDate, // Exact string from HTML date input
           amount: parseFloat(donationData.amount),
           memo: donationData.memo || null,
           is_donation: true,
@@ -104,8 +102,8 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         memo: "",
       });
       
-      // Reset to default date or today
-      setSelectedDate(defaultDate || getTodayString());
+      // Reset to default date or empty string
+      setSelectedDate(defaultDate || "");
       
       onOpenChange(false);
     } catch (error: any) {

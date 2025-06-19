@@ -23,16 +23,8 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
     type: "expense", // "expense" or "donation"
   });
   
-  // Get today's date in YYYY-MM-DD format in user's local timezone
-  const getTodayString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-  
-  const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
+  // Use empty string - let HTML date input handle the default
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddExpense = async () => {
@@ -40,6 +32,15 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
       toast({
         title: "Validation Error",
         description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date.",
         variant: "destructive",
       });
       return;
@@ -57,12 +58,12 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         return;
       }
 
-      // Save the date string directly without any conversion
+      // Save the exact date string that user selected - no conversions at all
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: selectedDate, // This is already a YYYY-MM-DD string
+          date: selectedDate, // Exact string from HTML date input
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,
           is_donation: expenseData.type === "donation",
@@ -104,7 +105,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         memo: "",
         type: "expense",
       });
-      setSelectedDate(getTodayString());
+      setSelectedDate("");
       
       onOpenChange(false);
     } catch (error: any) {
