@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 import { Tables } from "@/integrations/supabase/types";
 import { 
   Download, 
@@ -151,8 +151,8 @@ export default function IncomeExpense() {
     }
     
     if (startDate && endDate) {
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
+      const startDateStr = formatDateForDatabase(startDate);
+      const endDateStr = formatDateForDatabase(endDate);
       
       filteredGames = filteredGames.map(game => {
         const filteredSales = game.ticket_sales.filter(sale => 
@@ -615,7 +615,7 @@ export default function IncomeExpense() {
         doc.text('Queen of Hearts Financial Report', leftMargin, pageHeight - 10);
       }
       
-      const filename = `queen-of-hearts-financial-report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`;
+      const filename = `queen-of-hearts-financial-report-${formatDateForDatabase(new Date()).replace(/-/g, '')}.pdf`;
       doc.save(filename);
       
       toast({
