@@ -6,9 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateForDatabase, parseDateFromDatabase } from "@/lib/dateUtils";
 
 interface DonationModalProps {
   open: boolean;
@@ -25,9 +23,10 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
     memo: "",
   });
   
-  // Handle initial date properly - if defaultDate is provided, parse it properly
-  const initialDate = defaultDate ? parseDateFromDatabase(defaultDate) : new Date();
-  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  // Use simple date string for HTML date input
+  const [selectedDate, setSelectedDate] = useState<string>(
+    defaultDate || new Date().toISOString().split('T')[0]
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddDonation = async () => {
@@ -52,11 +51,12 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         return;
       }
 
+      // Use the date string directly - no conversion needed
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: formatDateForDatabase(selectedDate),
+          date: selectedDate, // Save date string directly
           amount: parseFloat(donationData.amount),
           memo: donationData.memo || null,
           is_donation: true,
@@ -96,9 +96,8 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         memo: "",
       });
       
-      // Reset date properly
-      const resetDate = defaultDate ? parseDateFromDatabase(defaultDate) : new Date();
-      setSelectedDate(resetDate);
+      // Reset to default date or today
+      setSelectedDate(defaultDate || new Date().toISOString().split('T')[0]);
       
       onOpenChange(false);
     } catch (error: any) {
@@ -126,14 +125,13 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="donationDate" className="col-span-1">Date</Label>
-            <div className="col-span-3">
-              <DatePickerWithInput
-                date={selectedDate}
-                setDate={(date) => date && setSelectedDate(date)}
-                placeholder="Select date"
-                className=""
-              />
-            </div>
+            <Input
+              id="donationDate"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="col-span-3"
+            />
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">

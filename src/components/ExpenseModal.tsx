@@ -7,8 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { DatePickerWithInput } from "@/components/ui/datepicker";
-import { formatDateForDatabase } from "@/lib/dateUtils";
 
 interface ExpenseModalProps {
   open: boolean;
@@ -24,7 +22,11 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
     memo: "",
     type: "expense", // "expense" or "donation"
   });
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Use simple date string for HTML date input
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddExpense = async () => {
@@ -49,11 +51,12 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         return;
       }
 
+      // Use the date string directly - no conversion needed
       const { error } = await supabase
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: formatDateForDatabase(selectedDate),
+          date: selectedDate, // Save date string directly
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,
           is_donation: expenseData.type === "donation",
@@ -95,7 +98,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         memo: "",
         type: "expense",
       });
-      setSelectedDate(new Date());
+      setSelectedDate(new Date().toISOString().split('T')[0]);
       
       onOpenChange(false);
     } catch (error: any) {
@@ -123,14 +126,13 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
-            <div className="col-span-3">
-              <DatePickerWithInput
-                date={selectedDate}
-                setDate={(date) => date && setSelectedDate(date)}
-                placeholder="Select date"
-                className=""
-              />
-            </div>
+            <Input
+              id="expenseDate"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="col-span-3"
+            />
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
