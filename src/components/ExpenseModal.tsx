@@ -58,32 +58,55 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         return;
       }
 
-      console.log('=== EXPENSE DATE DEBUG ===');
-      console.log('Selected date from input:', selectedDate);
-      console.log('Type of selectedDate:', typeof selectedDate);
-      console.log('Date will be saved exactly as:', selectedDate);
+      console.log('=== COMPREHENSIVE EXPENSE DATE DEBUG ===');
+      console.log('1. Raw selectedDate variable:', selectedDate);
+      console.log('2. Type of selectedDate:', typeof selectedDate);
+      console.log('3. selectedDate length:', selectedDate.length);
+      console.log('4. selectedDate as JSON:', JSON.stringify(selectedDate));
+      
+      // Create a fresh date string to ensure no contamination
+      const dateToSave = String(selectedDate).trim();
+      console.log('5. dateToSave after String() and trim():', dateToSave);
+      console.log('6. dateToSave === selectedDate:', dateToSave === selectedDate);
+      
+      // Validate the format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      console.log('7. Date format validation (YYYY-MM-DD):', dateRegex.test(dateToSave));
+      
+      // Show current timezone info
+      console.log('8. Browser timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log('9. Current time:', new Date().toString());
+      console.log('10. Current time ISO:', new Date().toISOString());
 
-      // Save the exact date string - NO conversions or manipulations
       const insertData = {
         game_id: gameId,
-        date: selectedDate, // This is the raw YYYY-MM-DD string from the input
+        date: dateToSave,
         amount: parseFloat(expenseData.amount),
         memo: expenseData.memo || null,
         is_donation: expenseData.type === "donation",
         user_id: user.id,
       };
 
-      console.log('Final data being sent to database:', insertData);
+      console.log('11. Final insertData object:', JSON.stringify(insertData, null, 2));
+      console.log('12. insertData.date specifically:', insertData.date);
 
       const { data: insertResult, error } = await supabase
         .from('expenses')
         .insert(insertData)
         .select('*');
       
-      if (error) throw error;
+      if (error) {
+        console.error('13. Supabase error:', error);
+        throw error;
+      }
       
-      console.log('Data successfully saved to database:', insertResult);
-      console.log('Saved date in database:', insertResult?.[0]?.date);
+      console.log('14. Supabase insert successful, result:', JSON.stringify(insertResult, null, 2));
+      console.log('15. Returned date from database:', insertResult?.[0]?.date);
+      console.log('16. Date comparison - sent vs received:', {
+        sent: dateToSave,
+        received: insertResult?.[0]?.date,
+        match: dateToSave === insertResult?.[0]?.date
+      });
       
       // Update game totals
       const { data: game } = await supabase
@@ -134,10 +157,17 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const dateValue = e.target.value; // Raw YYYY-MM-DD string from input
-    console.log('Raw date input value:', dateValue);
-    console.log('Setting selectedDate to:', dateValue);
-    setSelectedDate(dateValue);
+    const rawValue = e.target.value;
+    console.log('=== DATE INPUT CHANGE DEBUG ===');
+    console.log('A. Raw e.target.value:', rawValue);
+    console.log('B. Type of raw value:', typeof rawValue);
+    console.log('C. Raw value length:', rawValue.length);
+    console.log('D. Raw value as JSON:', JSON.stringify(rawValue));
+    console.log('E. Current selectedDate before change:', selectedDate);
+    
+    setSelectedDate(rawValue);
+    
+    console.log('F. selectedDate should now be:', rawValue);
   };
 
   return (
