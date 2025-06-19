@@ -1,9 +1,11 @@
-import { useState, useRef } from 'react';
+
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { format, isValid, parseISO } from "date-fns";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PayoutSlipModalProps {
   open: boolean;
@@ -13,7 +15,50 @@ interface PayoutSlipModalProps {
 
 export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipModalProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [weekData, setWeekData] = useState<any>(null);
   const slipRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (winnerData && open) {
+      fetchWeekExpenses();
+      fetchWeekData();
+    }
+  }, [winnerData, open]);
+
+  const fetchWeekExpenses = async () => {
+    if (!winnerData?.gameId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('game_id', winnerData.gameId)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      setExpenses(data || []);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    }
+  };
+
+  const fetchWeekData = async () => {
+    if (!winnerData?.weekId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('id', winnerData.weekId)
+        .single();
+      
+      if (error) throw error;
+      setWeekData(data);
+    } catch (error) {
+      console.error('Error fetching week data:', error);
+    }
+  };
 
   if (!winnerData) return null;
 
@@ -33,20 +78,28 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     return isValid(date) ? format(date, formatString) : 'N/A';
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
   const generatePDF = async () => {
     setIsGeneratingPdf(true);
     if (slipRef.current) {
       try {
         const canvas = await html2canvas(slipRef.current, {
-          scale: 2, // Increase scale for better resolution
-          useCORS: true, // Enable cross-origin resource loading if needed
+          scale: 2,
+          useCORS: true,
         });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const imgWidth = 210;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save(`payout-slip-${winnerData.winnerName}-${winnerData.weekNumber}.pdf`);
+        pdf.save(`payout-slip-${winnerData.winnerName}-week-${winnerData.weekNumber}.pdf`);
       } catch (error) {
         console.error('Error generating PDF:', error);
       } finally {
@@ -55,17 +108,24 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     }
   };
 
+  // Calculate totals
+  const totalExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+  const totalDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+  const grossWinnings = winnerData.payoutAmount || weekData?.weekly_payout || 0;
+  const netPayout = grossWinnings; // Assuming no deductions for now
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payout Distribution Slip</DialogTitle>
         </DialogHeader>
         
         <div ref={slipRef} className="bg-white p-8 space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center border-b pb-4">
             <div>
-              <img src="/logo.png" alt="Company Logo" className="h-8" />
+              <h1 className="text-xl font-bold">Queen of Hearts Game</h1>
+              <p className="text-sm text-gray-600">Payout Distribution Slip</p>
             </div>
             <div className="text-right space-y-1">
               <p className="font-semibold">Prepared By: Finance Department</p>
@@ -74,107 +134,154 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           </div>
           
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">PAYOUT DISTRIBUTION SLIP</h2>
-            <p className="text-lg">Week {winnerData.weekNumber}</p>
+            <h2 className="text-2xl font-bold">WEEK {winnerData.weekNumber} PAYOUT</h2>
+            <p className="text-lg font-semibold">{winnerData.gameName}</p>
             <p className="text-sm text-gray-600">
-              {formatSafeDate(winnerData.weekStartDate)} - {formatSafeDate(winnerData.weekEndDate)}
+              Week Period: {formatSafeDate(winnerData.weekStartDate)} - {formatSafeDate(winnerData.weekEndDate)}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 text-sm">
-            <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-8 text-sm">
+            <div className="space-y-4">
               <div>
                 <span className="font-semibold">Winner Name:</span>
-                <div className="border-b border-gray-300 pb-1 mt-1">
+                <div className="border-b border-gray-300 pb-1 mt-1 text-lg">
                   {winnerData.winnerName || 'N/A'}
                 </div>
               </div>
               <div>
-                <span className="font-semibold">Account Number:</span>
-                <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.accountNumber || 'N/A'}
-                </div>
-              </div>
-              <div>
-                <span className="font-semibold">Bank Name:</span>
-                <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.bankName || 'N/A'}
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <span className="font-semibold">Date:</span>
+                <span className="font-semibold">Date of Drawing:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
                   {formatSafeDate(winnerData.date)}
                 </div>
               </div>
               <div>
-                <span className="font-semibold">Amount Won:</span>
+                <span className="font-semibold">Slot Selected:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.amountWon ? `$${winnerData.amountWon.toLocaleString()}` : 'N/A'}
+                  #{winnerData.slotChosen || 'N/A'}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <span className="font-semibold">Card Drawn:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1 text-lg font-semibold">
+                  {winnerData.cardSelected || 'N/A'}
                 </div>
               </div>
               <div>
-                <span className="font-semibold">Payment Method:</span>
+                <span className="font-semibold">Winner Present:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.paymentMethod || 'N/A'}
+                  {winnerData.winnerPresent ? 'Yes' : 'No'}
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold">Authorized By:</span>
+                <div className="border-b border-gray-300 pb-1 mt-1">
+                  {winnerData.authorizedSignatureName || 'N/A'}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-lg">Distribution Details:</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-auto border-collapse border border-gray-400">
-                  <thead>
-                    <tr>
-                      <th className="border border-gray-400 px-4 py-2">Item</th>
-                      <th className="border border-gray-400 px-4 py-2">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border border-gray-400 px-4 py-2">Winnings</td>
-                      <td className="border border-gray-400 px-4 py-2">${winnerData.amountWon?.toLocaleString() || '0'}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-400 px-4 py-2">Tax Withheld</td>
-                      <td className="border border-gray-400 px-4 py-2">${winnerData.taxWithheld?.toLocaleString() || '0'}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-400 px-4 py-2">Other Deductions</td>
-                      <td className="border border-gray-400 px-4 py-2">${winnerData.otherDeductions?.toLocaleString() || '0'}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-400 px-4 py-2 font-semibold">Net Payout</td>
-                      <td className="border border-gray-400 px-4 py-2 font-semibold">${winnerData.netPayout?.toLocaleString() || '0'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-lg">Additional Notes:</h3>
-              <p className="text-sm">{winnerData.additionalNotes || 'N/A'}</p>
+            <h3 className="font-semibold text-lg border-b pb-2">Financial Distribution Details:</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-auto border-collapse border border-gray-400">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="border border-gray-400 px-4 py-2 text-left">Description</th>
+                    <th className="border border-gray-400 px-4 py-2 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-gray-400 px-4 py-2">Gross Winnings</td>
+                    <td className="border border-gray-400 px-4 py-2 text-right font-semibold">
+                      {formatCurrency(grossWinnings)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-400 px-4 py-2">Less: Tax Withholding</td>
+                    <td className="border border-gray-400 px-4 py-2 text-right">
+                      {formatCurrency(0)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-gray-400 px-4 py-2">Less: Other Deductions</td>
+                    <td className="border border-gray-400 px-4 py-2 text-right">
+                      {formatCurrency(0)}
+                    </td>
+                  </tr>
+                  <tr className="bg-yellow-50">
+                    <td className="border border-gray-400 px-4 py-2 font-bold">Net Payout to Winner</td>
+                    <td className="border border-gray-400 px-4 py-2 text-right font-bold text-lg">
+                      {formatCurrency(netPayout)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <div className="flex justify-between items-end text-sm">
-            <div className="space-y-1">
+          {expenses.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Game Expenses & Donations Summary:</h3>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium mb-2">Expenses</h4>
+                  <div className="space-y-1 text-sm">
+                    {expenses.filter(e => !e.is_donation).slice(0, 5).map((expense, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{formatSafeDate(expense.date, 'MM/dd')} - {expense.memo || 'Expense'}</span>
+                        <span>{formatCurrency(expense.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-1 font-semibold flex justify-between">
+                      <span>Total Expenses:</span>
+                      <span>{formatCurrency(totalExpenses)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Donations</h4>
+                  <div className="space-y-1 text-sm">
+                    {expenses.filter(e => e.is_donation).slice(0, 5).map((donation, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{formatSafeDate(donation.date, 'MM/dd')} - {donation.memo || 'Donation'}</span>
+                        <span>{formatCurrency(donation.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-1 font-semibold flex justify-between">
+                      <span>Total Donations:</span>
+                      <span>{formatCurrency(totalDonations)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-end text-sm pt-8 border-t">
+            <div className="space-y-2">
               <p className="font-semibold">Authorized Signature:</p>
-              <div className="border-b border-gray-300 w-48"></div>
+              <div className="border-b border-gray-300 w-48 h-8"></div>
               <p className="text-gray-600">Finance Manager</p>
+              <p className="text-xs text-gray-500">Date: _______________</p>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="font-semibold">Winner's Signature:</p>
-              <div className="border-b border-gray-300 w-48"></div>
-              <p className="text-gray-600">Date Received: {formatSafeDate(new Date())}</p>
+              <div className="border-b border-gray-300 w-48 h-8"></div>
+              <p className="text-gray-600">Date Received: _______________</p>
+              <p className="text-xs text-gray-500">ID Verified: _______________</p>
             </div>
+          </div>
+          
+          <div className="text-center text-xs text-gray-500 pt-4">
+            <p>This document serves as official record of payout distribution.</p>
+            <p>Please retain for your records.</p>
           </div>
         </div>
 
