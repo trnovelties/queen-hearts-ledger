@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
+import { DonationModal } from "@/components/DonationModal";
 
 export default function Dashboard() {
   const [games, setGames] = useState<any[]>([]);
@@ -56,6 +57,14 @@ export default function Dashboard() {
     amount: 0,
     memo: '',
     gameId: ''
+  });
+
+  // New state for donation modal
+  const [donationModalOpen, setDonationModalOpen] = useState(false);
+  const [donationModalData, setDonationModalData] = useState({
+    gameId: '',
+    gameName: '',
+    defaultDate: ''
   });
 
   useEffect(() => {
@@ -777,7 +786,7 @@ export default function Dashboard() {
           toast({
             title: "Entry Deleted",
             description: "Daily entry has been deleted and totals updated."
-          });
+          };
         }
 
       } else if (deleteType === 'expense') {
@@ -1171,49 +1180,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleDailyDonation = async (date: string, amount: number) => {
-    if (!currentGameId || amount <= 0) return;
-
-    try {
-      const { error } = await supabase
-        .from('expenses')
-        .insert([{
-          game_id: currentGameId,
-          date: date,
-          amount: amount,
-          memo: 'Daily donation',
-          is_donation: true,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        }]);
-
-      if (error) throw error;
-
-      // Update game totals
-      const game = games.find(g => g.id === currentGameId);
-      if (game) {
-        await supabase
-          .from('games')
-          .update({
-            total_donations: game.total_donations + amount,
-            organization_net_profit: game.organization_net_profit - amount
-          })
-          .eq('id', currentGameId);
-      }
-
-      toast({
-        title: "Donation Added",
-        description: `Daily donation of ${formatCurrency(amount)} has been recorded.`
-      });
-    } catch (error: any) {
-      console.error('Error adding daily donation:', error);
-      toast({
-        title: "Error",
-        description: `Failed to add donation: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleDailyExpense = async () => {
     if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0) return;
 
@@ -1273,6 +1239,15 @@ export default function Dashboard() {
       gameId: gameId
     });
     setDailyExpenseModalOpen(true);
+  };
+
+  const openDonationModal = (date: string, gameId: string, gameName: string) => {
+    setDonationModalData({
+      gameId: gameId,
+      gameName: gameName,
+      defaultDate: date
+    });
+    setDonationModalOpen(true);
   };
 
   if (loading) {
@@ -1629,12 +1604,10 @@ export default function Dashboard() {
                                                 
                                                 <div className="flex flex-col gap-1">
                                                   <label className="text-xs font-medium text-gray-600">Quick Add</label>
-                                                  <Select onValueChange={(value) => {
+                                                  <Select onValueChange={value => {
                                                     if (value === 'donation') {
-                                                      const amount = prompt('Enter donation amount:');
-                                                      if (amount && !isNaN(parseFloat(amount))) {
-                                                        handleDailyDonation(format(entryDate, 'yyyy-MM-dd'), parseFloat(amount));
-                                                      }
+                                                      const game = games.find(g => g.id === currentGameId);
+                                                      openDonationModal(format(entryDate, 'yyyy-MM-dd'), currentGameId || '', game?.name || '');
                                                     } else if (value === 'expense') {
                                                       openDailyExpenseModal(format(entryDate, 'yyyy-MM-dd'), game.id);
                                                     }
@@ -1923,6 +1896,15 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Donation Modal */}
+      <DonationModal
+        open={donationModalOpen}
+        onOpenChange={setDonationModalOpen}
+        gameId={donationModalData.gameId}
+        gameName={donationModalData.gameName}
+        defaultDate={donationModalData.defaultDate}
+      />
     </div>
   );
 }
