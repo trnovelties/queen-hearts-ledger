@@ -61,18 +61,19 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
       console.log('=== DONATION DATE DEBUG ===');
       console.log('Selected date from input:', selectedDate);
       console.log('Type of selectedDate:', typeof selectedDate);
+      console.log('Date will be saved exactly as:', selectedDate);
 
-      // Use the exact date string from the input - NO conversions whatsoever
+      // Save the exact date string - NO conversions or manipulations
       const insertData = {
         game_id: gameId,
-        date: selectedDate, // This is already a YYYY-MM-DD string from HTML input
+        date: selectedDate, // This is the raw YYYY-MM-DD string from the input
         amount: parseFloat(donationData.amount),
         memo: donationData.memo || null,
         is_donation: true,
         user_id: user.id,
       };
 
-      console.log('Data being sent to database:', insertData);
+      console.log('Final data being sent to database:', insertData);
 
       const { data: insertResult, error } = await supabase
         .from('expenses')
@@ -81,7 +82,8 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
       
       if (error) throw error;
       
-      console.log('Data returned from database:', insertResult);
+      console.log('Data successfully saved to database:', insertResult);
+      console.log('Saved date in database:', insertResult?.[0]?.date);
       
       // Update game totals
       const { data: game } = await supabase
@@ -130,9 +132,10 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value; // This is already YYYY-MM-DD format
-    console.log('Date input changed to:', rawValue);
-    setSelectedDate(rawValue);
+    const dateValue = e.target.value; // Raw YYYY-MM-DD string from input
+    console.log('Raw date input value:', dateValue);
+    console.log('Setting selectedDate to:', dateValue);
+    setSelectedDate(dateValue);
   };
 
   return (
