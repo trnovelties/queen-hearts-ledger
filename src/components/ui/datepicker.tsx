@@ -1,12 +1,12 @@
 
 import * as React from "react";
-import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { formatDateForDatabase, parseDateFromDatabase } from "@/lib/dateUtils";
 
 interface DatePickerProps {
   date: Date | undefined;
@@ -17,6 +17,29 @@ interface DatePickerProps {
   disabled?: boolean;
   disabledDates?: (date: Date) => boolean;
 }
+
+// Helper function to format date for display without timezone conversion
+const formatDateForDisplay = (date: Date, formatType: 'long' | 'short' = 'long'): string => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  const shortMonthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  
+  if (formatType === 'long') {
+    return `${monthNames[month]} ${day}, ${year}`;
+  } else {
+    return `${shortMonthNames[month]} ${day}, ${year}`;
+  }
+};
 
 export function DatePicker({
   date,
@@ -41,7 +64,7 @@ export function DatePicker({
             )}
             disabled={disabled}
           >
-            {date ? format(date, "PPP") : placeholder}
+            {date ? formatDateForDisplay(date, 'long') : placeholder}
             <CalendarIcon className="h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -83,7 +106,7 @@ export function DatePickerWithInput({
             )}
             disabled={disabled}
           >
-            {date ? format(date, "MMM d, yyyy") : placeholder}
+            {date ? formatDateForDisplay(date, 'short') : placeholder}
             <CalendarIcon className="h-4 w-4 opacity-50 text-[#1F4E4A]" />
           </Button>
         </PopoverTrigger>
