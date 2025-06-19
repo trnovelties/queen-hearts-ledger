@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 
 interface TicketSalesRowProps {
   gameId: string;
@@ -86,13 +86,13 @@ export function TicketSalesRow({
       // Calculate new jackpot contributions total
       const newJackpotContributions = totalJackpotContributions;
 
-      // Insert ticket sales record
+      // Insert ticket sales record using timezone-neutral date formatting
       const { error: insertError } = await supabase
         .from('ticket_sales')
         .insert({
           game_id: gameId,
           week_id: weekId,
-          date: formData.date.toISOString().split('T')[0],
+          date: formatDateForDatabase(formData.date),
           tickets_sold: ticketsSold,
           ticket_price: formData.ticketPrice,
           amount_collected: amountCollected,
