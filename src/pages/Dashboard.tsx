@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { formatDateForDatabase } from "@/lib/dateUtils";
+import { getTodayDateString, formatDateStringForDisplay } from "@/lib/dateUtils";
 import { CalendarIcon, ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { ExpenseModal } from "@/components/ExpenseModal";
@@ -33,7 +33,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [weekForm, setWeekForm] = useState({
     weekNumber: 1,
-    startDate: new Date()
+    startDate: getTodayDateString()
   });
   const [rowForm, setRowForm] = useState({
     date: new Date(),
@@ -173,16 +173,35 @@ export default function Dashboard() {
         throw new Error('You must be logged in to create a week');
       }
 
-      const endDate = new Date(weekForm.startDate);
-      endDate.setDate(endDate.getDate() + 6);
+      console.log('🔄 Creating week with start date:', weekForm.startDate);
+      console.log('🔄 Browser timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+      // Calculate end date by adding 6 days to the start date string
+      const startDateParts = weekForm.startDate.split('-');
+      const startYear = parseInt(startDateParts[0]);
+      const startMonth = parseInt(startDateParts[1]) - 1; // Month is 0-indexed
+      const startDay = parseInt(startDateParts[2]);
+      
+      const endDate = new Date(startYear, startMonth, startDay + 6);
+      const endDateString = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+      
+      console.log('🔄 Calculated end date string:', endDateString);
+
       const { data, error } = await supabase.from('weeks').insert([{
         game_id: currentGameId,
         week_number: weekForm.weekNumber,
-        start_date: formatDateForDatabase(weekForm.startDate),
-        end_date: formatDateForDatabase(endDate),
+        start_date: weekForm.startDate,
+        end_date: endDateString,
         user_id: user.id
       }]).select();
+      
       if (error) throw error;
+      
+      console.log('✅ Week created successfully with dates:', {
+        start_date: weekForm.startDate,
+        end_date: endDateString
+      });
+      
       toast({
         title: "Week Created",
         description: `Week ${weekForm.weekNumber} has been created successfully.`
@@ -190,7 +209,7 @@ export default function Dashboard() {
       setWeekFormOpen(false);
       setWeekForm({
         weekNumber: 1,
-        startDate: new Date()
+        startDate: getTodayDateString()
       });
     } catch (error: any) {
       console.error('Error creating week:', error);
@@ -288,7 +307,7 @@ export default function Dashboard() {
               id: `temp-${Date.now()}`,
               game_id: currentGameId,
               week_id: weekId,
-              date: formatDateForDatabase(entryDate),
+              date: entryDate.toISOString().split('T')[0],
               tickets_sold: ticketsSold,
               ticket_price: ticketPrice,
               amount_collected: amountCollected,
@@ -311,7 +330,7 @@ export default function Dashboard() {
       }));
       if (existingEntry) {
         const { error } = await supabase.from('ticket_sales').update({
-          date: formatDateForDatabase(entryDate),
+          date: entryDate.toISOString().split('T')[0],
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -325,7 +344,7 @@ export default function Dashboard() {
         const { error } = await supabase.from('ticket_sales').insert([{
           game_id: currentGameId,
           week_id: weekId,
-          date: formatDateForDatabase(entryDate),
+          date: entryDate.toISOString().split('T')[0],
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
@@ -429,7 +448,7 @@ export default function Dashboard() {
                 id: `temp-${Date.now()}`,
                 game_id: currentGameId,
                 week_id: weekId,
-                date: formatDateForDatabase(entryDate),
+                date: entryDate.toISOString().split('T')[0],
                 tickets_sold: ticketsSold,
                 ticket_price: 0,
                 amount_collected: 0,
@@ -465,7 +484,7 @@ export default function Dashboard() {
     const lastWeekNumber = game.weeks.length > 0 ? Math.max(...game.weeks.map((w: any) => w.week_number)) : 0;
     setWeekForm({
       weekNumber: lastWeekNumber + 1,
-      startDate: new Date()
+      startDate: getTodayDateString()
     });
     setCurrentGameId(gameId);
     setWeekFormOpen(true);
@@ -688,7 +707,7 @@ export default function Dashboard() {
       yPosition += 10;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
-      doc.text(`Report Date: ${formatDateForDatabase(new Date())}`, 20, yPosition);
+      doc.text(`Report Date: ${getTodayDateString()}`, 20, yPosition);
       yPosition += 10;
 
       doc.setFont("helvetica", "bold");
@@ -697,10 +716,10 @@ export default function Dashboard() {
       yPosition += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.text(`Start Date: ${formatDateForDatabase(new Date(game.start_date))}`, 20, yPosition);
+      doc.text(`Start Date: ${game.start_date}`, 20, yPosition);
       yPosition += 7;
       if (game.end_date) {
-        doc.text(`End Date: ${formatDateForDatabase(new Date(game.end_date))}`, 20, yPosition);
+        doc.text(`End Date: ${game.end_date}`, 20, yPosition);
         yPosition += 7;
       }
       doc.text(`Ticket Price: ${formatCurrency(game.ticket_price)}`, 20, yPosition);
@@ -774,7 +793,7 @@ export default function Dashboard() {
           }
           doc.setFont("helvetica", "bold");
           doc.setFontSize(12);
-          doc.text(`Week ${week.week_number} (${formatDateForDatabase(new Date(week.start_date))} - ${formatDateForDatabase(new Date(week.end_date))})`, 20, yPosition);
+          doc.text(`Week ${week.week_number} (${week.start_date} - ${week.end_date})`, 20, yPosition);
           yPosition += 8;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(10);
@@ -831,7 +850,7 @@ export default function Dashboard() {
                 doc.setFontSize(8);
               }
               xPos = 25;
-              doc.text(formatDateForDatabase(new Date(entry.date)), xPos, yPosition);
+              doc.text(entry.date, xPos, yPosition);
               xPos += colWidths[0];
               doc.text(entry.tickets_sold.toString(), xPos, yPosition);
               xPos += colWidths[1];
@@ -892,7 +911,7 @@ export default function Dashboard() {
             doc.setFontSize(9);
           }
           xPos = 20;
-          doc.text(formatDateForDatabase(new Date(expense.date)), xPos, yPosition);
+          doc.text(expense.date, xPos, yPosition);
           xPos += expenseColWidths[0];
           doc.text(expense.is_donation ? 'Donation' : 'Expense', xPos, yPosition);
           xPos += expenseColWidths[1];
@@ -908,7 +927,7 @@ export default function Dashboard() {
 
       doc.setFont("helvetica", "italic");
       doc.setFontSize(8);
-      doc.text(`Generated on ${formatDateForDatabase(new Date())}`, pageWidth - 20, pageHeight - 10, {
+      doc.text(`Generated on ${getTodayDateString()}`, pageWidth - 20, pageHeight - 10, {
         align: 'right'
       });
 
@@ -1036,9 +1055,9 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-4">
                       <div className="text-sm hidden md:flex space-x-4">
                         <div>
-                          <span className="text-muted-foreground">Start:</span> {formatDateForDatabase(new Date(gameStartDate))}
+                          <span className="text-muted-foreground">Start:</span> {gameStartDate}
                           {gameEndDate && <>
-                              <span className="ml-4 text-muted-foreground">End:</span> {formatDateForDatabase(new Date(gameEndDate))}
+                              <span className="ml-4 text-muted-foreground">End:</span> {gameEndDate}
                             </>}
                         </div>
                         <div><span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}</div>
@@ -1099,7 +1118,7 @@ export default function Dashboard() {
                                         <div>
                                           <h4 className="text-2xl font-bold text-[#1F4E4A] mb-2">Week {week.week_number}</h4>
                                           <p className="text-gray-600 text-lg">
-                                            {formatDateForDatabase(new Date(week.start_date))} - {formatDateForDatabase(new Date(week.end_date))}
+                                            {week.start_date} - {week.end_date}
                                           </p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -1210,7 +1229,7 @@ export default function Dashboard() {
                                                   Day {dayIndex + 1}
                                                 </div>
                                                 <div className="text-sm text-gray-600">
-                                                  {formatDateForDatabase(entryDate)}
+                                                  {entryDate.toISOString().split('T')[0]}
                                                 </div>
                                               </div>
                                               
@@ -1230,9 +1249,9 @@ export default function Dashboard() {
                                                   <label className="text-xs font-medium text-gray-600">Quick Add</label>
                                                   <Select onValueChange={value => {
                                     if (value === 'donation') {
-                                      openDonationModal(formatDateForDatabase(entryDate), game.id, game.name);
+                                      openDonationModal(entryDate.toISOString().split('T')[0], game.id, game.name);
                                     } else if (value === 'expense') {
-                                      openDailyExpenseModal(formatDateForDatabase(entryDate), game.id);
+                                      openDailyExpenseModal(entryDate.toISOString().split('T')[0], game.id);
                                     }
                                   }}>
                                                     <SelectTrigger className="w-24 h-9">
@@ -1307,7 +1326,7 @@ export default function Dashboard() {
                                 </TableHeader>
                                 <TableBody>
                                   {game.expenses.map((expense: any) => <TableRow key={expense.id}>
-                                      <TableCell>{formatDateForDatabase(new Date(expense.date))}</TableCell>
+                                      <TableCell>{expense.date}</TableCell>
                                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                                       <TableCell>{expense.is_donation ? 'Donation' : 'Expense'}</TableCell>
                                       <TableCell>{expense.memo}</TableCell>
@@ -1346,12 +1365,29 @@ export default function Dashboard() {
             </div>
             
             <div className="grid gap-2">
-              <DatePickerWithInput label="Start Date" date={weekForm.startDate} setDate={date => date ? setWeekForm({
-              ...weekForm,
-              startDate: date
-            }) : null} placeholder="Select start date" />
+              <label htmlFor="startDate" className="text-sm font-medium">Start Date</label>
+              <Input
+                id="startDate"
+                type="date"
+                value={weekForm.startDate}
+                onChange={e => {
+                  console.log('📅 Date input changed to:', e.target.value);
+                  setWeekForm({
+                    ...weekForm,
+                    startDate: e.target.value
+                  });
+                }}
+                className="w-full"
+              />
               <p className="text-xs text-muted-foreground">
-                End date will be automatically set to {weekForm.startDate ? formatDateForDatabase(new Date(weekForm.startDate.getTime() + 6 * 24 * 60 * 60 * 1000)) : 'N/A'}
+                End date will be automatically set to {weekForm.startDate ? (() => {
+                  const parts = weekForm.startDate.split('-');
+                  const year = parseInt(parts[0]);
+                  const month = parseInt(parts[1]) - 1;
+                  const day = parseInt(parts[2]);
+                  const endDate = new Date(year, month, day + 6);
+                  return `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+                })() : 'N/A'}
               </p>
             </div>
           </div>
@@ -1401,7 +1437,6 @@ export default function Dashboard() {
       
       <GameForm open={gameFormOpen} onOpenChange={setGameFormOpen} games={games} onComplete={handleGameComplete} />
       
-      {/* Add Donation Modal */}
       <DonationModal 
         open={donationModalOpen} 
         onOpenChange={setDonationModalOpen} 
@@ -1415,7 +1450,7 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle>Add Daily Expense</DialogTitle>
             <DialogDescription>
-              Enter the expense details for {dailyExpenseForm.date && formatDateForDatabase(new Date(dailyExpenseForm.date))}.
+              Enter the expense details for {dailyExpenseForm.date}.
             </DialogDescription>
           </DialogHeader>
           
