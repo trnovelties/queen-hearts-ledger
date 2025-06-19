@@ -28,10 +28,12 @@ export function addDaysToDate(date: Date, days: number): Date {
 /**
  * Parses a date string (YYYY-MM-DD) into a Date object
  * Creates the date in local timezone to match user expectation
+ * IMPORTANT: This creates the date at noon to avoid timezone edge cases
  */
 export function parseDateFromDatabase(dateString: string): Date {
   const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  // Create date at noon to avoid timezone shifting issues
+  return new Date(year, month - 1, day, 12, 0, 0);
 }
 
 /**
@@ -48,4 +50,20 @@ export function getWeekDayDate(weekStartDate: string, dayIndex: number): Date {
  */
 export function isSameDay(date1: Date, date2: Date): boolean {
   return formatDateForDatabase(date1) === formatDateForDatabase(date2);
+}
+
+/**
+ * Safely formats a date for display without timezone conversion
+ * This ensures displayed dates match what was originally selected
+ */
+export function formatDateForDisplay(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day, 12, 0, 0); // noon to avoid timezone issues
+  
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    timeZone: undefined // Use local timezone for display
+  });
 }

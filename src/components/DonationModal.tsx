@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateForDatabase } from "@/lib/dateUtils";
+import { formatDateForDatabase, parseDateFromDatabase } from "@/lib/dateUtils";
 
 interface DonationModalProps {
   open: boolean;
@@ -24,7 +24,10 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
     amount: "",
     memo: "",
   });
-  const [selectedDate, setSelectedDate] = useState<Date>(defaultDate ? new Date(defaultDate) : new Date());
+  
+  // Handle initial date properly - if defaultDate is provided, parse it properly
+  const initialDate = defaultDate ? parseDateFromDatabase(defaultDate) : new Date();
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddDonation = async () => {
@@ -92,7 +95,10 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         amount: "",
         memo: "",
       });
-      setSelectedDate(defaultDate ? new Date(defaultDate) : new Date());
+      
+      // Reset date properly
+      const resetDate = defaultDate ? parseDateFromDatabase(defaultDate) : new Date();
+      setSelectedDate(resetDate);
       
       onOpenChange(false);
     } catch (error: any) {
@@ -180,7 +186,7 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
             {isSubmitting ? "Saving..." : "Add Donation"}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </Content>
     </Dialog>
   );
 }

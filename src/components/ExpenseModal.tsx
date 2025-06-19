@@ -20,7 +20,6 @@ interface ExpenseModalProps {
 export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseModalProps) {
   const { toast } = useToast();
   const [expenseData, setExpenseData] = useState({
-    date: new Date().toISOString().split("T")[0],
     amount: "",
     memo: "",
     type: "expense", // "expense" or "donation"
@@ -92,7 +91,6 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
       });
       
       setExpenseData({
-        date: new Date().toISOString().split('T')[0],
         amount: "",
         memo: "",
         type: "expense",
@@ -203,7 +201,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
             {isSubmitting ? "Saving..." : "Add"}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
