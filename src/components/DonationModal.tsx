@@ -58,15 +58,21 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         return;
       }
 
-      // Use the exact date string from the input - no conversion needed
+      console.log('=== DONATION DATE DEBUG ===');
+      console.log('Selected date from input:', selectedDate);
+      console.log('Type of selectedDate:', typeof selectedDate);
+
+      // Use the exact date string from the input - NO conversions whatsoever
       const insertData = {
         game_id: gameId,
-        date: selectedDate, // Direct string, no Date object conversion
+        date: selectedDate, // This is already a YYYY-MM-DD string from HTML input
         amount: parseFloat(donationData.amount),
         memo: donationData.memo || null,
         is_donation: true,
         user_id: user.id,
       };
+
+      console.log('Data being sent to database:', insertData);
 
       const { data: insertResult, error } = await supabase
         .from('expenses')
@@ -74,6 +80,8 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         .select('*');
       
       if (error) throw error;
+      
+      console.log('Data returned from database:', insertResult);
       
       // Update game totals
       const { data: game } = await supabase
@@ -122,7 +130,9 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value);
+    const rawValue = e.target.value; // This is already YYYY-MM-DD format
+    console.log('Date input changed to:', rawValue);
+    setSelectedDate(rawValue);
   };
 
   return (
