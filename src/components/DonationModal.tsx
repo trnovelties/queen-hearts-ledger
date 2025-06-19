@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 
 interface DonationModalProps {
   open: boolean;
@@ -52,7 +53,7 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: selectedDate.toISOString().split('T')[0],
+          date: formatDateForDatabase(selectedDate),
           amount: parseFloat(donationData.amount),
           memo: donationData.memo || null,
           is_donation: true,

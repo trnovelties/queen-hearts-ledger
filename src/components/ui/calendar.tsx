@@ -8,35 +8,12 @@ import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-// Helper function to create timezone-neutral date from calendar selection
-const createNeutralDateFromSelection = (date: Date): Date => {
-  // Get the local date components without timezone conversion
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
-  
-  // Create a new Date using these components in local timezone
-  return new Date(year, month, day);
-};
-
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  onSelect,
   ...props
 }: CalendarProps) {
-  // Intercept the onSelect to ensure timezone-neutral date handling
-  const handleSelect = React.useCallback((date: Date | undefined, selectedDay: Date, activeModifiers: any, e: React.MouseEvent) => {
-    if (date && onSelect) {
-      // Create timezone-neutral version of the selected date
-      const neutralDate = createNeutralDateFromSelection(date);
-      onSelect(neutralDate, selectedDay, activeModifiers, e);
-    } else if (onSelect) {
-      onSelect(date, selectedDay, activeModifiers, e);
-    }
-  }, [onSelect]);
-
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -79,7 +56,6 @@ function Calendar({
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
       }}
-      onSelect={handleSelect}
       {...props}
     />
   );

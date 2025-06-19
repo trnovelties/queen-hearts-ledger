@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 
 interface ExpenseModalProps {
   open: boolean;
@@ -53,7 +54,7 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
         .from('expenses')
         .insert({
           game_id: gameId,
-          date: selectedDate.toISOString().split('T')[0],
+          date: formatDateForDatabase(selectedDate),
           amount: parseFloat(expenseData.amount),
           memo: expenseData.memo || null,
           is_donation: expenseData.type === "donation",
