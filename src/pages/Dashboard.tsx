@@ -233,202 +233,190 @@ export default function Dashboard() {
     }
   };
 
-  const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
-    if (!currentGameId || !user?.id) return;
+  const updateDailyEntry = async (
+    weekId: string,
+    gameId: string,
+    date: string,
+    ticketsSold: number,
+    ticketPrice: number
+  ) => {
     try {
-      const game = games.find(g => g.id === currentGameId);
-      if (!game) throw new Error("Game not found");
-      const week = game.weeks.find((w: any) => w.id === weekId);
-      if (!week) throw new Error("Week not found");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      // Calculate the date for this day
-      const weekStartDate = new Date(week.start_date);
-      const entryDate = new Date(weekStartDate);
-      entryDate.setDate(entryDate.getDate() + dayIndex);
-
-      // Find existing entry for this specific date
-      const existingEntry = week.ticket_sales.find((entry: any) => {
-        const existingDate = new Date(entry.date);
-        return existingDate.toDateString() === entryDate.toDateString();
-      });
-
-      // Calculate the basic values
-      const ticketPrice = game.ticket_price;
       const amountCollected = ticketsSold * ticketPrice;
-      const organizationPercentage = game.organization_percentage;
-      const jackpotPercentage = game.jackpot_percentage;
-      const organizationTotal = amountCollected * (organizationPercentage / 100);
-      const jackpotTotal = amountCollected * (jackpotPercentage / 100);
-
-      // Get all ticket sales for this game to calculate cumulative correctly
-      const {
-        data: allGameSales,
-        error: salesError
-      } = await supabase.from('ticket_sales').select('*').eq('game_id', currentGameId).eq('user_id', user.id).order('date', {
-        ascending: true
-      });
-      if (salesError) throw salesError;
-
-      // Calculate cumulative collected up to this date (excluding current entry if updating)
-      let cumulativeCollected = game.carryover_jackpot || 0;
-      if (allGameSales) {
-        for (const sale of allGameSales) {
-          const saleDate = new Date(sale.date);
-          const currentEntryDate = new Date(entryDate);
-
-          // Include all sales before this date, and this date if it's not the current entry being updated
-          if (saleDate < currentEntryDate || saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id) {
-            cumulativeCollected += sale.amount_collected;
-          }
-        }
+      const game = games.find(g => g.id === gameId);
+      
+      if (!game) {
+        toast.error("Game not found");
+        return;
       }
-      cumulativeCollected += amountCollected;
 
-      // Calculate ending jackpot total
-      // Get the previous ending jackpot total (from the most recent entry before this one)
-      let previousJackpotTotal = game.carryover_jackpot || 0;
-      if (allGameSales && allGameSales.length > 0) {
-        // Find the most recent entry before this date
-        const previousEntries = allGameSales.filter(sale => {
-          const saleDate = new Date(sale.date);
-          const currentEntryDate = new Date(entryDate);
-          return saleDate < currentEntryDate || saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id;
-        });
-        if (previousEntries.length > 0) {
-          const lastEntry = previousEntries[previousEntries.length - 1];
-          previousJackpotTotal = lastEntry.ending_jackpot_total;
-        }
+      const organizationTotal = amountCollected * (game.organization_percentage / 100);
+      const jackpotTotal = amountCollected * (game.jackpot_percentage / 100);
+
+      // Get all existing ticket sales for this game to calculate cumulative totals
+      const { data: existingSales, error: existingSalesError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('user_id', user.id)
+        .order('date', { ascending: true });
+
+      if (existingSalesError) {
+        console.error('Error fetching existing sales:', existingSalesError);
+        throw existingSalesError;
       }
-      const endingJackpotTotal = previousJackpotTotal + jackpotTotal;
 
-      // Optimistically update local state first
-      setGames(prevGames => prevGames.map(g => {
-        if (g.id !== currentGameId) return g;
-        return {
-          ...g,
-          weeks: g.weeks.map((w: any) => {
-            if (w.id !== weekId) return w;
-            const updatedTicketSales = existingEntry ? w.ticket_sales.map((entry: any) => {
-              const entryDate = new Date(entry.date);
-              const targetDate = new Date(weekStartDate);
-              targetDate.setDate(targetDate.getDate() + dayIndex);
-              if (entryDate.toDateString() === targetDate.toDateString()) {
-                return {
-                  ...entry,
-                  tickets_sold: ticketsSold,
-                  amount_collected: amountCollected,
-                  cumulative_collected: cumulativeCollected,
-                  organization_total: organizationTotal,
-                  jackpot_total: jackpotTotal,
-                  ending_jackpot_total: endingJackpotTotal
-                };
-              }
-              return entry;
-            }) : [...w.ticket_sales, {
-              id: `temp-${Date.now()}`,
-              game_id: currentGameId,
-              week_id: weekId,
-              date: format(entryDate, 'yyyy-MM-dd'),
-              tickets_sold: ticketsSold,
-              ticket_price: ticketPrice,
-              amount_collected: amountCollected,
-              cumulative_collected: cumulativeCollected,
-              organization_total: organizationTotal,
-              jackpot_total: jackpotTotal,
-              ending_jackpot_total: endingJackpotTotal
-            }];
+      // Calculate cumulative collected up to this point
+      const previousSales = existingSales?.filter(sale => new Date(sale.date) < new Date(date)) || [];
+      const previousTotal = previousSales.reduce((sum, sale) => sum + sale.amount_collected, 0);
+      const cumulativeCollected = previousTotal + amountCollected;
 
-            // Recalculate week totals
-            const weekTotalTickets = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
-            const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
-            return {
-              ...w,
-              ticket_sales: updatedTicketSales,
-              weekly_tickets_sold: weekTotalTickets,
-              weekly_sales: weekTotalSales
-            };
-          })
-        };
-      }));
-      if (existingEntry) {
-        // Update existing entry
-        const {
-          error
-        } = await supabase.from('ticket_sales').update({
-          date: format(entryDate, 'yyyy-MM-dd'),
-          tickets_sold: ticketsSold,
-          ticket_price: ticketPrice,
-          amount_collected: amountCollected,
-          cumulative_collected: cumulativeCollected,
-          organization_total: organizationTotal,
-          jackpot_total: jackpotTotal,
-          ending_jackpot_total: endingJackpotTotal
-        }).eq('id', existingEntry.id).eq('user_id', user.id);
-        if (error) throw error;
+      // Calculate jackpot contributions total for this game
+      const jackpotContributionsTotal = previousSales.reduce((sum, sale) => sum + sale.jackpot_total, 0) + jackpotTotal;
+
+      // Get the last ending jackpot total from previous entries
+      let previousEndingJackpot = 0;
+      if (previousSales.length > 0) {
+        const lastSale = previousSales[previousSales.length - 1];
+        previousEndingJackpot = lastSale.ending_jackpot_total || 0;
       } else {
-        // Insert new entry
-        const {
-          error
-        } = await supabase.from('ticket_sales').insert([{
-          game_id: currentGameId,
+        // First entry in game, use carryover jackpot
+        previousEndingJackpot = game.carryover_jackpot || 0;
+      }
+
+      // Calculate displayed jackpot using the minimum starting jackpot logic
+      const minimumJackpot = game.minimum_starting_jackpot || 500;
+      let displayedJackpot = 0;
+      
+      if (jackpotContributionsTotal < minimumJackpot) {
+        displayedJackpot = minimumJackpot + (game.carryover_jackpot || 0);
+      } else {
+        displayedJackpot = jackpotContributionsTotal + (game.carryover_jackpot || 0);
+      }
+
+      const endingJackpotTotal = displayedJackpot;
+
+      // Insert new ticket sales record
+      const { error: insertError } = await supabase
+        .from('ticket_sales')
+        .insert({
+          game_id: gameId,
           week_id: weekId,
-          date: format(entryDate, 'yyyy-MM-dd'),
+          date: date,
           tickets_sold: ticketsSold,
           ticket_price: ticketPrice,
           amount_collected: amountCollected,
           cumulative_collected: cumulativeCollected,
           organization_total: organizationTotal,
           jackpot_total: jackpotTotal,
+          weekly_payout_amount: 0,
           ending_jackpot_total: endingJackpotTotal,
+          jackpot_contributions_total: jackpotContributionsTotal,
+          displayed_jackpot_total: displayedJackpot,
           user_id: user.id
-        }]);
-        if (error) throw error;
+        });
+
+      if (insertError) {
+        console.error('Error inserting ticket sales:', insertError);
+        throw insertError;
       }
 
-      // Recalculate and update week totals
-      const {
-        data: weekSales
-      } = await supabase.from('ticket_sales').select('*').eq('week_id', weekId).eq('user_id', user.id);
-      if (weekSales) {
-        const weekTotalTickets = weekSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
-        const weekTotalSales = weekSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-        await supabase.from('weeks').update({
-          weekly_sales: weekTotalSales,
-          weekly_tickets_sold: weekTotalTickets
-        }).eq('id', weekId).eq('user_id', user.id);
+      // Update all subsequent ticket sales records in this game to recalculate cumulative totals
+      const subsequentSales = existingSales?.filter(sale => new Date(sale.date) > new Date(date)) || [];
+      
+      for (let i = 0; i < subsequentSales.length; i++) {
+        const sale = subsequentSales[i];
+        const newCumulative = cumulativeCollected + existingSales
+          ?.filter(s => new Date(s.date) > new Date(date) && new Date(s.date) <= new Date(sale.date))
+          .reduce((sum, s) => sum + s.amount_collected, 0) || 0;
+
+        await supabase
+          .from('ticket_sales')
+          .update({
+            cumulative_collected: newCumulative
+          })
+          .eq('id', sale.id);
       }
 
-      // Recalculate and update game totals
-      const {
-        data: gameSales
-      } = await supabase.from('ticket_sales').select('*').eq('game_id', currentGameId).eq('user_id', user.id);
-      if (gameSales) {
-        const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-        const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
+      // Update week totals
+      const { data: weekSales, error: weekSalesError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('week_id', weekId)
+        .eq('user_id', user.id);
 
-        // Get total expenses and donations
-        const {
-          data: expenses
-        } = await supabase.from('expenses').select('*').eq('game_id', currentGameId).eq('user_id', user.id);
-        const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-        const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-        const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
-        await supabase.from('games').update({
-          total_sales: gameTotalSales,
+      if (weekSalesError) {
+        console.error('Error fetching week sales:', weekSalesError);
+        throw weekSalesError;
+      }
+
+      const weeklyTicketsSold = weekSales?.reduce((sum, sale) => sum + sale.tickets_sold, 0) || 0;
+      const weeklySales = weekSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
+
+      const { error: weekUpdateError } = await supabase
+        .from('weeks')
+        .update({
+          weekly_tickets_sold: weeklyTicketsSold,
+          weekly_sales: weeklySales
+        })
+        .eq('id', weekId);
+
+      if (weekUpdateError) {
+        console.error('Error updating week:', weekUpdateError);
+        throw weekUpdateError;
+      }
+
+      // Update game totals
+      const { data: gameSales, error: gameSalesError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('user_id', user.id);
+
+      if (gameSalesError) {
+        console.error('Error fetching game sales:', gameSalesError);
+      }
+
+      const totalSales = gameSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
+      const totalOrganizationAmount = gameSales?.reduce((sum, sale) => sum + sale.organization_total, 0) || 0;
+
+      // Get expenses and donations for this game
+      const { data: expenses, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('game_id', gameId)
+        .eq('user_id', user.id);
+
+      if (expensesError) {
+        console.error('Error fetching expenses:', expensesError);
+      }
+
+      const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0) || 0;
+      const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0) || 0;
+      const organizationNetProfit = Math.max(0, totalOrganizationAmount - totalExpenses - totalDonations);
+
+      const { error: gameUpdateError } = await supabase
+        .from('games')
+        .update({
+          total_sales: totalSales,
           total_expenses: totalExpenses,
           total_donations: totalDonations,
           organization_net_profit: organizationNetProfit
-        }).eq('id', currentGameId).eq('user_id', user.id);
+        })
+        .eq('id', gameId);
+
+      if (gameUpdateError) {
+        console.error('Error updating game:', gameUpdateError);
+        throw gameUpdateError;
       }
-    } catch (error: any) {
+
+      await loadGames();
+      toast.success("Daily entry added successfully!");
+    } catch (error) {
       console.error('Error updating daily entry:', error);
-      // Revert optimistic update on error
-      fetchGames();
-      toast({
-        title: "Error",
-        description: `Failed to update daily entry: ${error.message}`,
-        variant: "destructive"
-      });
+      toast.error("Failed to add daily entry");
     }
   };
 
@@ -507,8 +495,9 @@ export default function Dashboard() {
     }));
 
     // Then update the database
-    updateDailyEntry(weekId, dayIndex, ticketsSold);
+    updateDailyEntry(weekId, currentGameId, format(entryDate, 'yyyy-MM-dd'), ticketsSold, 0);
   };
+
   const toggleGame = (gameId: string) => {
     setExpandedGame(expandedGame === gameId ? null : gameId);
     setExpandedWeek(null);
@@ -1155,6 +1144,7 @@ export default function Dashboard() {
     });
     setDailyExpenseModalOpen(true);
   };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -1167,7 +1157,7 @@ export default function Dashboard() {
       </div>;
   }
 
-  return <div className="space-y-6">
+  return <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
         <Button onClick={() => setGameFormOpen(true)} className="bg-primary hover:bg-primary/90">
@@ -1196,7 +1186,7 @@ export default function Dashboard() {
         // Calculate actual start and end dates from weeks data
         const gameStartDate = game.weeks.length > 0 ? game.weeks.reduce((earliest: any, week: any) => new Date(week.start_date) < new Date(earliest.start_date) ? week : earliest).start_date : game.start_date;
         const gameEndDate = game.weeks.length > 0 ? game.weeks.reduce((latest: any, week: any) => new Date(week.end_date) > new Date(latest.end_date) ? week : latest).end_date : game.end_date;
-        return <Card key={game.id} className="overflow-hidden">
+        return <Card key={game.id} className="w-full">
                 <CardHeader className={`flex flex-col items-start justify-between cursor-pointer ${expandedGame === game.id ? 'bg-accent/50' : ''}`} onClick={() => toggleGame(game.id)}>
                   <div className="w-full flex flex-row items-center justify-between">
                     <CardTitle className="text-xl">
@@ -1509,8 +1499,8 @@ export default function Dashboard() {
                             </div> : <p className="text-muted-foreground text-sm">No expenses or donations recorded yet.</p>}
                         </>}
                     </div>
-                  </CardContent>}
-              </Card>;
+                  </CardContent>
+                </Card>;
       })}
       </div>
       
