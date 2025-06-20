@@ -8,8 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GameForm } from "./GameForm";
 import { ExpenseModal } from "./ExpenseModal";
+import { useAuth } from "@/context/AuthContext";
 
 export function GameManagement() {
+  const { user } = useAuth();
   const [games, setGames] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showGameForm, setShowGameForm] = useState(false);
@@ -18,13 +20,20 @@ export function GameManagement() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchGames();
-  }, []);
+    if (user) {
+      fetchGames();
+    }
+  }, [user]);
 
   const fetchGames = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No user found, skipping games fetch');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Fetching games for user:', user.id);
 
       const { data, error } = await supabase
         .from('games')
@@ -32,7 +41,12 @@ export function GameManagement() {
         .eq('user_id', user.id)
         .order('game_number', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching games:', error);
+        throw error;
+      }
+
+      console.log('Fetched games:', data);
       setGames(data || []);
     } catch (error) {
       console.error('Error fetching games:', error);
@@ -67,6 +81,10 @@ export function GameManagement() {
 
   if (isLoading) {
     return <div className="flex justify-center p-4">Loading games...</div>;
+  }
+
+  if (!user) {
+    return <div className="flex justify-center p-4">Please log in to view games.</div>;
   }
 
   return (

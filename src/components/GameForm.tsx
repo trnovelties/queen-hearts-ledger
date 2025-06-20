@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface GameFormProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface GameFormProps {
 }
 
 export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     ticketPrice: 2,
@@ -50,11 +52,12 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("You must be logged in to create games.");
         return;
       }
+
+      console.log('Creating game with user_id:', user.id);
 
       // Get current configuration including card payouts and version - now user-specific
       const { data: config, error: configError } = await supabase
@@ -79,23 +82,30 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
       const gameNumber = games.length + 1;
 
+      const gameData = {
+        game_number: gameNumber,
+        name: formData.name,
+        start_date: new Date().toISOString().split('T')[0],
+        ticket_price: formData.ticketPrice,
+        organization_percentage: formData.organizationPercentage,
+        jackpot_percentage: formData.jackpotPercentage,
+        minimum_starting_jackpot: formData.minimumStartingJackpot,
+        carryover_jackpot: carryoverJackpot,
+        card_payouts: config.card_payouts,
+        configuration_version: config.version,
+        user_id: user.id // Explicitly set user_id
+      };
+
+      console.log('Inserting game with data:', gameData);
+
       const { error } = await supabase
         .from('games')
-        .insert({
-          game_number: gameNumber,
-          name: formData.name,
-          start_date: new Date().toISOString().split('T')[0],
-          ticket_price: formData.ticketPrice,
-          organization_percentage: formData.organizationPercentage,
-          jackpot_percentage: formData.jackpotPercentage,
-          minimum_starting_jackpot: formData.minimumStartingJackpot,
-          carryover_jackpot: carryoverJackpot,
-          card_payouts: config.card_payouts,
-          configuration_version: config.version,
-          user_id: user.id
-        });
+        .insert(gameData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating game:', error);
+        throw error;
+      }
 
       toast.success("Game created successfully!");
       onComplete();
