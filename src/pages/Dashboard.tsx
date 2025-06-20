@@ -46,7 +46,9 @@ export default function Dashboard() {
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [currentGameName, setCurrentGameName] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
   const [tempTicketInputs, setTempTicketInputs] = useState<{
@@ -63,11 +65,11 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchGames();
 
-      // Set up real-time subscription for games table - filter by user_id
-      const gamesSubscription = supabase.channel(`public:games:user_id=eq.${user.id}`).on('postgres_changes', {
+      // Set up real-time subscription for games table
+      const gamesSubscription = supabase.channel('public:games').on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'games',
@@ -77,8 +79,8 @@ export default function Dashboard() {
         fetchGames();
       }).subscribe();
 
-      // Set up real-time subscription for weeks table - filter by user_id
-      const weeksSubscription = supabase.channel(`public:weeks:user_id=eq.${user.id}`).on('postgres_changes', {
+      // Set up real-time subscription for weeks table
+      const weeksSubscription = supabase.channel('public:weeks').on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'weeks',
@@ -88,8 +90,8 @@ export default function Dashboard() {
         fetchGames();
       }).subscribe();
 
-      // Set up real-time subscription for ticket_sales table - filter by user_id
-      const ticketSalesSubscription = supabase.channel(`public:ticket_sales:user_id=eq.${user.id}`).on('postgres_changes', {
+      // Set up real-time subscription for ticket_sales table
+      const ticketSalesSubscription = supabase.channel('public:ticket_sales').on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'ticket_sales',
@@ -99,8 +101,8 @@ export default function Dashboard() {
         fetchGames();
       }).subscribe();
 
-      // Set up real-time subscription for expenses table - filter by user_id
-      const expensesSubscription = supabase.channel(`public:expenses:user_id=eq.${user.id}`).on('postgres_changes', {
+      // Set up real-time subscription for expenses table
+      const expensesSubscription = supabase.channel('public:expenses').on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'expenses',
@@ -117,11 +119,11 @@ export default function Dashboard() {
         supabase.removeChannel(expensesSubscription);
       };
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchGames = async () => {
-    if (!user) {
-      setLoading(false);
+    if (!user?.id) {
+      console.log('No user ID available');
       return;
     }
 
@@ -139,7 +141,7 @@ export default function Dashboard() {
       if (gamesError) throw gamesError;
 
       const gamesWithDetails = await Promise.all(gamesData.map(async game => {
-        // Get weeks for this game - filter by user_id
+        // Get weeks for this game
         const {
           data: weeksData,
           error: weeksError
@@ -148,7 +150,7 @@ export default function Dashboard() {
         });
         if (weeksError) throw weeksError;
 
-        // Get expenses for this game - filter by user_id
+        // Get expenses for this game
         const {
           data: expensesData,
           error: expensesError
@@ -157,7 +159,7 @@ export default function Dashboard() {
         });
         if (expensesError) throw expensesError;
 
-        // Get detailed week data with ticket sales - filter by user_id
+        // Get detailed week data with ticket sales
         const weeksWithDetails = await Promise.all(weeksData.map(async week => {
           const {
             data: salesData,
@@ -190,8 +192,13 @@ export default function Dashboard() {
     }
   };
 
+  // Filter games based on active tab
+  const currentGames = games.filter(game => !game.end_date);
+  const archivedGames = games.filter(game => game.end_date);
+  const displayGames = activeTab === 'current' ? currentGames : archivedGames;
+
   const createWeek = async () => {
-    if (!currentGameId || !user) return;
+    if (!currentGameId || !user?.id) return;
     try {
       // Calculate end date as 6 days after start date (7 days total)
       const endDate = new Date(weekForm.startDate);
@@ -227,8 +234,7 @@ export default function Dashboard() {
   };
 
   const updateDailyEntry = async (weekId: string, dayIndex: number, ticketsSold: number) => {
-    if (!currentGameId || !user) return;
-    
+    if (!currentGameId || !user?.id) return;
     try {
       const game = games.find(g => g.id === currentGameId);
       if (!game) throw new Error("Game not found");
@@ -254,7 +260,7 @@ export default function Dashboard() {
       const organizationTotal = amountCollected * (organizationPercentage / 100);
       const jackpotTotal = amountCollected * (jackpotPercentage / 100);
 
-      // Get all ticket sales for this game to calculate cumulative correctly - filter by user_id
+      // Get all ticket sales for this game to calculate cumulative correctly
       const {
         data: allGameSales,
         error: salesError
@@ -344,7 +350,6 @@ export default function Dashboard() {
           })
         };
       }));
-
       if (existingEntry) {
         // Update existing entry
         const {
@@ -401,7 +406,7 @@ export default function Dashboard() {
         const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
         const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
 
-        // Get total expenses and donations - filter by user_id
+        // Get total expenses and donations
         const {
           data: expenses
         } = await supabase.from('expenses').select('*').eq('game_id', currentGameId).eq('user_id', user.id);
@@ -427,6 +432,7 @@ export default function Dashboard() {
     }
   };
 
+  // Handle input change for ticket sold (store temporarily)
   const handleTicketInputChange = (weekId: string, dayIndex: number, value: string) => {
     const key = `${weekId}-${dayIndex}`;
     setTempTicketInputs(prev => ({
@@ -435,6 +441,7 @@ export default function Dashboard() {
     }));
   };
 
+  // Handle Enter key press to submit the ticket input
   const handleTicketInputSubmit = (weekId: string, dayIndex: number, value: string) => {
     const ticketsSold = parseInt(value) || 0;
 
@@ -502,21 +509,17 @@ export default function Dashboard() {
     // Then update the database
     updateDailyEntry(weekId, dayIndex, ticketsSold);
   };
-
   const toggleGame = (gameId: string) => {
     setExpandedGame(expandedGame === gameId ? null : gameId);
     setExpandedWeek(null);
     setExpandedExpenses(null);
   };
-
   const toggleWeek = (weekId: string) => {
     setExpandedWeek(expandedWeek === weekId ? null : weekId);
   };
-
   const toggleExpenses = (gameId: string) => {
     setExpandedExpenses(expandedExpenses === gameId ? null : gameId);
   };
-
   const openWeekForm = (gameId: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game) return;
@@ -530,15 +533,13 @@ export default function Dashboard() {
     setCurrentGameId(gameId);
     setWeekFormOpen(true);
   };
-
   const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
     setDeleteItemId(id);
     setDeleteType(type);
     setDeleteDialogOpen(true);
   };
-
   const confirmDelete = async () => {
-    if (!deleteItemId || !user) {
+    if (!deleteItemId || !user?.id) {
       toast({
         title: "Error",
         description: "No item selected for deletion.",
@@ -560,7 +561,7 @@ export default function Dashboard() {
         }
         console.log('Game found:', gameCheck);
 
-        // Delete all ticket_sales for this game first - filter by user_id
+        // Delete all ticket_sales for this game first
         console.log('Deleting ticket sales...');
         const {
           error: ticketSalesError
@@ -571,7 +572,7 @@ export default function Dashboard() {
         }
         console.log('Ticket sales deleted successfully');
 
-        // Delete all weeks for this game - filter by user_id
+        // Delete all weeks for this game
         console.log('Deleting weeks...');
         const {
           error: weeksError
@@ -582,7 +583,7 @@ export default function Dashboard() {
         }
         console.log('Weeks deleted successfully');
 
-        // Delete all expenses for this game - filter by user_id
+        // Delete all expenses for this game
         console.log('Deleting expenses...');
         const {
           error: expensesError
@@ -593,7 +594,7 @@ export default function Dashboard() {
         }
         console.log('Expenses deleted successfully');
 
-        // Finally delete the game itself - filter by user_id
+        // Finally delete the game itself
         console.log('Deleting game...');
         const {
           error: gameError
@@ -623,7 +624,7 @@ export default function Dashboard() {
           description: `Game "${gameCheck.name}" and all associated data have been deleted successfully.`
         });
       } else if (deleteType === 'week') {
-        // Delete ticket sales first, then the week - filter by user_id
+        // Delete ticket sales first, then the week
         const {
           error: ticketSalesError
         } = await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId).eq('user_id', user.id);
@@ -647,7 +648,7 @@ export default function Dashboard() {
         // Refresh data to update game totals
         fetchGames();
       } else if (deleteType === 'entry') {
-        // Get the entry details before deletion for recalculation - filter by user_id
+        // Get the entry details before deletion for recalculation
         const {
           data: entry,
           error: entryFetchError
@@ -663,7 +664,7 @@ export default function Dashboard() {
             tickets_sold
           } = entry;
 
-          // Delete the entry - filter by user_id
+          // Delete the entry
           const {
             error
           } = await supabase.from('ticket_sales').delete().eq('id', deleteItemId).eq('user_id', user.id);
@@ -671,7 +672,7 @@ export default function Dashboard() {
             throw new Error(`Failed to delete entry: ${error.message}`);
           }
 
-          // Recalculate week totals - filter by user_id
+          // Recalculate week totals
           const {
             data: remainingWeekSales
           } = await supabase.from('ticket_sales').select('*').eq('week_id', week_id).eq('user_id', user.id);
@@ -682,14 +683,14 @@ export default function Dashboard() {
             weekly_tickets_sold: weekTotalTickets
           }).eq('id', week_id).eq('user_id', user.id);
 
-          // Recalculate game totals - filter by user_id
+          // Recalculate game totals
           const {
             data: remainingGameSales
           } = await supabase.from('ticket_sales').select('*').eq('game_id', game_id).eq('user_id', user.id);
           const gameTotalSales = remainingGameSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0;
           const gameTotalOrganization = remainingGameSales?.reduce((sum, sale) => sum + sale.organization_total, 0) || 0;
 
-          // Get total expenses and donations - filter by user_id
+          // Get total expenses and donations
           const {
             data: expenses
           } = await supabase.from('expenses').select('*').eq('game_id', game_id).eq('user_id', user.id);
@@ -706,7 +707,7 @@ export default function Dashboard() {
           });
         }
       } else if (deleteType === 'expense') {
-        // Get the expense details before deletion - filter by user_id
+        // Get the expense details before deletion
         const {
           data: expense,
           error: expenseFetchError
@@ -721,7 +722,7 @@ export default function Dashboard() {
             is_donation
           } = expense;
 
-          // Delete the expense - filter by user_id
+          // Delete the expense
           const {
             error
           } = await supabase.from('expenses').delete().eq('id', deleteItemId).eq('user_id', user.id);
@@ -729,7 +730,7 @@ export default function Dashboard() {
             throw new Error(`Failed to delete expense: ${error.message}`);
           }
 
-          // Get the game and recalculate totals - filter by user_id
+          // Get the game and recalculate totals
           const {
             data: game
           } = await supabase.from('games').select('*').eq('id', game_id).eq('user_id', user.id).single();
@@ -765,26 +766,21 @@ export default function Dashboard() {
       setDeleteItemId(null);
     }
   };
-
   const openExpenseModal = (gameId: string, gameName: string) => {
     setCurrentGameId(gameId);
     setCurrentGameName(gameName);
     setExpenseModalOpen(true);
   };
-
   const handleOpenPayoutSlip = (winnerData: any) => {
     setPayoutSlipData(winnerData);
     setPayoutSlipOpen(true);
   };
-
   const handleWinnerComplete = () => {
     fetchGames();
   };
-
   const handleGameComplete = () => {
     fetchGames();
   };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -792,7 +788,6 @@ export default function Dashboard() {
       minimumFractionDigits: 2
     }).format(amount);
   };
-
   const generateGamePdfReport = async (game: any) => {
     try {
       toast({
@@ -1072,9 +1067,8 @@ export default function Dashboard() {
       });
     }
   };
-
   const handleDailyDonation = async (date: string, amount: number) => {
-    if (!currentGameId || amount <= 0 || !user) return;
+    if (!currentGameId || amount <= 0 || !user?.id) return;
     try {
       const {
         error
@@ -1109,9 +1103,8 @@ export default function Dashboard() {
       });
     }
   };
-
   const handleDailyExpense = async () => {
-    if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0 || !user) return;
+    if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0 || !user?.id) return;
     try {
       const {
         error
@@ -1153,7 +1146,6 @@ export default function Dashboard() {
       });
     }
   };
-
   const openDailyExpenseModal = (date: string, gameId: string) => {
     setDailyExpenseForm({
       date: date,
@@ -1163,16 +1155,15 @@ export default function Dashboard() {
     });
     setDailyExpenseModalOpen(true);
   };
-
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>;
   }
 
-  if (!user) {
+  if (!user?.id) {
     return <div className="flex justify-center items-center h-64">
-        <p className="text-muted-foreground">Please log in to view your games.</p>
+        <div className="text-muted-foreground">Please log in to view your games.</div>
       </div>;
   }
 
@@ -1184,6 +1175,7 @@ export default function Dashboard() {
         </Button>
       </div>
 
+      {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <button onClick={() => setActiveTab('current')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'current' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
           Current Game
