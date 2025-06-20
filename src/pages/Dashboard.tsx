@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { GameForm } from "@/components/GameForm";
 import { TicketSalesRow } from "@/components/TicketSalesRow";
 import { WinnerForm } from "@/components/WinnerForm";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
-import { formatDateForInput, formatDateForDatabase } from "@/lib/dateUtils";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 
 interface Game {
   id: string;
@@ -689,10 +688,23 @@ const Dashboard = () => {
                               
                               <div className="mt-4 flex gap-2">
                                 <TicketSalesRow
-                                  weekId={week.id}
                                   gameId={game.id}
-                                  ticketPrice={game.ticket_price}
-                                  onUpdate={updateDailyEntry}
+                                  weekId={week.id}
+                                  gameData={{
+                                    ticket_price: game.ticket_price,
+                                    organization_percentage: game.organization_percentage,
+                                    jackpot_percentage: game.jackpot_percentage,
+                                    minimum_starting_jackpot: game.minimum_starting_jackpot,
+                                    carryover_jackpot: game.carryover_jackpot
+                                  }}
+                                  previousEndingJackpot={weekTicketSales.length > 0 ? weekTicketSales[weekTicketSales.length - 1]?.ending_jackpot_total || 0 : 0}
+                                  previousJackpotContributions={weekTicketSales.length > 0 ? weekTicketSales[weekTicketSales.length - 1]?.jackpot_contributions_total || 0 : 0}
+                                  onSuccess={() => {
+                                    loadTicketSales(week.id);
+                                    loadWeeks(game.id);
+                                    loadGames();
+                                  }}
+                                  onCancel={() => {}}
                                 />
                                 
                                 {weekTicketSales.length >= 7 && !hasWinner && (
@@ -723,7 +735,11 @@ const Dashboard = () => {
       <GameForm 
         open={isGameFormOpen}
         onOpenChange={setIsGameFormOpen}
-        onSubmit={createGame}
+        games={games}
+        onComplete={() => {
+          setIsGameFormOpen(false);
+          loadGames();
+        }}
       />
 
       <WinnerForm
