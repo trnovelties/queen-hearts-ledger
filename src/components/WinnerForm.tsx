@@ -32,72 +32,6 @@ interface WinnerFormProps {
   onOpenPayoutSlip: (winnerData: any) => void;
 }
 
-// Organized card list by suit and value
-const ORGANIZED_CARDS = [
-  // Hearts
-  { card: "2 of Hearts", suit: "Hearts" },
-  { card: "3 of Hearts", suit: "Hearts" },
-  { card: "4 of Hearts", suit: "Hearts" },
-  { card: "5 of Hearts", suit: "Hearts" },
-  { card: "6 of Hearts", suit: "Hearts" },
-  { card: "7 of Hearts", suit: "Hearts" },
-  { card: "8 of Hearts", suit: "Hearts" },
-  { card: "9 of Hearts", suit: "Hearts" },
-  { card: "10 of Hearts", suit: "Hearts" },
-  { card: "Jack of Hearts", suit: "Hearts" },
-  { card: "Queen of Hearts", suit: "Hearts" },
-  { card: "King of Hearts", suit: "Hearts" },
-  { card: "Ace of Hearts", suit: "Hearts" },
-  
-  // Diamonds
-  { card: "2 of Diamonds", suit: "Diamonds" },
-  { card: "3 of Diamonds", suit: "Diamonds" },
-  { card: "4 of Diamonds", suit: "Diamonds" },
-  { card: "5 of Diamonds", suit: "Diamonds" },
-  { card: "6 of Diamonds", suit: "Diamonds" },
-  { card: "7 of Diamonds", suit: "Diamonds" },
-  { card: "8 of Diamonds", suit: "Diamonds" },
-  { card: "9 of Diamonds", suit: "Diamonds" },
-  { card: "10 of Diamonds", suit: "Diamonds" },
-  { card: "Jack of Diamonds", suit: "Diamonds" },
-  { card: "Queen of Diamonds", suit: "Diamonds" },
-  { card: "King of Diamonds", suit: "Diamonds" },
-  { card: "Ace of Diamonds", suit: "Diamonds" },
-  
-  // Clubs
-  { card: "2 of Clubs", suit: "Clubs" },
-  { card: "3 of Clubs", suit: "Clubs" },
-  { card: "4 of Clubs", suit: "Clubs" },
-  { card: "5 of Clubs", suit: "Clubs" },
-  { card: "6 of Clubs", suit: "Clubs" },
-  { card: "7 of Clubs", suit: "Clubs" },
-  { card: "8 of Clubs", suit: "Clubs" },
-  { card: "9 of Clubs", suit: "Clubs" },
-  { card: "10 of Clubs", suit: "Clubs" },
-  { card: "Jack of Clubs", suit: "Clubs" },
-  { card: "Queen of Clubs", suit: "Clubs" },
-  { card: "King of Clubs", suit: "Clubs" },
-  { card: "Ace of Clubs", suit: "Clubs" },
-  
-  // Spades
-  { card: "2 of Spades", suit: "Spades" },
-  { card: "3 of Spades", suit: "Spades" },
-  { card: "4 of Spades", suit: "Spades" },
-  { card: "5 of Spades", suit: "Spades" },
-  { card: "6 of Spades", suit: "Spades" },
-  { card: "7 of Spades", suit: "Spades" },
-  { card: "8 of Spades", suit: "Spades" },
-  { card: "9 of Spades", suit: "Spades" },
-  { card: "10 of Spades", suit: "Spades" },
-  { card: "Jack of Spades", suit: "Spades" },
-  { card: "Queen of Spades", suit: "Spades" },
-  { card: "King of Spades", suit: "Spades" },
-  { card: "Ace of Spades", suit: "Spades" },
-  
-  // Joker
-  { card: "Joker", suit: "Special" }
-];
-
 export function WinnerForm({ 
   open,
   onOpenChange,
@@ -112,7 +46,7 @@ export function WinnerForm({
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
-    slotChosen: '',
+    slotChosen: 1,
     winnerPresent: true,
     authorizedSignatureName: ''
   });
@@ -212,11 +146,6 @@ export function WinnerForm({
     loadGameConfiguration();
   }, [open, gameData, gameId]);
 
-  const getCardPayout = (cardName: string) => {
-    const cardDistribution = cardDistributions.find(card => card.card === cardName);
-    return cardDistribution ? cardDistribution.distribution : 0;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -227,18 +156,17 @@ export function WinnerForm({
         return;
       }
 
-      if (!formData.winnerName || !formData.cardSelected || !formData.authorizedSignatureName || !formData.slotChosen) {
+      if (!formData.winnerName || !formData.cardSelected || !formData.authorizedSignatureName) {
         toast.error("Please fill out all fields");
         return;
       }
 
-      const slotNumber = parseInt(formData.slotChosen);
-      if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 54) {
-        toast.error("Slot chosen must be a number between 1 and 54");
+      if (!selectedDistribution && formData.cardSelected !== 'Queen of Hearts') {
+        toast.error("Please select a valid distribution");
         return;
       }
 
-      let finalDistribution = 0;
+      let finalDistribution = selectedDistribution;
 
       // Handle Queen of Hearts special case
       if (formData.cardSelected === 'Queen of Hearts') {
@@ -249,9 +177,6 @@ export function WinnerForm({
           const penalty = finalDistribution * (penaltyPercentage / 100);
           finalDistribution = finalDistribution - penalty;
         }
-      } else {
-        // Get payout from card distributions
-        finalDistribution = getCardPayout(formData.cardSelected);
       }
 
       // Update week record
@@ -260,7 +185,7 @@ export function WinnerForm({
         .update({
           winner_name: formData.winnerName,
           card_selected: formData.cardSelected,
-          slot_chosen: slotNumber,
+          slot_chosen: formData.slotChosen,
           winner_present: formData.winnerPresent,
           authorized_signature_name: formData.authorizedSignatureName,
           weekly_payout: finalDistribution
@@ -328,7 +253,7 @@ export function WinnerForm({
       const winnerData = {
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
-        slotChosen: slotNumber,
+        slotChosen: formData.slotChosen,
         amountWon: finalDistribution,
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
@@ -345,7 +270,7 @@ export function WinnerForm({
       setFormData({
         winnerName: '',
         cardSelected: '',
-        slotChosen: '',
+        slotChosen: 1,
         winnerPresent: true,
         authorizedSignatureName: ''
       });
@@ -360,7 +285,7 @@ export function WinnerForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>Record Winner Details</CardTitle>
@@ -384,58 +309,44 @@ export function WinnerForm({
                 <Label htmlFor="cardSelected">Card Selected</Label>
                 <Select onValueChange={(value) => {
                   setFormData({ ...formData, cardSelected: value });
-                  if (value === 'Queen of Hearts') {
-                    setSelectedDistribution(displayedJackpot);
-                  } else {
-                    const distribution = getCardPayout(value);
-                    setSelectedDistribution(distribution);
-                  }
+                  const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
+                  setSelectedDistribution(distribution);
                 }}>
-                  <SelectTrigger className="bg-white">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select a card" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border max-h-60 overflow-y-auto z-50">
-                    <SelectItem value="Queen of Hearts" className="font-bold text-red-600">
-                      Queen of Hearts - ${displayedJackpot.toFixed(2)}
-                    </SelectItem>
-                    {ORGANIZED_CARDS.filter(c => c.card !== 'Queen of Hearts').map((cardInfo, index) => {
-                      const payout = getCardPayout(cardInfo.card);
-                      return (
-                        <SelectItem key={index} value={cardInfo.card}>
-                          {cardInfo.card} - ${payout.toFixed(2)}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="selectedDistribution">Payout Amount</Label>
-                <Input
-                  id="selectedDistribution"
-                  type="number"
-                  step="0.01"
-                  value={selectedDistribution}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="slotChosen">Slot Chosen (1-54)</Label>
-                <Select onValueChange={(value) => setFormData({ ...formData, slotChosen: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select slot number" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border max-h-60 overflow-y-auto z-50">
-                    {Array.from({ length: 54 }, (_, i) => i + 1).map((slot) => (
-                      <SelectItem key={slot} value={slot.toString()}>
-                        Slot {slot}
-                      </SelectItem>
+                  <SelectContent>
+                    <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
+                    {cardDistributions.map((card, index) => (
+                      <SelectItem key={index} value={card.card}>{card.card} - ${card.distribution}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {formData.cardSelected !== 'Queen of Hearts' && (
+                <div className="space-y-2">
+                  <Label htmlFor="selectedDistribution">Selected Distribution</Label>
+                  <Input
+                    id="selectedDistribution"
+                    type="number"
+                    value={selectedDistribution}
+                    readOnly
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="slotChosen">Slot Chosen</Label>
+                <Input
+                  id="slotChosen"
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={formData.slotChosen}
+                  onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
+                  required
+                />
               </div>
 
               <div className="flex items-center space-x-2">
