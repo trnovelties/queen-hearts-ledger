@@ -21,6 +21,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
+    startDate: getTodayDateString(), // Default to today, but user can change
     ticketPrice: 2,
     organizationPercentage: 40,
     jackpotPercentage: 60,
@@ -34,6 +35,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       const nextGameNumber = games.length + 1;
       setFormData({
         name: `Game ${nextGameNumber}`,
+        startDate: getTodayDateString(), // Default to today
         ticketPrice: 2,
         organizationPercentage: 40,
         jackpotPercentage: 60,
@@ -83,17 +85,16 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
       const gameNumber = games.length + 1;
 
-      // CRITICAL FIX: Use getTodayDateString() instead of new Date().toISOString().split('T')[0]
-      const todayDateString = getTodayDateString();
+      // CRITICAL FIX: Use the user-selected date directly as string
       console.log('=== GAME FORM DATE DEBUG ===');
-      console.log('1. getTodayDateString():', todayDateString);
-      console.log('2. typeof todayDateString:', typeof todayDateString);
+      console.log('1. User selected start_date:', formData.startDate);
+      console.log('2. typeof formData.startDate:', typeof formData.startDate);
       console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
 
       const gameData = {
         game_number: gameNumber,
         name: formData.name,
-        start_date: todayDateString, // Pure string, no Date conversion
+        start_date: formData.startDate, // Use EXACTLY what user selected, no conversion
         ticket_price: formData.ticketPrice,
         organization_percentage: formData.organizationPercentage,
         jackpot_percentage: formData.jackpotPercentage,
@@ -119,7 +120,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
       console.log('7. Insert successful, DB returned:', JSON.stringify(insertResult, null, 2));
       console.log('8. DB returned start_date:', insertResult?.[0]?.start_date);
-      console.log('9. Date match check:', todayDateString === insertResult?.[0]?.start_date);
+      console.log('9. Date match check:', formData.startDate === insertResult?.[0]?.start_date);
 
       toast.success("Game created successfully!");
       onComplete();
@@ -130,6 +131,16 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedDate = e.target.value;
+    console.log('=== DATE INPUT CHANGE DEBUG ===');
+    console.log('User selected date from input:', selectedDate);
+    console.log('typeof selectedDate:', typeof selectedDate);
+    
+    // Set exactly what user selected from date input (YYYY-MM-DD string)
+    setFormData({ ...formData, startDate: selectedDate });
   };
 
   return (
@@ -150,6 +161,17 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Game 1"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={handleStartDateChange}
                   required
                 />
               </div>
