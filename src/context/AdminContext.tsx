@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
@@ -40,11 +39,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getCurrentUserId = () => {
+    // If admin is viewing another organization, return that organization's ID
     if (viewingOrganization && isAdmin) {
       console.log('Using viewing organization ID:', viewingOrganization.id);
       return viewingOrganization.id;
     }
-    console.log('Using current user ID:', user?.id);
+    // Otherwise return the current user's ID
+    console.log('Using current user ID:', user?.id || null);
     return user?.id || null;
   };
 
