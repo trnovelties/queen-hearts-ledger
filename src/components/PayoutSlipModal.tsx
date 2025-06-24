@@ -2,10 +2,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { formatDateStringForDisplay, formatDateStringShort } from "@/lib/dateUtils";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDateStringForDisplay, formatDateStringShort, getTodayDateString } from '@/lib/dateUtils';
 
 interface PayoutSlipModalProps {
   open: boolean;
@@ -62,34 +62,27 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
   if (!winnerData) return null;
 
-  // Safe date formatting function using timezone-neutral string manipulation
-  const formatSafeDate = (dateValue: any, formatString: string = 'long') => {
-    console.log('=== PAYOUT SLIP DATE DEBUG ===');
-    console.log('Input dateValue:', dateValue);
-    console.log('Input type:', typeof dateValue);
+  // Safe date formatting function using our timezone-neutral utilities
+  const formatSafeDate = (dateValue: any, shortFormat: boolean = false) => {
+    if (!dateValue) return 'N/A';
     
-    if (!dateValue) {
-      console.log('No date value, returning N/A');
+    // Handle various date formats
+    let dateString: string;
+    if (typeof dateValue === 'string') {
+      // If it's already a date string, use it directly
+      if (dateValue.includes('-')) {
+        dateString = dateValue.split('T')[0]; // Handle ISO strings
+      } else {
+        dateString = dateValue;
+      }
+    } else if (dateValue instanceof Date) {
+      // Convert Date object to YYYY-MM-DD format
+      dateString = dateValue.toISOString().split('T')[0];
+    } else {
       return 'N/A';
     }
     
-    // Handle string dates (YYYY-MM-DD format from database)
-    if (typeof dateValue === 'string') {
-      console.log('Processing string date:', dateValue);
-      
-      if (formatString === 'long') {
-        const result = formatDateStringForDisplay(dateValue);
-        console.log('formatDateStringForDisplay result:', result);
-        return result;
-      } else {
-        const result = formatDateStringShort(dateValue);
-        console.log('formatDateStringShort result:', result);
-        return result;
-      }
-    }
-    
-    console.log('Unexpected date format, returning as-is');
-    return dateValue;
+    return shortFormat ? formatDateStringShort(dateString) : formatDateStringForDisplay(dateString);
   };
 
   const formatCurrency = (amount: number) => {
@@ -128,10 +121,6 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   const grossWinnings = winnerData.payoutAmount || weekData?.weekly_payout || 0;
   const netPayout = grossWinnings; // Assuming no deductions for now
 
-  // Get today's date as string for "Date Prepared"
-  const todayDateString = getTodayDateString();
-  const todayFormatted = formatDateStringForDisplay(todayDateString);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -147,7 +136,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </div>
             <div className="text-right space-y-1">
               <p className="font-semibold">Prepared By: Finance Department</p>
-              <p className="text-sm text-gray-600">Date Prepared: {todayFormatted}</p>
+              <p className="text-sm text-gray-600">Date Prepared: {formatSafeDate(new Date().toISOString().split('T')[0])}</p>
             </div>
           </div>
           
@@ -250,15 +239,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                 <div>
                   <h4 className="font-medium mb-2">Expenses</h4>
                   <div className="space-y-1 text-sm">
-                    {expenses.filter(e => !e.is_donation).slice(0, 5).map((expense, index) => {
-                      const expenseDate = formatSafeDate(expense.date, 'short');
-                      return (
-                        <div key={index} className="flex justify-between">
-                          <span>{expenseDate} - {expense.memo || 'Expense'}</span>
-                          <span>{formatCurrency(expense.amount)}</span>
-                        </div>
-                      );
-                    })}
+                    {expenses.filter(e => !e.is_donation).slice(0, 5).map((expense, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{formatSafeDate(expense.date, true)} - {expense.memo || 'Expense'}</span>
+                        <span>{formatCurrency(expense.amount)}</span>
+                      </div>
+                    ))}
                     <div className="border-t pt-1 font-semibold flex justify-between">
                       <span>Total Expenses:</span>
                       <span>{formatCurrency(totalExpenses)}</span>
@@ -269,15 +255,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                 <div>
                   <h4 className="font-medium mb-2">Donations</h4>
                   <div className="space-y-1 text-sm">
-                    {expenses.filter(e => e.is_donation).slice(0, 5).map((donation, index) => {
-                      const donationDate = formatSafeDate(donation.date, 'short');
-                      return (
-                        <div key={index} className="flex justify-between">
-                          <span>{donationDate} - {donation.memo || 'Donation'}</span>
-                          <span>{formatCurrency(donation.amount)}</span>
-                        </div>
-                      );
-                    })}
+                    {expenses.filter(e => e.is_donation).slice(0, 5).map((donation, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{formatSafeDate(donation.date, true)} - {donation.memo || 'Donation'}</span>
+                        <span>{formatCurrency(donation.amount)}</span>
+                      </div>
+                    ))}
                     <div className="border-t pt-1 font-semibold flex justify-between">
                       <span>Total Donations:</span>
                       <span>{formatCurrency(totalDonations)}</span>
