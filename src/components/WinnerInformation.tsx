@@ -1,8 +1,9 @@
 
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Check, X, Crown } from "lucide-react";
-import { format } from "date-fns";
+import { formatDateStringForDisplay } from "@/lib/dateUtils";
 
 interface Winner {
   name: string;
@@ -93,7 +94,7 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
                   </Badge>
                 )}
                 <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                  {format(new Date(winner.date), 'MMM d, yyyy')}
+                  {formatDateStringForDisplay(winner.date)}
                 </Badge>
               </div>
             </div>
@@ -111,3 +112,4 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
     </Card>
   );
 }
+
