@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { formatDateStringForDisplay } from "@/lib/dateUtils";
 import { 
   Calendar, 
   DollarSign, 
@@ -134,8 +134,8 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
                 {game.name}
               </DialogTitle>
               <DialogDescription className="mt-2">
-                Game #{game.game_number} | Started: {format(new Date(game.start_date), 'MMM d, yyyy')}
-                {game.end_date && ` | Ended: ${format(new Date(game.end_date), 'MMM d, yyyy')}`}
+                Game #{game.game_number} | Started: {formatDateStringForDisplay(game.start_date)}
+                {game.end_date && ` | Ended: ${formatDateStringForDisplay(game.end_date)}`}
               </DialogDescription>
             </div>
             <Badge variant={gameStatus.variant}>{gameStatus.status}</Badge>
@@ -231,7 +231,7 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
                               Week {week.week_number}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {format(new Date(week.start_date), 'MM/dd')} - {format(new Date(week.end_date), 'MM/dd')}
+                              {formatDateStringForDisplay(week.start_date)} - {formatDateStringForDisplay(week.end_date)}
                             </TableCell>
                             <TableCell className="text-center font-medium">
                               {week.weekly_tickets_sold?.toLocaleString() || 0}
@@ -307,7 +307,7 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
                         {ticketSales.map(sale => (
                           <TableRow key={sale.id} className="border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
                             <TableCell className="font-medium text-[#132E2C]">
-                              {format(new Date(sale.date), 'MMM d, yyyy')}
+                              {formatDateStringForDisplay(sale.date)}
                             </TableCell>
                             <TableCell className="text-center font-medium">
                               {sale.tickets_sold?.toLocaleString() || 0}
@@ -356,7 +356,7 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
                         {expenses.map(expense => (
                           <TableRow key={expense.id} className="border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
                             <TableCell className="font-medium text-[#132E2C]">
-                              {format(new Date(expense.date), 'MMM d, yyyy')}
+                              {formatDateStringForDisplay(expense.date)}
                             </TableCell>
                             <TableCell>
                               <Badge 
