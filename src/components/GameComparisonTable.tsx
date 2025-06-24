@@ -1,9 +1,10 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
 import { TrendingUp, TrendingDown, Trophy, DollarSign } from "lucide-react";
-import { formatDateStringForMediumDisplay } from "@/lib/dateUtils";
+import { formatDateStringShort } from "@/lib/dateUtils";
 
 type Game = Tables<"games">;
 type Week = Tables<"weeks">;
@@ -122,8 +123,8 @@ export function GameComparisonTable({ games, formatCurrency }: GameComparisonTab
                         <span className="font-semibold text-[#1F4E4A]">{game.name}</span>
                       </div>
                       <div className="text-xs text-[#132E2C]/60">
-                        {formatDateStringForMediumDisplay(game.start_date)}
-                        {game.end_date && ` - ${formatDateStringForMediumDisplay(game.end_date)}`}
+                        {formatDateStringShort(game.start_date)}
+                        {game.end_date && ` - ${formatDateStringShort(game.end_date)}`}
                       </div>
                     </div>
                   </TableCell>

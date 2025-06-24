@@ -128,6 +128,32 @@ export function formatDateStringForMediumDisplay(dateString: string): string {
 }
 
 /**
+ * NEW: Formats a date string for compact display (MMM d, yyyy format)
+ * Input: YYYY-MM-DD string from database  
+ * Output: Compact format (e.g., "Jun 24, 2025")
+ * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
+ * This replaces date-fns format calls to prevent timezone issues
+ */
+export function formatDateStringShort(dateString: string): string {
+  if (!dateString || !isValidDateString(dateString)) {
+    return dateString;
+  }
+  
+  const [year, month, day] = dateString.split('-');
+  
+  const shortMonthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = shortMonthNames[monthIndex];
+  const dayNumber = parseInt(day, 10);
+  
+  return `${monthName} ${dayNumber}, ${year}`;
+}
+
+/**
  * Legacy function for backward compatibility
  * Formats a Date object to YYYY-MM-DD string for database storage
  * Note: This may cause timezone issues, prefer using date strings directly

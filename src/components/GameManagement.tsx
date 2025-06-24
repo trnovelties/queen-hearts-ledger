@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,23 +10,7 @@ import { ExpenseModal } from "./ExpenseModal";
 import { GameDetailsModal } from "./GameDetailsModal";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
-
-// Simple date formatter - NO Date objects, pure string manipulation
-const formatSimpleDate = (dateString: string): string => {
-  if (!dateString) return dateString;
-  
-  const [year, month, day] = dateString.split('-');
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  
-  const monthIndex = parseInt(month, 10) - 1;
-  const monthName = monthNames[monthIndex];
-  const dayNumber = parseInt(day, 10);
-  
-  return `${monthName} ${dayNumber}, ${year}`;
-};
+import { formatDateStringShort } from "@/lib/dateUtils";
 
 export function GameManagement() {
   const { user, isAdmin } = useAuth();
@@ -207,9 +190,9 @@ export function GameManagement() {
             console.log('Raw start_date from game object:', game.start_date);
             console.log('start_date type:', typeof game.start_date);
             
-            // Use simple string formatting - NO Date objects
-            const displayDate = formatSimpleDate(game.start_date);
-            console.log('Simple formatted display date:', displayDate);
+            // Use formatDateStringShort for consistent display - NO Date objects
+            const displayDate = formatDateStringShort(game.start_date);
+            console.log('formatDateStringShort display date:', displayDate);
             
             return (
               <Card key={game.id} className="hover:shadow-lg transition-shadow">

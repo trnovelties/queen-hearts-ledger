@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,7 +15,7 @@ import {
   Target,
   Banknote
 } from "lucide-react";
-import { formatDateStringForDisplay, formatDateStringForShortDisplay } from "@/lib/dateUtils";
+import { formatDateStringForDisplay, formatDateStringShort } from "@/lib/dateUtils";
 
 type Game = Tables<"games">;
 type Week = Tables<"weeks">;
@@ -159,7 +160,7 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                               Week {week.week_number}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {formatDateStringForShortDisplay(week.start_date)} - {formatDateStringForShortDisplay(week.end_date)}
+                              {formatDateStringShort(week.start_date)} - {formatDateStringShort(week.end_date)}
                             </TableCell>
                             <TableCell className="text-center font-medium">
                               {week.weekly_tickets_sold.toLocaleString()}
