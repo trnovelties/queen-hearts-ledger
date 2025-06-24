@@ -100,8 +100,10 @@ export function GameManagement() {
   };
 
   const handleViewDetails = (game: any) => {
+    console.log('GameManagement: handleViewDetails called with game:', game);
     setSelectedGame(game);
     setShowGameDetailsModal(true);
+    console.log('GameManagement: Modal state set to true');
   };
 
   const formatCurrency = (amount: number) => {
@@ -269,15 +271,22 @@ export function GameManagement() {
               gameName={selectedGame.name}
             />
           )}
-
-          {selectedGame && (
-            <GameDetailsModal
-              open={showGameDetailsModal}
-              onOpenChange={setShowGameDetailsModal}
-              game={selectedGame}
-            />
-          )}
         </>
+      )}
+
+      {/* Game Details Modal - Show for both admin and regular users */}
+      {selectedGame && (
+        <GameDetailsModal
+          open={showGameDetailsModal}
+          onOpenChange={(open) => {
+            console.log('GameManagement: GameDetailsModal onOpenChange called with:', open);
+            setShowGameDetailsModal(open);
+            if (!open) {
+              setSelectedGame(null);
+            }
+          }}
+          game={selectedGame}
+        />
       )}
     </div>
   );

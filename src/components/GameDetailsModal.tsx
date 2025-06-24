@@ -30,10 +30,13 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
   const [weeks, setWeeks] = useState<any[]>([]);
   const [ticketSales, setTicketSales] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  console.log('GameDetailsModal: rendered with props:', { open, game: game?.id });
+
   useEffect(() => {
+    console.log('GameDetailsModal: useEffect triggered', { open, gameId: game?.id });
     if (open && game?.id) {
       fetchGameDetails();
     }
@@ -41,6 +44,7 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
 
   const fetchGameDetails = async () => {
     try {
+      console.log('GameDetailsModal: fetchGameDetails called for game:', game.id);
       setIsLoading(true);
 
       // Fetch weeks
@@ -49,6 +53,8 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
         .select('*')
         .eq('game_id', game.id)
         .order('week_number', { ascending: true });
+
+      console.log('GameDetailsModal: weeks query result:', { data: weeksData, error: weeksError });
 
       if (weeksError) throw weeksError;
 
@@ -59,6 +65,8 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
         .eq('game_id', game.id)
         .order('date', { ascending: true });
 
+      console.log('GameDetailsModal: ticket sales query result:', { data: ticketSalesData, error: ticketSalesError });
+
       if (ticketSalesError) throw ticketSalesError;
 
       // Fetch expenses
@@ -68,13 +76,15 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
         .eq('game_id', game.id)
         .order('date', { ascending: true });
 
+      console.log('GameDetailsModal: expenses query result:', { data: expensesData, error: expensesError });
+
       if (expensesError) throw expensesError;
 
       setWeeks(weeksData || []);
       setTicketSales(ticketSalesData || []);
       setExpenses(expensesData || []);
     } catch (error) {
-      console.error('Error fetching game details:', error);
+      console.error('GameDetailsModal: Error fetching game details:', error);
       toast({
         title: "Error",
         description: "Failed to fetch game details",
@@ -89,19 +99,29 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   const getGameStatus = (game: any) => {
-    if (game.end_date) {
+    if (game?.end_date) {
       return { status: 'Completed', variant: 'default' as const };
     }
     return { status: 'Active', variant: 'destructive' as const };
   };
 
-  if (!game) return null;
+  if (!game) {
+    console.log('GameDetailsModal: No game provided');
+    return null;
+  }
 
   const gameStatus = getGameStatus(game);
+
+  console.log('GameDetailsModal: Rendering modal with data:', {
+    weeksCount: weeks.length,
+    ticketSalesCount: ticketSales.length,
+    expensesCount: expenses.length,
+    isLoading
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,7 +234,7 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
                               {format(new Date(week.start_date), 'MM/dd')} - {format(new Date(week.end_date), 'MM/dd')}
                             </TableCell>
                             <TableCell className="text-center font-medium">
-                              {week.weekly_tickets_sold.toLocaleString()}
+                              {week.weekly_tickets_sold?.toLocaleString() || 0}
                             </TableCell>
                             <TableCell className="font-medium text-[#1F4E4A]">
                               {formatCurrency(week.weekly_sales)}
@@ -290,7 +310,7 @@ export function GameDetailsModal({ open, onOpenChange, game }: GameDetailsModalP
                               {format(new Date(sale.date), 'MMM d, yyyy')}
                             </TableCell>
                             <TableCell className="text-center font-medium">
-                              {sale.tickets_sold.toLocaleString()}
+                              {sale.tickets_sold?.toLocaleString() || 0}
                             </TableCell>
                             <TableCell className="font-medium text-[#1F4E4A]">
                               {formatCurrency(sale.ticket_price)}
