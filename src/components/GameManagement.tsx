@@ -9,9 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { GameForm } from "./GameForm";
 import { ExpenseModal } from "./ExpenseModal";
 import { useAuth } from "@/context/AuthContext";
+import { useAdmin } from "@/context/AdminContext";
 
 export function GameManagement() {
   const { user } = useAuth();
+  const { getCurrentUserId } = useAdmin();
   const [games, setGames] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showGameForm, setShowGameForm] = useState(false);
@@ -23,22 +25,23 @@ export function GameManagement() {
     if (user) {
       fetchGames();
     }
-  }, [user]);
+  }, [user, getCurrentUserId]);
 
   const fetchGames = async () => {
     try {
-      if (!user) {
-        console.log('No user found, skipping games fetch');
+      const currentUserId = getCurrentUserId();
+      if (!currentUserId) {
+        console.log('No user ID found, skipping games fetch');
         setIsLoading(false);
         return;
       }
 
-      console.log('Fetching games for user:', user.id);
+      console.log('Fetching games for user:', currentUserId);
 
       const { data, error } = await supabase
         .from('games')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUserId)
         .order('game_number', { ascending: false });
 
       if (error) {
