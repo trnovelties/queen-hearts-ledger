@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { getTodayDateString } from "@/lib/dateUtils";
 
 interface GameFormProps {
   open: boolean;
@@ -82,10 +83,17 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
       const gameNumber = games.length + 1;
 
+      // CRITICAL FIX: Use getTodayDateString() instead of new Date().toISOString().split('T')[0]
+      const todayDateString = getTodayDateString();
+      console.log('=== GAME FORM DATE DEBUG ===');
+      console.log('1. getTodayDateString():', todayDateString);
+      console.log('2. typeof todayDateString:', typeof todayDateString);
+      console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+
       const gameData = {
         game_number: gameNumber,
         name: formData.name,
-        start_date: new Date().toISOString().split('T')[0],
+        start_date: todayDateString, // Pure string, no Date conversion
         ticket_price: formData.ticketPrice,
         organization_percentage: formData.organizationPercentage,
         jackpot_percentage: formData.jackpotPercentage,
@@ -96,16 +104,22 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         user_id: user.id // Explicitly set user_id
       };
 
-      console.log('Inserting game with data:', gameData);
+      console.log('4. Final gameData:', JSON.stringify(gameData, null, 2));
+      console.log('5. gameData.start_date specifically:', gameData.start_date);
 
-      const { error } = await supabase
+      const { data: insertResult, error } = await supabase
         .from('games')
-        .insert(gameData);
+        .insert(gameData)
+        .select('*');
 
       if (error) {
-        console.error('Error creating game:', error);
+        console.error('6. Supabase error:', error);
         throw error;
       }
+
+      console.log('7. Insert successful, DB returned:', JSON.stringify(insertResult, null, 2));
+      console.log('8. DB returned start_date:', insertResult?.[0]?.start_date);
+      console.log('9. Date match check:', todayDateString === insertResult?.[0]?.start_date);
 
       toast.success("Game created successfully!");
       onComplete();
