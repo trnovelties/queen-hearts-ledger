@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -57,25 +58,37 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         return;
       }
 
-      console.log('=== DONATION DATE DEBUG ===');
-      console.log('1. selectedDate variable:', selectedDate);
-      console.log('2. typeof selectedDate:', typeof selectedDate);
-      console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log('=== COMPREHENSIVE DONATION DATE DEBUG ===');
+      console.log('1. Raw selectedDate variable:', selectedDate);
+      console.log('2. Type of selectedDate:', typeof selectedDate);
+      console.log('3. selectedDate length:', selectedDate.length);
+      console.log('4. selectedDate as JSON:', JSON.stringify(selectedDate));
       
-      // Ensure we send the date exactly as a string, no conversions
+      // Create a fresh date string to ensure no contamination
       const dateToSave = String(selectedDate).trim();
-      console.log('4. dateToSave (final):', dateToSave);
+      console.log('5. dateToSave after String() and trim():', dateToSave);
+      console.log('6. dateToSave === selectedDate:', dateToSave === selectedDate);
+      
+      // Validate the format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      console.log('7. Date format validation (YYYY-MM-DD):', dateRegex.test(dateToSave));
+      
+      // Show current timezone info
+      console.log('8. Browser timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log('9. Current time:', new Date().toString());
+      console.log('10. Current time ISO:', new Date().toISOString());
 
       const insertData = {
         game_id: gameId,
-        date: dateToSave, // Pure string, no Date conversion
+        date: dateToSave,
         amount: parseFloat(donationData.amount),
         memo: donationData.memo || null,
         is_donation: true,
         user_id: user.id,
       };
 
-      console.log('5. Final insertData:', JSON.stringify(insertData, null, 2));
+      console.log('11. Final insertData object:', JSON.stringify(insertData, null, 2));
+      console.log('12. insertData.date specifically:', insertData.date);
 
       const { data: insertResult, error } = await supabase
         .from('expenses')
@@ -83,13 +96,17 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         .select('*');
       
       if (error) {
-        console.error('6. Supabase error:', error);
+        console.error('13. Supabase error:', error);
         throw error;
       }
       
-      console.log('7. Insert successful, DB returned:', JSON.stringify(insertResult, null, 2));
-      console.log('8. DB returned date:', insertResult?.[0]?.date);
-      console.log('9. Date match:', dateToSave === insertResult?.[0]?.date);
+      console.log('14. Supabase insert successful, result:', JSON.stringify(insertResult, null, 2));
+      console.log('15. Returned date from database:', insertResult?.[0]?.date);
+      console.log('16. Date comparison - sent vs received:', {
+        sent: dateToSave,
+        received: insertResult?.[0]?.date,
+        match: dateToSave === insertResult?.[0]?.date
+      });
       
       // Update game totals
       const { data: game } = await supabase
@@ -139,12 +156,16 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    console.log('=== DONATION DATE INPUT CHANGE ===');
-    console.log('Raw e.target.value:', rawValue);
-    console.log('Setting selectedDate to:', rawValue);
+    console.log('=== DATE INPUT CHANGE DEBUG ===');
+    console.log('A. Raw e.target.value:', rawValue);
+    console.log('B. Type of raw value:', typeof rawValue);
+    console.log('C. Raw value length:', rawValue.length);
+    console.log('D. Raw value as JSON:', JSON.stringify(rawValue));
+    console.log('E. Current selectedDate before change:', selectedDate);
     
-    // Set exactly as received from input (YYYY-MM-DD string)
     setSelectedDate(rawValue);
+    
+    console.log('F. selectedDate should now be:', rawValue);
   };
 
   return (

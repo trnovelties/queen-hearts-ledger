@@ -8,7 +8,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { getTodayDateString } from "@/lib/dateUtils";
 
 interface GameFormProps {
   open: boolean;
@@ -21,7 +20,6 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
-    startDate: getTodayDateString(),
     ticketPrice: 2,
     organizationPercentage: 40,
     jackpotPercentage: 60,
@@ -33,15 +31,8 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
   useEffect(() => {
     if (open) {
       const nextGameNumber = games.length + 1;
-      const todayString = getTodayDateString();
-      
-      console.log('=== FORM INITIALIZATION (CLEAN) ===');
-      console.log('Modal opened, setting default date to:', todayString);
-      console.log('User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      
       setFormData({
         name: `Game ${nextGameNumber}`,
-        startDate: todayString,
         ticketPrice: 2,
         organizationPercentage: 40,
         jackpotPercentage: 60,
@@ -66,16 +57,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
-      console.log('=== PURE STRING DATE HANDLING ===');
-      console.log('1. formData.startDate (pure string):', formData.startDate);
-      console.log('2. typeof formData.startDate:', typeof formData.startDate);
-      console.log('3. String length:', formData.startDate.length);
-      console.log('4. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      
-      // CRITICAL: We will NOT create any Date objects - work with pure strings only
-      const dateStringForDB = formData.startDate.trim();
-      console.log('5. Final date string for DB (no Date object created):', dateStringForDB);
-      console.log('6. This exact string will be sent to Supabase:', `"${dateStringForDB}"`);
+      console.log('Creating game with user_id:', user.id);
 
       // Get current configuration including card payouts and version - now user-specific
       const { data: config, error: configError } = await supabase
@@ -103,7 +85,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       const gameData = {
         game_number: gameNumber,
         name: formData.name,
-        start_date: dateStringForDB, // Pure YYYY-MM-DD string, no Date object conversion
+        start_date: new Date().toISOString().split('T')[0],
         ticket_price: formData.ticketPrice,
         organization_percentage: formData.organizationPercentage,
         jackpot_percentage: formData.jackpotPercentage,
@@ -111,29 +93,19 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         carryover_jackpot: carryoverJackpot,
         card_payouts: config.card_payouts,
         configuration_version: config.version,
-        user_id: user.id
+        user_id: user.id // Explicitly set user_id
       };
 
-      console.log('7. Complete gameData being inserted:', JSON.stringify(gameData, null, 2));
-      console.log('8. gameData.start_date specifically:', gameData.start_date);
+      console.log('Inserting game with data:', gameData);
 
-      const { data: insertResult, error } = await supabase
+      const { error } = await supabase
         .from('games')
-        .insert(gameData)
-        .select('*');
+        .insert(gameData);
 
       if (error) {
-        console.error('9. Supabase insert error:', error);
+        console.error('Error creating game:', error);
         throw error;
       }
-
-      console.log('10. SUCCESS - Insert completed, returned data:', JSON.stringify(insertResult, null, 2));
-      console.log('11. Returned start_date from DB:', insertResult?.[0]?.start_date);
-      console.log('12. String comparison - sent vs returned:', {
-        sent: dateStringForDB,
-        returned: insertResult?.[0]?.start_date,
-        match: dateStringForDB === insertResult?.[0]?.start_date
-      });
 
       toast.success("Game created successfully!");
       onComplete();
@@ -144,20 +116,6 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedDate = e.target.value;
-    console.log('=== DATE INPUT CHANGE (PURE STRING) ===');
-    console.log('1. Raw input value:', selectedDate);
-    console.log('2. typeof selectedDate:', typeof selectedDate);
-    console.log('3. String length:', selectedDate.length);
-    console.log('4. User timezone when changed:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-    console.log('5. NO Date object will be created - working with pure strings only');
-    
-    // Set exactly what HTML date input gives us (YYYY-MM-DD string)
-    setFormData({ ...formData, startDate: selectedDate });
-    console.log('6. Updated formData.startDate to pure string:', selectedDate);
   };
 
   return (
@@ -178,17 +136,6 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Game 1"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={handleStartDateChange}
                   required
                 />
               </div>

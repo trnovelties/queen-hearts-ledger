@@ -26,145 +26,28 @@ export function isValidDateString(dateString: string): boolean {
   if (!dateRegex.test(dateString)) return false;
   
   const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   
-  // Basic validation without creating Date objects
-  if (year < 1900 || year > 2100) return false;
-  if (month < 1 || month > 12) return false;
-  if (day < 1 || day > 31) return false;
-  
-  return true;
+  return date.getFullYear() === year && 
+         date.getMonth() === month - 1 && 
+         date.getDate() === day;
 }
 
 /**
- * Formats a date string for display - RAW DATABASE DATE DISPLAY
- * Input: YYYY-MM-DD string from database
- * Output: Human readable format (e.g., "June 24, 2025")
- * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
+ * Formats a date string for display
+ * Input: YYYY-MM-DD string
+ * Output: Human readable format
  */
 export function formatDateStringForDisplay(dateString: string): string {
-  console.log('=== formatDateStringForDisplay DEBUG START ===');
-  console.log('Input dateString:', dateString);
-  console.log('Input type:', typeof dateString);
+  if (!isValidDateString(dateString)) return dateString;
   
-  // If empty or invalid, return as-is
-  if (!dateString || !isValidDateString(dateString)) {
-    console.log('Invalid or empty dateString, returning as-is');
-    console.log('=== formatDateStringForDisplay DEBUG END ===');
-    return dateString;
-  }
-  
-  // Parse the date string components directly - NO Date() constructor
-  const [year, month, day] = dateString.split('-');
-  console.log('Split parts:', [year, month, day]);
-  
+  const [year, month, day] = dateString.split('-').map(Number);
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
-  const monthIndex = parseInt(month, 10) - 1;
-  const monthName = monthNames[monthIndex];
-  const dayNumber = parseInt(day, 10);
-  
-  console.log('Month index:', monthIndex, 'Month name:', monthName);
-  console.log('Day number:', dayNumber);
-  
-  // Format using pure string manipulation - no Date objects involved
-  const result = `${monthName} ${dayNumber}, ${year}`;
-  console.log('Formatted result:', result);
-  console.log('=== formatDateStringForDisplay DEBUG END ===');
-  
-  return result;
-}
-
-/**
- * Formats a date string for short display (MMM d format)
- * Input: YYYY-MM-DD string from database
- * Output: Short format (e.g., "Jun 24")
- * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
- */
-export function formatDateStringForShortDisplay(dateString: string): string {
-  if (!dateString || !isValidDateString(dateString)) {
-    return dateString;
-  }
-  
-  const [year, month, day] = dateString.split('-');
-  
-  const shortMonthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-  
-  const monthIndex = parseInt(month, 10) - 1;
-  const monthName = shortMonthNames[monthIndex];
-  const dayNumber = parseInt(day, 10);
-  
-  return `${monthName} ${dayNumber}`;
-}
-
-/**
- * Formats a date string with year for short display (MMM d, yyyy format)  
- * Input: YYYY-MM-DD string from database
- * Output: Short format with year (e.g., "Jun 24, 2025")
- * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
- */
-export function formatDateStringForMediumDisplay(dateString: string): string {
-  if (!dateString || !isValidDateString(dateString)) {
-    return dateString;
-  }
-  
-  const [year, month, day] = dateString.split('-');
-  
-  const shortMonthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-  
-  const monthIndex = parseInt(month, 10) - 1;
-  const monthName = shortMonthNames[monthIndex];
-  const dayNumber = parseInt(day, 10);
-  
-  return `${monthName} ${dayNumber}, ${year}`;
-}
-
-/**
- * NEW: Formats a date string for compact display (MMM d, yyyy format)
- * Input: YYYY-MM-DD string from database  
- * Output: Compact format (e.g., "Jun 24, 2025")
- * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
- * This replaces date-fns format calls to prevent timezone issues
- */
-export function formatDateStringShort(dateString: string): string {
-  console.log('=== formatDateStringShort DEBUG START ===');
-  console.log('Input dateString:', dateString);
-  console.log('Input type:', typeof dateString);
-  
-  if (!dateString || !isValidDateString(dateString)) {
-    console.log('Invalid dateString, returning as-is:', dateString);
-    console.log('=== formatDateStringShort DEBUG END ===');
-    return dateString;
-  }
-  
-  const [year, month, day] = dateString.split('-');
-  console.log('Split parts:', [year, month, day]);
-  
-  const shortMonthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-  
-  const monthIndex = parseInt(month, 10) - 1;
-  const monthName = shortMonthNames[monthIndex];
-  const dayNumber = parseInt(day, 10);
-  
-  console.log('Month index:', monthIndex, 'Month name:', monthName);
-  console.log('Day number:', dayNumber);
-  
-  const result = `${monthName} ${dayNumber}, ${year}`;
-  console.log('Final formatted result:', result);
-  console.log('=== formatDateStringShort DEBUG END ===');
-  
-  return result;
+  return `${monthNames[month - 1]} ${day}, ${year}`;
 }
 
 /**
