@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ComposedChart, 
@@ -18,7 +17,7 @@ import {
   AreaChart
 } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
-import { format } from "date-fns";
+import { formatDateStringForShortDisplay } from "@/lib/dateUtils";
 
 type Game = Tables<"games">;
 type Week = Tables<"weeks">;
@@ -54,9 +53,15 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
       
       games.forEach(game => {
         game.weeks.forEach(week => {
+          console.log(`=== CHART WEEK DATE DEBUG: ${game.name} Week ${week.week_number} ===`);
+          console.log('Week start_date raw:', week.start_date);
+          
+          const formattedStartDate = formatDateStringForShortDisplay(week.start_date);
+          console.log('formatDateStringForShortDisplay result:', formattedStartDate);
+          
           const weekKey = selectedGame === "all" ? 
             `${game.name} - Week ${week.week_number}` : 
-            `Week ${week.week_number} (${format(new Date(week.start_date), 'MMM d')})`;
+            `Week ${week.week_number} (${formattedStartDate})`;
           
           if (!weeklyData[weekKey]) {
             weeklyData[weekKey] = {
@@ -80,14 +85,20 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
         
         // Add expenses for each week
         game.expenses.forEach(expense => {
+          console.log(`=== CHART EXPENSE DATE DEBUG ===`);
+          console.log('Expense date raw:', expense.date);
+          
           const expenseWeek = game.weeks.find(week => 
             expense.date >= week.start_date && expense.date <= week.end_date
           );
           
           if (expenseWeek) {
+            const formattedStartDate = formatDateStringForShortDisplay(expenseWeek.start_date);
+            console.log('Matched expense to week, formatted start date:', formattedStartDate);
+            
             const weekKey = selectedGame === "all" ? 
               `${game.name} - Week ${expenseWeek.week_number}` : 
-              `Week ${expenseWeek.week_number} (${format(new Date(expenseWeek.start_date), 'MMM d')})`;
+              `Week ${expenseWeek.week_number} (${formattedStartDate})`;
             
             if (weeklyData[weekKey]) {
               if (expense.is_donation) {

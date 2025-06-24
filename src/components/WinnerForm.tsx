@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
-import { formatDateForDatabase } from "@/lib/dateUtils";
+import { getTodayDateString } from "@/lib/dateUtils";
 
 interface WinnerFormProps {
   open: boolean;
@@ -214,11 +214,18 @@ export function WinnerForm({
         carryoverAmount = newEndingJackpot;
         newEndingJackpot = 0;
         
+        // CRITICAL: Use getTodayDateString for timezone-neutral date string
+        const todayDateString = getTodayDateString();
+        console.log('=== WINNER FORM DATE DEBUG ===');
+        console.log('1. getTodayDateString():', todayDateString);
+        console.log('2. typeof todayDateString:', typeof todayDateString);
+        console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+        
         // Update game end date and carryover
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            end_date: formatDateForDatabase(new Date()),
+            end_date: todayDateString, // Pure string, no Date conversion
             carryover_jackpot: carryoverAmount,
             total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
@@ -249,7 +256,8 @@ export function WinnerForm({
 
       if (updateSaleError) throw updateSaleError;
 
-      // Prepare winner data for distribution slip
+      // Prepare winner data for distribution slip - use string date
+      const todayDateString = getTodayDateString();
       const winnerData = {
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
@@ -258,7 +266,7 @@ export function WinnerForm({
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId,
-        date: formatDateForDatabase(new Date())
+        date: todayDateString // Pure string, no Date conversion
       };
 
       toast.success("Winner details saved successfully!");
