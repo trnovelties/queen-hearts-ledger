@@ -57,6 +57,7 @@ export function GameManagement() {
       }
 
       console.log('GameManagement: Fetched games:', data);
+      console.log('GameManagement: Number of games found:', data?.length || 0);
       setGames(data || []);
     } catch (error) {
       console.error('GameManagement: Error fetching games:', error);

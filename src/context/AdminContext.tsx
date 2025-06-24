@@ -45,12 +45,13 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     console.log('AdminContext: user?.id:', user?.id);
     
     // If admin is viewing another organization, return that organization's ID
-    if (viewingOrganization && isAdmin) {
-      console.log('AdminContext: Using viewing organization ID:', viewingOrganization.id);
+    if (isAdmin && viewingOrganization) {
+      console.log('AdminContext: Admin viewing organization, returning org ID:', viewingOrganization.id);
       return viewingOrganization.id;
     }
+    
     // Otherwise return the current user's ID
-    console.log('AdminContext: Using current user ID:', user?.id || null);
+    console.log('AdminContext: Returning current user ID:', user?.id || null);
     return user?.id || null;
   };
 
