@@ -20,23 +20,26 @@ export function GameManagement() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const { toast } = useToast();
 
+  // Get the current user ID and track it as a dependency
+  const currentUserId = getCurrentUserId();
+
   useEffect(() => {
     console.log('GameManagement: useEffect triggered');
     console.log('GameManagement: user:', user);
     console.log('GameManagement: isAdmin:', isAdmin);
+    console.log('GameManagement: currentUserId:', currentUserId);
     console.log('GameManagement: viewingOrganization:', viewingOrganization);
     console.log('GameManagement: isViewingOtherOrganization:', isViewingOtherOrganization);
     
-    if (user) {
+    if (user && currentUserId) {
       fetchGames();
     }
-  }, [user, viewingOrganization, isViewingOtherOrganization]);
+  }, [user, currentUserId, viewingOrganization, isViewingOtherOrganization]);
 
   const fetchGames = async () => {
     try {
-      const currentUserId = getCurrentUserId();
       console.log('GameManagement: fetchGames called');
-      console.log('GameManagement: getCurrentUserId() returns:', currentUserId);
+      console.log('GameManagement: Using currentUserId:', currentUserId);
       
       if (!currentUserId) {
         console.log('GameManagement: No user ID found, skipping games fetch');
@@ -46,7 +49,7 @@ export function GameManagement() {
 
       console.log('GameManagement: Fetching games for user:', currentUserId);
 
-      // First, let's try to fetch with detailed error logging
+      // Query games for the specific user ID
       const { data: gamesData, error: gamesError, count } = await supabase
         .from('games')
         .select('*', { count: 'exact' })
@@ -71,18 +74,28 @@ export function GameManagement() {
       console.log('GameManagement: Successfully fetched games:', gamesData);
       console.log('GameManagement: Number of games found:', gamesData?.length || 0);
       
-      // If we're viewing as admin and no games found, let's check if RLS is working
+      // Test RLS permissions if admin viewing other org and no games found
       if (isAdmin && isViewingOtherOrganization && (!gamesData || gamesData.length === 0)) {
-        console.log('GameManagement: Admin viewing other org but no games found, checking RLS...');
+        console.log('GameManagement: Admin viewing other org but no games found, testing RLS...');
         
-        // Test if admin can see all games (without user_id filter)
-        const { data: allGames, error: allGamesError } = await supabase
+        // Test admin access to all games
+        const { data: adminTestData, error: adminTestError } = await supabase
           .from('games')
-          .select('*')
+          .select('id, user_id, name')
           .limit(5);
           
-        console.log('GameManagement: All games test query result:', allGames);
-        console.log('GameManagement: All games test query error:', allGamesError);
+        console.log('GameManagement: Admin RLS test - data:', adminTestData);
+        console.log('GameManagement: Admin RLS test - error:', adminTestError);
+
+        // Test specific user query
+        const { data: userTestData, error: userTestError } = await supabase
+          .from('games')
+          .select('id, user_id, name')
+          .eq('user_id', currentUserId)
+          .limit(5);
+          
+        console.log('GameManagement: User-specific test - data:', userTestData);
+        console.log('GameManagement: User-specific test - error:', userTestError);
       }
       
       setGames(gamesData || []);
@@ -132,7 +145,7 @@ export function GameManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Queen of Hearts Games</h2>
           <p className="text-gray-600 mt-1">
             {isViewingOtherOrganization 
-              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email} (ID: ${getCurrentUserId()})`
+              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email} (ID: ${currentUserId})`
               : "Manage your Queen of Hearts game sessions"
             }
           </p>
