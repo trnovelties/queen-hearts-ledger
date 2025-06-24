@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,29 +82,6 @@ export function GameManagement() {
 
       console.log('GameManagement: Successfully fetched games:', gamesData);
       console.log('GameManagement: Number of games found:', gamesData?.length || 0);
-      
-      // Add comprehensive debugging for date handling
-      if (gamesData && gamesData.length > 0) {
-        console.log('=== COMPREHENSIVE DATE DISPLAY DEBUGGING ===');
-        gamesData.forEach((game, index) => {
-          console.log(`\n--- Game ${index + 1} (${game.name}) ---`);
-          console.log(`Raw start_date from DB: "${game.start_date}" (type: ${typeof game.start_date})`);
-          console.log(`Raw end_date from DB: "${game.end_date}" (type: ${typeof game.end_date})`);
-          
-          // Test the formatting function
-          const formattedStartDate = formatDateStringForDisplay(game.start_date);
-          console.log(`formatDateStringForDisplay(start_date) result: "${formattedStartDate}"`);
-          
-          if (game.end_date) {
-            const formattedEndDate = formatDateStringForDisplay(game.end_date);
-            console.log(`formatDateStringForDisplay(end_date) result: "${formattedEndDate}"`);
-          }
-          
-          // Test what the UI will actually show
-          console.log(`What UI will show for start date: "Started: ${formattedStartDate}"`);
-        });
-        console.log('=== END COMPREHENSIVE DATE DISPLAY DEBUGGING ===\n');
-      }
       
       setGames(gamesData || []);
     } catch (error) {
@@ -202,13 +180,8 @@ export function GameManagement() {
           {games.map((game) => {
             const gameStatus = getGameStatus(game);
             
-            // Add debugging right before rendering each game card
-            console.log(`\n=== RENDERING GAME CARD: ${game.name} ===`);
-            console.log(`game.start_date: "${game.start_date}"`);
+            // Display raw database date without any conversion
             const displayDate = formatDateStringForDisplay(game.start_date);
-            console.log(`Final display date: "${displayDate}"`);
-            console.log(`Full display text: "Started: ${displayDate}"`);
-            console.log(`=== END GAME CARD RENDER DEBUG ===\n`);
             
             return (
               <Card key={game.id} className="hover:shadow-lg transition-shadow">

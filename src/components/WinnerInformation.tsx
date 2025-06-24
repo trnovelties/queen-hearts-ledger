@@ -1,5 +1,4 @@
 
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Check, X, Crown } from "lucide-react";
@@ -112,4 +111,3 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
     </Card>
   );
 }
-
