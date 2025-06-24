@@ -21,7 +21,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
-    startDate: getTodayDateString(), // Default to today, but user can change
+    startDate: getTodayDateString(),
     ticketPrice: 2,
     organizationPercentage: 40,
     jackpotPercentage: 60,
@@ -35,16 +35,13 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       const nextGameNumber = games.length + 1;
       const todayString = getTodayDateString();
       
-      console.log('=== FORM INITIALIZATION DEBUG ===');
-      console.log('Modal opened, initializing form');
-      console.log('getTodayDateString() result:', todayString);
+      console.log('=== FORM INITIALIZATION (CLEAN) ===');
+      console.log('Modal opened, setting default date to:', todayString);
       console.log('User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      console.log('Current Date object:', new Date());
-      console.log('Date.now():', Date.now());
       
       setFormData({
         name: `Game ${nextGameNumber}`,
-        startDate: todayString, // Default to today
+        startDate: todayString,
         ticketPrice: 2,
         organizationPercentage: 40,
         jackpotPercentage: 60,
@@ -69,7 +66,16 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
-      console.log('Creating game with user_id:', user.id);
+      console.log('=== PURE STRING DATE HANDLING ===');
+      console.log('1. formData.startDate (pure string):', formData.startDate);
+      console.log('2. typeof formData.startDate:', typeof formData.startDate);
+      console.log('3. String length:', formData.startDate.length);
+      console.log('4. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      // CRITICAL: We will NOT create any Date objects - work with pure strings only
+      const dateStringForDB = formData.startDate.trim();
+      console.log('5. Final date string for DB (no Date object created):', dateStringForDB);
+      console.log('6. This exact string will be sent to Supabase:', `"${dateStringForDB}"`);
 
       // Get current configuration including card payouts and version - now user-specific
       const { data: config, error: configError } = await supabase
@@ -94,31 +100,10 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
       const gameNumber = games.length + 1;
 
-      // CRITICAL DEBUGGING: Let's trace every step of the date handling
-      console.log('=== COMPREHENSIVE DATE DEBUG ===');
-      console.log('1. formData.startDate (from state):', formData.startDate);
-      console.log('2. typeof formData.startDate:', typeof formData.startDate);
-      console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      console.log('4. Current system time:', new Date().toString());
-      console.log('5. Current UTC time:', new Date().toUTCString());
-      console.log('6. Browser locale:', navigator.language);
-      
-      // Test what happens if we create a Date object from the string (this might reveal the issue)
-      const testDate = new Date(formData.startDate);
-      console.log('7. TEST: new Date(formData.startDate):', testDate.toString());
-      console.log('8. TEST: testDate.toISOString():', testDate.toISOString());
-      console.log('9. TEST: testDate.toDateString():', testDate.toDateString());
-      console.log('10. TEST: testDate.getTimezoneOffset():', testDate.getTimezoneOffset());
-      
-      // Create the exact string we're sending to database
-      const dateStringForDB = formData.startDate;
-      console.log('11. Final dateStringForDB:', dateStringForDB);
-      console.log('12. typeof dateStringForDB:', typeof dateStringForDB);
-
       const gameData = {
         game_number: gameNumber,
         name: formData.name,
-        start_date: dateStringForDB, // Use EXACTLY what user selected, no conversion
+        start_date: dateStringForDB, // Pure YYYY-MM-DD string, no Date object conversion
         ticket_price: formData.ticketPrice,
         organization_percentage: formData.organizationPercentage,
         jackpot_percentage: formData.jackpotPercentage,
@@ -126,11 +111,11 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         carryover_jackpot: carryoverJackpot,
         card_payouts: config.card_payouts,
         configuration_version: config.version,
-        user_id: user.id // Explicitly set user_id
+        user_id: user.id
       };
 
-      console.log('13. Complete gameData object:', JSON.stringify(gameData, null, 2));
-      console.log('14. gameData.start_date specifically:', gameData.start_date);
+      console.log('7. Complete gameData being inserted:', JSON.stringify(gameData, null, 2));
+      console.log('8. gameData.start_date specifically:', gameData.start_date);
 
       const { data: insertResult, error } = await supabase
         .from('games')
@@ -138,21 +123,17 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         .select('*');
 
       if (error) {
-        console.error('15. Supabase insert error:', error);
+        console.error('9. Supabase insert error:', error);
         throw error;
       }
 
-      console.log('16. Insert successful, complete DB response:', JSON.stringify(insertResult, null, 2));
-      console.log('17. DB returned start_date:', insertResult?.[0]?.start_date);
-      console.log('18. Date match check (exact string comparison):', dateStringForDB === insertResult?.[0]?.start_date);
-      console.log('19. Date match check (loose comparison):', dateStringForDB == insertResult?.[0]?.start_date);
-      
-      // Additional debugging: Let's see what happens if we parse the returned date
-      if (insertResult?.[0]?.start_date) {
-        const returnedDate = new Date(insertResult[0].start_date);
-        console.log('20. TEST: new Date(returned_date):', returnedDate.toString());
-        console.log('21. TEST: returned date toISOString():', returnedDate.toISOString());
-      }
+      console.log('10. SUCCESS - Insert completed, returned data:', JSON.stringify(insertResult, null, 2));
+      console.log('11. Returned start_date from DB:', insertResult?.[0]?.start_date);
+      console.log('12. String comparison - sent vs returned:', {
+        sent: dateStringForDB,
+        returned: insertResult?.[0]?.start_date,
+        match: dateStringForDB === insertResult?.[0]?.start_date
+      });
 
       toast.success("Game created successfully!");
       onComplete();
@@ -167,24 +148,16 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedDate = e.target.value;
-    console.log('=== DATE INPUT CHANGE COMPREHENSIVE DEBUG ===');
-    console.log('1. Raw input event target value:', selectedDate);
+    console.log('=== DATE INPUT CHANGE (PURE STRING) ===');
+    console.log('1. Raw input value:', selectedDate);
     console.log('2. typeof selectedDate:', typeof selectedDate);
-    console.log('3. selectedDate length:', selectedDate.length);
-    console.log('4. selectedDate character codes:', selectedDate.split('').map(c => c.charCodeAt(0)));
-    console.log('5. User timezone when input changed:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-    console.log('6. Current system time when input changed:', new Date().toString());
+    console.log('3. String length:', selectedDate.length);
+    console.log('4. User timezone when changed:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log('5. NO Date object will be created - working with pure strings only');
     
-    // Test what the HTML input is actually giving us
-    const inputElement = e.target as HTMLInputElement;
-    console.log('7. Input element type:', inputElement.type);
-    console.log('8. Input element value:', inputElement.value);
-    console.log('9. Input element valueAsDate:', inputElement.valueAsDate);
-    console.log('10. Input element valueAsNumber:', inputElement.valueAsNumber);
-    
-    // Set exactly what user selected from date input (YYYY-MM-DD string)
+    // Set exactly what HTML date input gives us (YYYY-MM-DD string)
     setFormData({ ...formData, startDate: selectedDate });
-    console.log('11. Updated formData.startDate to:', selectedDate);
+    console.log('6. Updated formData.startDate to pure string:', selectedDate);
   };
 
   return (
