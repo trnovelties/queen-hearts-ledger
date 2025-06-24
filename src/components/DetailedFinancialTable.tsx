@@ -1,10 +1,8 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
 import { 
   ChevronDown, 
@@ -16,6 +14,7 @@ import {
   Target,
   Banknote
 } from "lucide-react";
+import { formatDateStringForDisplay, formatDateStringForShortDisplay } from "@/lib/dateUtils";
 
 type Game = Tables<"games">;
 type Week = Tables<"weeks">;
@@ -67,8 +66,8 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                     {game.name}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Started: {format(new Date(game.start_date), 'MMM d, yyyy')}
-                    {game.end_date && ` | Ended: ${format(new Date(game.end_date), 'MMM d, yyyy')}`}
+                    Started: {formatDateStringForDisplay(game.start_date)}
+                    {game.end_date && ` | Ended: ${formatDateStringForDisplay(game.end_date)}`}
                   </CardDescription>
                 </div>
               </div>
@@ -160,7 +159,7 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                               Week {week.week_number}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {format(new Date(week.start_date), 'MM/dd')} - {format(new Date(week.end_date), 'MM/dd')}
+                              {formatDateStringForShortDisplay(week.start_date)} - {formatDateStringForShortDisplay(week.end_date)}
                             </TableCell>
                             <TableCell className="text-center font-medium">
                               {week.weekly_tickets_sold.toLocaleString()}
@@ -233,7 +232,7 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                         {game.expenses.map(expense => (
                           <TableRow key={expense.id} className="border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
                             <TableCell className="font-medium text-[#132E2C]">
-                              {format(new Date(expense.date), 'MMM d, yyyy')}
+                              {formatDateStringForDisplay(expense.date)}
                             </TableCell>
                             <TableCell>
                               <Badge 

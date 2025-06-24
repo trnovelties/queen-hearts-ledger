@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Check, X, Crown } from "lucide-react";
-import { format } from "date-fns";
+import { formatDateStringForDisplay } from "@/lib/dateUtils";
 
 interface Winner {
   name: string;
@@ -22,10 +22,18 @@ interface WinnerInformationProps {
 }
 
 export function WinnerInformation({ winners, formatCurrency }: WinnerInformationProps) {
-  if (winners.length === 0) return null;
+  console.log('=== WinnerInformation RENDER DEBUG ===');
+  console.log('Winners prop:', winners);
+  
+  if (winners.length === 0) {
+    console.log('No winners to display');
+    return null;
+  }
 
   // Show only the most recent winner if there's only one, or show multiple in a grid
   const displayWinners = winners.slice(0, 6); // Limit to 6 most recent winners to avoid overcrowding
+  
+  console.log('Display winners:', displayWinners);
 
   return (
     <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200">
@@ -37,67 +45,77 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {displayWinners.map((winner, index) => (
-            <div key={index} className={`${index > 0 ? 'border-t border-yellow-200 pt-6' : ''}`}>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Winner Name</p>
-                  <p className="text-lg font-bold text-[#654321]">{winner.name}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Slot Selected</p>
-                  <p className="text-lg font-bold text-[#654321]">#{winner.slot}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Card Drawn</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-lg font-bold text-[#654321]">{winner.card}</p>
-                    {winner.card === 'Queen of Hearts' && (
-                      <Crown className="h-5 w-5 text-yellow-600" />
-                    )}
+          {displayWinners.map((winner, index) => {
+            console.log(`=== Processing winner ${index} ===`);
+            console.log('Winner object:', winner);
+            console.log('Winner date raw:', winner.date);
+            console.log('Winner date type:', typeof winner.date);
+            
+            const formattedDate = formatDateStringForDisplay(winner.date);
+            console.log('Formatted date result:', formattedDate);
+            
+            return (
+              <div key={index} className={`${index > 0 ? 'border-t border-yellow-200 pt-6' : ''}`}>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Winner Name</p>
+                    <p className="text-lg font-bold text-[#654321]">{winner.name}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Slot Selected</p>
+                    <p className="text-lg font-bold text-[#654321]">#{winner.slot}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Card Drawn</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-bold text-[#654321]">{winner.card}</p>
+                      {winner.card === 'Queen of Hearts' && (
+                        <Crown className="h-5 w-5 text-yellow-600" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Distribution Amount</p>
+                    <p className="text-lg font-bold text-[#654321]">{formatCurrency(winner.amount)}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Winner Present</p>
+                    <div className="flex items-center gap-2">
+                      {winner.present ? (
+                        <>
+                          <Check className="h-5 w-5 text-green-600" />
+                          <span className="text-lg font-bold text-green-600">Yes</span>
+                        </>
+                      ) : (
+                        <>
+                          <X className="h-5 w-5 text-red-600" />
+                          <span className="text-lg font-bold text-red-600">No</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Distribution Amount</p>
-                  <p className="text-lg font-bold text-[#654321]">{formatCurrency(winner.amount)}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#8B4513] uppercase tracking-wide">Winner Present</p>
-                  <div className="flex items-center gap-2">
-                    {winner.present ? (
-                      <>
-                        <Check className="h-5 w-5 text-green-600" />
-                        <span className="text-lg font-bold text-green-600">Yes</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="h-5 w-5 text-red-600" />
-                        <span className="text-lg font-bold text-red-600">No</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-end gap-3 pt-4">
-                <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                  {winner.gameName}
-                </Badge>
-                {winner.weekNumber && (
+                <div className="flex items-center justify-end gap-3 pt-4">
                   <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                    Week {winner.weekNumber}
+                    {winner.gameName}
                   </Badge>
-                )}
-                <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
-                  {format(new Date(winner.date), 'MMM d, yyyy')}
-                </Badge>
+                  {winner.weekNumber && (
+                    <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
+                      Week {winner.weekNumber}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="bg-white text-[#8B4513] border-[#8B4513]">
+                    {formattedDate}
+                  </Badge>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           
           {winners.length > 6 && (
             <div className="text-center pt-4 border-t border-yellow-200">
