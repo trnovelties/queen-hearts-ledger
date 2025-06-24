@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for timezone-neutral date handling
  * These functions ensure dates are handled consistently regardless of user timezone
@@ -39,15 +38,32 @@ export function isValidDateString(dateString: string): boolean {
  * Output: Human readable format
  */
 export function formatDateStringForDisplay(dateString: string): string {
-  if (!isValidDateString(dateString)) return dateString;
+  console.log('=== formatDateStringForDisplay DEBUG ===');
+  console.log('Input dateString:', dateString, 'type:', typeof dateString);
+  
+  if (!dateString) {
+    console.log('Empty dateString, returning as-is');
+    return dateString;
+  }
+  
+  if (!isValidDateString(dateString)) {
+    console.log('Invalid dateString format, returning as-is');
+    return dateString;
+  }
   
   const [year, month, day] = dateString.split('-').map(Number);
+  console.log('Parsed values - year:', year, 'month:', month, 'day:', day);
+  
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
-  return `${monthNames[month - 1]} ${day}, ${year}`;
+  const formattedDate = `${monthNames[month - 1]} ${day}, ${year}`;
+  console.log('Formatted result:', formattedDate);
+  console.log('=== END formatDateStringForDisplay DEBUG ===');
+  
+  return formattedDate;
 }
 
 /**
