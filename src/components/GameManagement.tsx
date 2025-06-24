@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GameForm } from "./GameForm";
 import { ExpenseModal } from "./ExpenseModal";
+import { GameDetailsModal } from "./GameDetailsModal";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
 
@@ -19,6 +19,7 @@ export function GameManagement() {
   const [showGameForm, setShowGameForm] = useState(false);
   const [selectedGame, setSelectedGame] = useState<any>(null);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showGameDetailsModal, setShowGameDetailsModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -96,6 +97,11 @@ export function GameManagement() {
   const handleAddExpense = (game: any) => {
     setSelectedGame(game);
     setShowExpenseModal(true);
+  };
+
+  const handleViewDetails = (game: any) => {
+    setSelectedGame(game);
+    setShowGameDetailsModal(true);
   };
 
   const formatCurrency = (amount: number) => {
@@ -233,6 +239,7 @@ export function GameManagement() {
                       variant="outline" 
                       size="sm"
                       className="flex-1"
+                      onClick={() => handleViewDetails(game)}
                     >
                       <Eye className="w-4 h-4 mr-1" />
                       View Details
@@ -260,6 +267,14 @@ export function GameManagement() {
               onOpenChange={setShowExpenseModal}
               gameId={selectedGame.id}
               gameName={selectedGame.name}
+            />
+          )}
+
+          {selectedGame && (
+            <GameDetailsModal
+              open={showGameDetailsModal}
+              onOpenChange={setShowGameDetailsModal}
+              game={selectedGame}
             />
           )}
         </>
