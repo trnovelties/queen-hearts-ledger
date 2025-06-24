@@ -83,6 +83,13 @@ export function GameManagement() {
       console.log('GameManagement: Successfully fetched games:', gamesData);
       console.log('GameManagement: Number of games found:', gamesData?.length || 0);
       
+      // Log each game's start_date for debugging
+      if (gamesData) {
+        gamesData.forEach((game, index) => {
+          console.log(`Game ${index} start_date from DB:`, game.start_date, 'type:', typeof game.start_date);
+        });
+      }
+      
       setGames(gamesData || []);
     } catch (error) {
       console.error('GameManagement: Error in fetchGames:', error);
@@ -180,8 +187,13 @@ export function GameManagement() {
           {games.map((game) => {
             const gameStatus = getGameStatus(game);
             
+            console.log(`=== Processing game card for game: ${game.name} ===`);
+            console.log('Raw start_date from game object:', game.start_date);
+            console.log('start_date type:', typeof game.start_date);
+            
             // Display raw database date without any conversion
             const displayDate = formatDateStringForDisplay(game.start_date);
+            console.log('Formatted display date:', displayDate);
             
             return (
               <Card key={game.id} className="hover:shadow-lg transition-shadow">

@@ -42,24 +42,51 @@ export function isValidDateString(dateString: string): boolean {
  * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
  */
 export function formatDateStringForDisplay(dateString: string): string {
+  console.log('=== formatDateStringForDisplay DEBUG START ===');
+  console.log('Input dateString:', dateString);
+  console.log('Input type:', typeof dateString);
+  
   // If empty or invalid, return as-is
   if (!dateString || !isValidDateString(dateString)) {
+    console.log('Invalid or empty dateString, returning as-is');
+    console.log('=== formatDateStringForDisplay DEBUG END ===');
     return dateString;
   }
   
   // Parse the date string components directly - NO Date() constructor
-  const [yearStr, monthStr, dayStr] = dateString.split('-');
+  const parts = dateString.split('-');
+  console.log('Split parts:', parts);
+  
+  const yearStr = parts[0];
+  const monthStr = parts[1]; 
+  const dayStr = parts[2];
+  
+  console.log('Year string:', yearStr);
+  console.log('Month string:', monthStr);
+  console.log('Day string:', dayStr);
+  
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10);
   const day = parseInt(dayStr, 10);
+  
+  console.log('Parsed year:', year);
+  console.log('Parsed month:', month);
+  console.log('Parsed day:', day);
   
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
+  const monthName = monthNames[month - 1];
+  console.log('Month name (index', month - 1, '):', monthName);
+  
   // Format using pure string manipulation - no Date objects involved
-  return `${monthNames[month - 1]} ${day}, ${year}`;
+  const result = `${monthName} ${day}, ${year}`;
+  console.log('Formatted result:', result);
+  console.log('=== formatDateStringForDisplay DEBUG END ===');
+  
+  return result;
 }
 
 /**
