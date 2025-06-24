@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { AdminDashboard } from '@/components/admin';
+import { AdminViewingIndicator } from '@/components/AdminViewingIndicator';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -19,5 +20,10 @@ export default function AdminView() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <AdminDashboard />;
+  return (
+    <div>
+      <AdminViewingIndicator />
+      <AdminDashboard />
+    </div>
+  );
 }
