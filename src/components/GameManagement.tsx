@@ -47,12 +47,20 @@ export function GameManagement() {
 
       console.log('GameManagement: Fetching games for user:', currentUserId);
 
-      // Query games for the specific user ID
-      const { data: gamesData, error: gamesError, count } = await supabase
-        .from('games')
-        .select('*', { count: 'exact' })
-        .eq('user_id', currentUserId)
-        .order('game_number', { ascending: false });
+      // For admin viewing other organization, we need to use a different approach
+      let query = supabase.from('games').select('*', { count: 'exact' });
+      
+      if (isAdmin && isViewingOtherOrganization && viewingOrganization) {
+        // Admin viewing another organization - filter by that organization's user ID
+        console.log('GameManagement: Admin viewing other org, filtering by:', viewingOrganization.id);
+        query = query.eq('user_id', viewingOrganization.id);
+      } else {
+        // Regular user or admin viewing their own data
+        console.log('GameManagement: Regular user or admin viewing own data, filtering by:', currentUserId);
+        query = query.eq('user_id', currentUserId);
+      }
+
+      const { data: gamesData, error: gamesError, count } = await query.order('game_number', { ascending: false });
 
       console.log('GameManagement: Supabase query completed');
       console.log('GameManagement: Query result - data:', gamesData);
@@ -71,30 +79,6 @@ export function GameManagement() {
 
       console.log('GameManagement: Successfully fetched games:', gamesData);
       console.log('GameManagement: Number of games found:', gamesData?.length || 0);
-      
-      // Test RLS permissions if admin viewing other org and no games found
-      if (isAdmin && isViewingOtherOrganization && (!gamesData || gamesData.length === 0)) {
-        console.log('GameManagement: Admin viewing other org but no games found, testing RLS...');
-        
-        // Test admin access to all games
-        const { data: adminTestData, error: adminTestError } = await supabase
-          .from('games')
-          .select('id, user_id, name')
-          .limit(5);
-          
-        console.log('GameManagement: Admin RLS test - data:', adminTestData);
-        console.log('GameManagement: Admin RLS test - error:', adminTestError);
-
-        // Test specific user query
-        const { data: userTestData, error: userTestError } = await supabase
-          .from('games')
-          .select('id, user_id, name')
-          .eq('user_id', currentUserId)
-          .limit(5);
-          
-        console.log('GameManagement: User-specific test - data:', userTestData);
-        console.log('GameManagement: User-specific test - error:', userTestError);
-      }
       
       setGames(gamesData || []);
     } catch (error) {
@@ -143,7 +127,7 @@ export function GameManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Queen of Hearts Games</h2>
           <p className="text-gray-600 mt-1">
             {isViewingOtherOrganization 
-              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email} (ID: ${getCurrentUserId()})`
+              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email}`
               : "Manage your Queen of Hearts game sessions"
             }
           </p>
