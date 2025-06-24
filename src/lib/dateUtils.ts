@@ -1,4 +1,5 @@
 
+
 /**
  * Utility functions for timezone-neutral date handling
  * These functions ensure dates are handled consistently regardless of user timezone
@@ -36,42 +37,77 @@ export function isValidDateString(dateString: string): boolean {
 }
 
 /**
- * Formats a date string for display - PURE STRING MANIPULATION
+ * Formats a date string for display - COMPREHENSIVE DEBUGGING VERSION
  * Input: YYYY-MM-DD string
  * Output: Human readable format (e.g., "June 24, 2025")
  * NO DATE OBJECTS - NO TIMEZONE ISSUES
  */
 export function formatDateStringForDisplay(dateString: string): string {
-  console.log('=== formatDateStringForDisplay DEBUG ===');
-  console.log('Input dateString:', dateString, 'type:', typeof dateString);
+  console.log('\n=== COMPREHENSIVE DATE FORMAT DEBUGGING ===');
+  console.log('1. Raw input dateString:', JSON.stringify(dateString));
+  console.log('2. Input type:', typeof dateString);
+  console.log('3. Input length:', dateString?.length);
   
   if (!dateString) {
-    console.log('Empty dateString, returning as-is');
+    console.log('4. EARLY RETURN: Empty dateString');
+    console.log('=== END DEBUG (empty) ===\n');
     return dateString;
   }
   
   if (!isValidDateString(dateString)) {
-    console.log('Invalid dateString format, returning as-is');
+    console.log('4. EARLY RETURN: Invalid dateString format');
+    console.log('=== END DEBUG (invalid) ===\n');
     return dateString;
   }
   
+  console.log('4. Validation passed, proceeding with parsing');
+  
   // Parse the date string components directly - NO Date() constructor
-  const [yearStr, monthStr, dayStr] = dateString.split('-');
+  const splitResult = dateString.split('-');
+  console.log('5. Split result:', splitResult);
+  
+  const [yearStr, monthStr, dayStr] = splitResult;
+  console.log('6. Destructured strings - year:', JSON.stringify(yearStr), 'month:', JSON.stringify(monthStr), 'day:', JSON.stringify(dayStr));
+  
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10);
   const day = parseInt(dayStr, 10);
   
-  console.log('Parsed values - year:', year, 'month:', month, 'day:', day);
+  console.log('7. Parsed integers - year:', year, 'month:', month, 'day:', day);
+  console.log('8. parseInt results types - year:', typeof year, 'month:', typeof month, 'day:', typeof day);
+  console.log('9. Are all numbers valid?', !isNaN(year), !isNaN(month), !isNaN(day));
   
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
+  console.log('10. Month names array length:', monthNames.length);
+  console.log('11. Array index to use (month - 1):', month - 1);
+  console.log('12. Is index valid?', (month - 1) >= 0 && (month - 1) < monthNames.length);
+  console.log('13. Month name at index:', monthNames[month - 1]);
+  
   // Format using pure string manipulation - no Date objects involved
   const formattedDate = `${monthNames[month - 1]} ${day}, ${year}`;
-  console.log('Formatted result:', formattedDate);
-  console.log('=== END formatDateStringForDisplay DEBUG ===');
+  console.log('14. Final formatted result:', JSON.stringify(formattedDate));
+  
+  // Let's also test what would happen with Date object (for comparison)
+  console.log('\n--- COMPARISON TEST WITH DATE OBJECT (for debugging) ---');
+  try {
+    const testDate = new Date(dateString + 'T00:00:00');
+    console.log('15. Date object created:', testDate);
+    console.log('16. Date.toString():', testDate.toString());
+    console.log('17. Date.getFullYear():', testDate.getFullYear());
+    console.log('18. Date.getMonth():', testDate.getMonth(), '(0-based)');
+    console.log('19. Date.getDate():', testDate.getDate());
+    console.log('20. Would Date show:', `${monthNames[testDate.getMonth()]} ${testDate.getDate()}, ${testDate.getFullYear()}`);
+  } catch (e) {
+    console.log('15. Date object creation failed:', e);
+  }
+  console.log('--- END COMPARISON TEST ---\n');
+  
+  console.log('21. FINAL RETURN VALUE:', JSON.stringify(formattedDate));
+  console.log('=== END COMPREHENSIVE DATE FORMAT DEBUGGING ===\n');
   
   return formattedDate;
 }
@@ -97,3 +133,4 @@ export function parseDateFromDatabase(dateString: string): Date {
   const [year, month, day] = dateString.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
+
