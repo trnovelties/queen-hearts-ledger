@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ComposedChart, 
@@ -17,7 +18,7 @@ import {
   AreaChart
 } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
-import { formatDateStringForShortDisplay } from "@/lib/dateUtils";
+import { format } from "date-fns";
 
 type Game = Tables<"games">;
 type Week = Tables<"weeks">;
@@ -55,7 +56,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
         game.weeks.forEach(week => {
           const weekKey = selectedGame === "all" ? 
             `${game.name} - Week ${week.week_number}` : 
-            `Week ${week.week_number} (${formatDateStringForShortDisplay(week.start_date)})`;
+            `Week ${week.week_number} (${format(new Date(week.start_date), 'MMM d')})`;
           
           if (!weeklyData[weekKey]) {
             weeklyData[weekKey] = {
@@ -86,7 +87,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
           if (expenseWeek) {
             const weekKey = selectedGame === "all" ? 
               `${game.name} - Week ${expenseWeek.week_number}` : 
-              `Week ${expenseWeek.week_number} (${formatDateStringForShortDisplay(expenseWeek.start_date)})`;
+              `Week ${expenseWeek.week_number} (${format(new Date(expenseWeek.start_date), 'MMM d')})`;
             
             if (weeklyData[weekKey]) {
               if (expense.is_donation) {

@@ -12,7 +12,8 @@ import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { getTodayDateString, formatDateStringForDisplay } from "@/lib/dateUtils";
+import { format } from "date-fns";
+import { formatDateForDatabase } from "@/lib/dateUtils";
 import { Tables } from "@/integrations/supabase/types";
 import { 
   Download, 
@@ -53,23 +54,6 @@ interface GameSummary extends Game {
   ticket_sales: TicketSale[];
   expenses: Expense[];
 }
-
-// Simple date formatting function - NO Date objects
-const formatSimpleDate = (dateString: string): string => {
-  if (!dateString) return dateString;
-  
-  const [year, month, day] = dateString.split('-');
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  
-  const monthIndex = parseInt(month, 10) - 1;
-  const monthName = monthNames[monthIndex];
-  const dayNumber = parseInt(day, 10);
-  
-  return `${monthName} ${dayNumber}, ${year}`;
-};
 
 export default function IncomeExpense() {
   const { toast } = useToast();
@@ -167,9 +151,8 @@ export default function IncomeExpense() {
     }
     
     if (startDate && endDate) {
-      // Convert Date objects to YYYY-MM-DD strings for comparison
-      const startDateStr = getTodayDateString().split('T')[0]; // Just in case
-      const endDateStr = getTodayDateString().split('T')[0]; // Just in case
+      const startDateStr = formatDateForDatabase(startDate);
+      const endDateStr = formatDateForDatabase(endDate);
       
       filteredGames = filteredGames.map(game => {
         const filteredSales = game.ticket_sales.filter(sale => 
@@ -281,8 +264,8 @@ export default function IncomeExpense() {
           }
         });
       });
-      // Sort by date descending (most recent first) - using string comparison
-      winners.sort((a, b) => b.date.localeCompare(a.date));
+      // Sort by date descending (most recent first)
+      winners.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } else {
       // Show only winners from selected game
       const selectedGameData = summary.filteredGames.find(game => game.id === selectedGame);
@@ -388,7 +371,7 @@ export default function IncomeExpense() {
     );
   };
 
-  // Enhanced PDF generation with comprehensive structure - using simple date formatting
+  // Enhanced PDF generation with comprehensive structure
   const generatePdfReport = async () => {
     try {
       toast({
@@ -419,15 +402,15 @@ export default function IncomeExpense() {
       doc.text('Queen of Hearts Financial Report', pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 15;
       
-      // Report metadata - using simple date formatting
+      // Report metadata
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Generated: ${formatSimpleDate(getTodayDateString())}`, pageWidth / 2, yPosition, { align: 'center' });
+      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy h:mm a')}`, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 5;
       
       const reportPeriod = startDate && endDate 
-        ? `${formatSimpleDate(getTodayDateString())} - ${formatSimpleDate(getTodayDateString())}`
+        ? `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`
         : 'All Time';
       doc.text(`Report Period: ${reportPeriod}`, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 5;
@@ -435,7 +418,7 @@ export default function IncomeExpense() {
       const gameScope = selectedGame === "all" ? "All Games" : games.find(g => g.id === selectedGame)?.name || "Unknown Game";
       doc.text(`Scope: ${gameScope}`, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 15;
-
+      
       // Executive Summary Section
       checkNewPage(50);
       doc.setFont("helvetica", "bold");
@@ -566,8 +549,8 @@ export default function IncomeExpense() {
           doc.setTextColor(0, 0, 0);
           
           const gameData = [
-            ['Start Date', formatSimpleDate(game.start_date)],
-            ['End Date', game.end_date ? formatSimpleDate(game.end_date) : 'Ongoing'],
+            ['Start Date', format(new Date(game.start_date), 'MMM d, yyyy')],
+            ['End Date', game.end_date ? format(new Date(game.end_date), 'MMM d, yyyy') : 'Ongoing'],
             ['Total Sales', formatCurrency(game.total_sales)],
             ['Total Distributions', formatCurrency(game.total_payouts)],
             ['Total Expenses', formatCurrency(game.total_expenses)],
@@ -632,7 +615,7 @@ export default function IncomeExpense() {
         doc.text('Queen of Hearts Financial Report', leftMargin, pageHeight - 10);
       }
       
-      const filename = `queen-of-hearts-financial-report-${getTodayDateString().replace(/-/g, '')}.pdf`;
+      const filename = `queen-of-hearts-financial-report-${formatDateForDatabase(new Date()).replace(/-/g, '')}.pdf`;
       doc.save(filename);
       
       toast({
