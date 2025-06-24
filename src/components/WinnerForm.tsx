@@ -214,11 +214,18 @@ export function WinnerForm({
         carryoverAmount = newEndingJackpot;
         newEndingJackpot = 0;
         
-        // Update game end date and carryover - use getTodayDateString for timezone-neutral date
+        // CRITICAL: Use getTodayDateString for timezone-neutral date string
+        const todayDateString = getTodayDateString();
+        console.log('=== WINNER FORM DATE DEBUG ===');
+        console.log('1. getTodayDateString():', todayDateString);
+        console.log('2. typeof todayDateString:', typeof todayDateString);
+        console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+        
+        // Update game end date and carryover
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            end_date: getTodayDateString(), // Use string instead of Date object
+            end_date: todayDateString, // Pure string, no Date conversion
             carryover_jackpot: carryoverAmount,
             total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
@@ -249,7 +256,8 @@ export function WinnerForm({
 
       if (updateSaleError) throw updateSaleError;
 
-      // Prepare winner data for distribution slip
+      // Prepare winner data for distribution slip - use string date
+      const todayDateString = getTodayDateString();
       const winnerData = {
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
@@ -258,7 +266,7 @@ export function WinnerForm({
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId,
-        date: getTodayDateString() // Use string instead of Date object
+        date: todayDateString // Pure string, no Date conversion
       };
 
       toast.success("Winner details saved successfully!");

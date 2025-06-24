@@ -35,7 +35,7 @@ export function TicketSalesRow({
   onCancel 
 }: TicketSalesRowProps) {
   const [formData, setFormData] = useState({
-    date: getTodayDateString(), // Use string instead of Date object
+    date: getTodayDateString(),
     ticketsSold: '',
     ticketPrice: gameData.ticket_price
   });
@@ -69,6 +69,17 @@ export function TicketSalesRow({
         return;
       }
 
+      // CRITICAL: Log the exact date being sent to database
+      console.log('=== TICKET SALES DATE DEBUG ===');
+      console.log('1. formData.date (raw):', formData.date);
+      console.log('2. typeof formData.date:', typeof formData.date);
+      console.log('3. formData.date length:', formData.date.length);
+      console.log('4. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      // Ensure we're sending the date exactly as entered, no conversions
+      const dateToSave = String(formData.date).trim();
+      console.log('5. dateToSave (final):', dateToSave);
+
       const amountCollected = ticketsSold * formData.ticketPrice;
       const organizationTotal = amountCollected * (gameData.organization_percentage / 100);
       const jackpotTotal = amountCollected * (gameData.jackpot_percentage / 100);
@@ -86,26 +97,37 @@ export function TicketSalesRow({
       // Calculate new jackpot contributions total
       const newJackpotContributions = totalJackpotContributions;
 
-      // Insert ticket sales record using timezone-neutral date string
-      const { error: insertError } = await supabase
+      // Insert ticket sales record - CRITICAL: Use dateToSave directly as string
+      const insertData = {
+        game_id: gameId,
+        week_id: weekId,
+        date: dateToSave, // Pure string, no Date object conversion
+        tickets_sold: ticketsSold,
+        ticket_price: formData.ticketPrice,
+        amount_collected: amountCollected,
+        cumulative_collected: cumulativeCollected,
+        organization_total: organizationTotal,
+        jackpot_total: jackpotTotal,
+        jackpot_contributions_total: newJackpotContributions,
+        displayed_jackpot_total: displayedJackpot,
+        ending_jackpot_total: displayedJackpot,
+        user_id: user.id
+      };
+
+      console.log('6. Final insertData:', JSON.stringify(insertData, null, 2));
+      console.log('7. insertData.date specifically:', insertData.date);
+
+      const { data: insertResult, error: insertError } = await supabase
         .from('ticket_sales')
-        .insert({
-          game_id: gameId,
-          week_id: weekId,
-          date: formData.date, // Use the date string directly
-          tickets_sold: ticketsSold,
-          ticket_price: formData.ticketPrice,
-          amount_collected: amountCollected,
-          cumulative_collected: cumulativeCollected,
-          organization_total: organizationTotal,
-          jackpot_total: jackpotTotal,
-          jackpot_contributions_total: newJackpotContributions,
-          displayed_jackpot_total: displayedJackpot,
-          ending_jackpot_total: displayedJackpot,
-          user_id: user.id
-        });
+        .insert(insertData)
+        .select('*');
 
       if (insertError) throw insertError;
+
+      console.log('8. Database insert successful');
+      console.log('9. Returned data from DB:', JSON.stringify(insertResult, null, 2));
+      console.log('10. DB returned date:', insertResult?.[0]?.date);
+      console.log('11. Date match check:', dateToSave === insertResult?.[0]?.date);
 
       // Update game totals
       const { error: updateError } = await supabase
@@ -127,9 +149,14 @@ export function TicketSalesRow({
     }
   };
 
-  const handleDateChange = (dateString: string) => {
-    console.log('TicketSalesRow: Date changed to:', dateString);
-    setFormData({ ...formData, date: dateString });
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    console.log('=== DATE INPUT CHANGE ===');
+    console.log('Raw input value:', rawValue);
+    console.log('Setting formData.date to:', rawValue);
+    
+    // Set the date exactly as received from input (YYYY-MM-DD string)
+    setFormData({ ...formData, date: rawValue });
   };
 
   return (
@@ -146,7 +173,7 @@ export function TicketSalesRow({
               id="date"
               type="date"
               value={formData.date}
-              onChange={(e) => handleDateChange(e.target.value)}
+              onChange={handleDateChange}
               className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium"
               required
             />
