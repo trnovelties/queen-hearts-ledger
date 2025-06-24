@@ -129,6 +129,35 @@ export default function Dashboard() {
     }).format(amount);
   };
 
+  // Calculate summary data for FinancialOverview component
+  const calculateSummary = () => {
+    const totalTicketsSold = games.reduce((sum, game) => {
+      return sum + Math.round(game.total_sales / (game.ticket_price || 2));
+    }, 0);
+
+    const totalSales = games.reduce((sum, game) => sum + game.total_sales, 0);
+    const totalDistributions = games.reduce((sum, game) => sum + game.total_payouts, 0);
+    const totalExpenses = games.reduce((sum, game) => sum + game.total_expenses, 0);
+    const totalDonations = games.reduce((sum, game) => sum + game.total_donations, 0);
+    const organizationNetProfit = games.reduce((sum, game) => sum + game.organization_net_profit, 0);
+
+    // Calculate organization and jackpot portions based on typical 40/60 split
+    const organizationTotalPortion = totalSales * 0.4;
+    const jackpotTotalPortion = totalSales * 0.6;
+
+    return {
+      totalTicketsSold,
+      totalSales,
+      totalDistributions,
+      totalExpenses,
+      totalDonations,
+      organizationTotalPortion,
+      jackpotTotalPortion,
+      organizationNetProfit,
+      filteredGames: games
+    };
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -144,6 +173,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const summary = calculateSummary();
 
   return (
     <div className="space-y-8 p-6 max-w-7xl mx-auto">
@@ -163,7 +194,7 @@ export default function Dashboard() {
       </div>
 
       {/* Financial Overview */}
-      <FinancialOverview games={games} formatCurrency={formatCurrency} />
+      <FinancialOverview summary={summary} formatCurrency={formatCurrency} />
 
       {/* Winner Information */}
       {winners.length > 0 && (
@@ -177,7 +208,7 @@ export default function Dashboard() {
 
       {/* Financial Charts */}
       {games.length > 0 && (
-        <FinancialCharts games={games} />
+        <FinancialCharts games={games} reportType="game" />
       )}
 
       {/* Detailed Financial Table */}
