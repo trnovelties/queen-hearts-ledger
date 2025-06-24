@@ -135,11 +135,18 @@ export function formatDateStringForMediumDisplay(dateString: string): string {
  * This replaces date-fns format calls to prevent timezone issues
  */
 export function formatDateStringShort(dateString: string): string {
+  console.log('=== formatDateStringShort DEBUG START ===');
+  console.log('Input dateString:', dateString);
+  console.log('Input type:', typeof dateString);
+  
   if (!dateString || !isValidDateString(dateString)) {
+    console.log('Invalid dateString, returning as-is:', dateString);
+    console.log('=== formatDateStringShort DEBUG END ===');
     return dateString;
   }
   
   const [year, month, day] = dateString.split('-');
+  console.log('Split parts:', [year, month, day]);
   
   const shortMonthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -150,7 +157,14 @@ export function formatDateStringShort(dateString: string): string {
   const monthName = shortMonthNames[monthIndex];
   const dayNumber = parseInt(day, 10);
   
-  return `${monthName} ${dayNumber}, ${year}`;
+  console.log('Month index:', monthIndex, 'Month name:', monthName);
+  console.log('Day number:', dayNumber);
+  
+  const result = `${monthName} ${dayNumber}, ${year}`;
+  console.log('Final formatted result:', result);
+  console.log('=== formatDateStringShort DEBUG END ===');
+  
+  return result;
 }
 
 /**

@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Check, X, Crown } from "lucide-react";
-import { formatDateStringForDisplay } from "@/lib/dateUtils";
+import { formatDateStringShort } from "@/lib/dateUtils";
 
 interface Winner {
   name: string;
@@ -51,7 +51,7 @@ export function WinnerInformation({ winners, formatCurrency }: WinnerInformation
             console.log('Winner date raw:', winner.date);
             console.log('Winner date type:', typeof winner.date);
             
-            const formattedDate = formatDateStringForDisplay(winner.date);
+            const formattedDate = formatDateStringShort(winner.date);
             console.log('Formatted date result:', formattedDate);
             
             return (
