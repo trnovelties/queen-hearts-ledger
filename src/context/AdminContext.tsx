@@ -29,23 +29,28 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       console.error('Only admins can switch to other organizations');
       return;
     }
-    console.log('Admin switching to organization:', org);
+    console.log('AdminContext: Admin switching to organization:', org);
     setViewingOrganization(org);
   };
 
   const returnToAdminView = () => {
-    console.log('Returning to admin view');
+    console.log('AdminContext: Returning to admin view');
     setViewingOrganization(null);
   };
 
   const getCurrentUserId = () => {
+    console.log('AdminContext: getCurrentUserId called');
+    console.log('AdminContext: isAdmin:', isAdmin);
+    console.log('AdminContext: viewingOrganization:', viewingOrganization);
+    console.log('AdminContext: user?.id:', user?.id);
+    
     // If admin is viewing another organization, return that organization's ID
     if (viewingOrganization && isAdmin) {
-      console.log('Using viewing organization ID:', viewingOrganization.id);
+      console.log('AdminContext: Using viewing organization ID:', viewingOrganization.id);
       return viewingOrganization.id;
     }
     // Otherwise return the current user's ID
-    console.log('Using current user ID:', user?.id || null);
+    console.log('AdminContext: Using current user ID:', user?.id || null);
     return user?.id || null;
   };
 
@@ -58,6 +63,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     returnToAdminView,
     getCurrentUserId
   };
+
+  console.log('AdminContext: Provider value:', value);
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 };
