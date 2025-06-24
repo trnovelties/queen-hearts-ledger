@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
 
 export function GameManagement() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { getCurrentUserId, viewingOrganization, isViewingOtherOrganization } = useAdmin();
   const [games, setGames] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +24,7 @@ export function GameManagement() {
   useEffect(() => {
     console.log('GameManagement: useEffect triggered');
     console.log('GameManagement: user:', user);
+    console.log('GameManagement: isAdmin:', isAdmin);
     console.log('GameManagement: viewingOrganization:', viewingOrganization);
     console.log('GameManagement: isViewingOtherOrganization:', isViewingOtherOrganization);
     
@@ -45,22 +47,48 @@ export function GameManagement() {
 
       console.log('GameManagement: Fetching games for user:', currentUserId);
 
-      const { data, error } = await supabase
+      // First, let's try to fetch with detailed error logging
+      const { data: gamesData, error: gamesError, count } = await supabase
         .from('games')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('user_id', currentUserId)
         .order('game_number', { ascending: false });
 
-      if (error) {
-        console.error('GameManagement: Error fetching games:', error);
-        throw error;
+      console.log('GameManagement: Supabase query completed');
+      console.log('GameManagement: Query result - data:', gamesData);
+      console.log('GameManagement: Query result - error:', gamesError);
+      console.log('GameManagement: Query result - count:', count);
+
+      if (gamesError) {
+        console.error('GameManagement: Error fetching games:', gamesError);
+        toast({
+          title: "Error",
+          description: `Failed to fetch games: ${gamesError.message}`,
+          variant: "destructive",
+        });
+        throw gamesError;
       }
 
-      console.log('GameManagement: Fetched games:', data);
-      console.log('GameManagement: Number of games found:', data?.length || 0);
-      setGames(data || []);
+      console.log('GameManagement: Successfully fetched games:', gamesData);
+      console.log('GameManagement: Number of games found:', gamesData?.length || 0);
+      
+      // If we're viewing as admin and no games found, let's check if RLS is working
+      if (isAdmin && isViewingOtherOrganization && (!gamesData || gamesData.length === 0)) {
+        console.log('GameManagement: Admin viewing other org but no games found, checking RLS...');
+        
+        // Test if admin can see all games (without user_id filter)
+        const { data: allGames, error: allGamesError } = await supabase
+          .from('games')
+          .select('*')
+          .limit(5);
+          
+        console.log('GameManagement: All games test query result:', allGames);
+        console.log('GameManagement: All games test query error:', allGamesError);
+      }
+      
+      setGames(gamesData || []);
     } catch (error) {
-      console.error('GameManagement: Error fetching games:', error);
+      console.error('GameManagement: Error in fetchGames:', error);
       toast({
         title: "Error",
         description: "Failed to fetch games",
@@ -105,7 +133,7 @@ export function GameManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Queen of Hearts Games</h2>
           <p className="text-gray-600 mt-1">
             {isViewingOtherOrganization 
-              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email}`
+              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email} (ID: ${getCurrentUserId()})`
               : "Manage your Queen of Hearts game sessions"
             }
           </p>
