@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
 type ViewingOrganization = {
@@ -56,7 +56,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     return user?.id || null;
   };
 
-  const isViewingOtherOrganization = viewingOrganization !== null && isAdmin;
+  const isViewingOtherOrganization = isAdmin && viewingOrganization !== null;
 
   const value = {
     viewingOrganization,

@@ -20,26 +20,23 @@ export function GameManagement() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const { toast } = useToast();
 
-  // Get the current user ID and track it as a dependency
-  const currentUserId = getCurrentUserId();
-
   useEffect(() => {
     console.log('GameManagement: useEffect triggered');
     console.log('GameManagement: user:', user);
     console.log('GameManagement: isAdmin:', isAdmin);
-    console.log('GameManagement: currentUserId:', currentUserId);
     console.log('GameManagement: viewingOrganization:', viewingOrganization);
     console.log('GameManagement: isViewingOtherOrganization:', isViewingOtherOrganization);
     
-    if (user && currentUserId) {
+    if (user) {
       fetchGames();
     }
-  }, [user, currentUserId, viewingOrganization, isViewingOtherOrganization]);
+  }, [user, viewingOrganization, isViewingOtherOrganization]);
 
   const fetchGames = async () => {
     try {
+      const currentUserId = getCurrentUserId();
       console.log('GameManagement: fetchGames called');
-      console.log('GameManagement: Using currentUserId:', currentUserId);
+      console.log('GameManagement: getCurrentUserId() returns:', currentUserId);
       
       if (!currentUserId) {
         console.log('GameManagement: No user ID found, skipping games fetch');
@@ -145,7 +142,7 @@ export function GameManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Queen of Hearts Games</h2>
           <p className="text-gray-600 mt-1">
             {isViewingOtherOrganization 
-              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email} (ID: ${currentUserId})`
+              ? `Viewing games for: ${viewingOrganization?.organization_name || viewingOrganization?.email} (ID: ${getCurrentUserId()})`
               : "Manage your Queen of Hearts game sessions"
             }
           </p>
