@@ -26,18 +26,25 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [viewingOrganization, setViewingOrganization] = useState<ViewingOrganization | null>(null);
 
   const switchToOrganization = (org: ViewingOrganization) => {
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      console.error('Only admins can switch to other organizations');
+      return;
+    }
+    console.log('Admin switching to organization:', org);
     setViewingOrganization(org);
   };
 
   const returnToAdminView = () => {
+    console.log('Returning to admin view');
     setViewingOrganization(null);
   };
 
   const getCurrentUserId = () => {
     if (viewingOrganization && isAdmin) {
+      console.log('Using viewing organization ID:', viewingOrganization.id);
       return viewingOrganization.id;
     }
+    console.log('Using current user ID:', user?.id);
     return user?.id || null;
   };
 

@@ -11,10 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Users, GamepadIcon, DollarSign, Building2, Eye, Edit, Save, X } from "lucide-react";
+import { Users, GamepadIcon, Building2, Eye, Edit, Save, X } from "lucide-react";
 import { format } from "date-fns";
 
 interface Organization {
@@ -68,29 +66,64 @@ export default function AdminView() {
   const fetchOrganizations = async () => {
     try {
       setLoading(true);
+      console.log('Fetching organizations as admin...');
 
-      // Fetch all users
+      // First verify admin status
+      const { data: currentUser, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+
+      if (userError) {
+        console.error('Error verifying admin status:', userError);
+        throw userError;
+      }
+
+      if (currentUser?.role !== 'admin') {
+        console.error('User is not an admin');
+        navigate('/dashboard');
+        return;
+      }
+
+      console.log('Admin status verified, fetching all users...');
+
+      // Use RPC function or direct query with service role
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      console.log('Fetched users:', usersData);
 
       // Fetch games data for each organization
       const organizationsWithStats = await Promise.all(
-        usersData.map(async (user) => {
-          const { data: gamesData } = await supabase
+        usersData.map(async (userRecord) => {
+          console.log(`Fetching games for user ${userRecord.id}...`);
+          
+          const { data: gamesData, error: gamesError } = await supabase
             .from('games')
             .select('total_sales, organization_net_profit')
-            .eq('user_id', user.id);
+            .eq('user_id', userRecord.id);
+
+          if (gamesError) {
+            console.error(`Error fetching games for user ${userRecord.id}:`, gamesError);
+            // Continue with empty stats if games fetch fails
+          }
 
           const totalGames = gamesData?.length || 0;
           const totalSales = gamesData?.reduce((sum, game) => sum + (game.total_sales || 0), 0) || 0;
           const totalProfit = gamesData?.reduce((sum, game) => sum + (game.organization_net_profit || 0), 0) || 0;
 
+          console.log(`Stats for ${userRecord.email}: Games=${totalGames}, Sales=${totalSales}, Profit=${totalProfit}`);
+
           return {
-            ...user,
+            ...userRecord,
             total_games: totalGames,
             total_sales: totalSales,
             total_profit: totalProfit
@@ -98,6 +131,7 @@ export default function AdminView() {
         })
       );
 
+      console.log('Organizations with stats:', organizationsWithStats);
       setOrganizations(organizationsWithStats);
 
       // Calculate overall stats
@@ -107,8 +141,8 @@ export default function AdminView() {
       setStats({
         totalOrganizations,
         totalGames,
-        totalSales: 0, // Keep for compatibility but not displayed
-        totalProfit: 0 // Keep for compatibility but not displayed
+        totalSales: 0,
+        totalProfit: 0
       });
 
     } catch (error: any) {
@@ -124,6 +158,7 @@ export default function AdminView() {
   };
 
   const handleViewOrganization = (organization: Organization) => {
+    console.log('Viewing organization:', organization);
     switchToOrganization({
       id: organization.id,
       email: organization.email,
@@ -132,10 +167,16 @@ export default function AdminView() {
       about: organization.about,
       role: organization.role
     });
+    
+    toast({
+      title: "Switched to Organization",
+      description: `Now viewing: ${organization.organization_name || organization.email}`,
+    });
+    
     navigate('/dashboard');
   };
 
-  const handleEditRole = (organizationId: string, currentRole: string) => {
+  const handleEditRole = async (organizationId: string, currentRole: string) => {
     setEditingRole(organizationId);
     setNewRole(currentRole);
   };
@@ -304,7 +345,6 @@ export default function AdminView() {
             <Card 
               key={org.id} 
               className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => handleViewOrganization(org)}
             >
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
@@ -359,7 +399,7 @@ export default function AdminView() {
 
                 <Separator className="my-4" />
 
-                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex gap-2">
                   <Button
                     onClick={() => handleViewOrganization(org)}
                     size="sm"
