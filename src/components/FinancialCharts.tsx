@@ -53,15 +53,9 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
       
       games.forEach(game => {
         game.weeks.forEach(week => {
-          console.log(`=== CHART WEEK DATE DEBUG: ${game.name} Week ${week.week_number} ===`);
-          console.log('Week start_date raw:', week.start_date);
-          
-          const formattedStartDate = formatDateStringForShortDisplay(week.start_date);
-          console.log('formatDateStringForShortDisplay result:', formattedStartDate);
-          
           const weekKey = selectedGame === "all" ? 
             `${game.name} - Week ${week.week_number}` : 
-            `Week ${week.week_number} (${formattedStartDate})`;
+            `Week ${week.week_number} (${formatDateStringForShortDisplay(week.start_date)})`;
           
           if (!weeklyData[weekKey]) {
             weeklyData[weekKey] = {
@@ -85,20 +79,14 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
         
         // Add expenses for each week
         game.expenses.forEach(expense => {
-          console.log(`=== CHART EXPENSE DATE DEBUG ===`);
-          console.log('Expense date raw:', expense.date);
-          
           const expenseWeek = game.weeks.find(week => 
             expense.date >= week.start_date && expense.date <= week.end_date
           );
           
           if (expenseWeek) {
-            const formattedStartDate = formatDateStringForShortDisplay(expenseWeek.start_date);
-            console.log('Matched expense to week, formatted start date:', formattedStartDate);
-            
             const weekKey = selectedGame === "all" ? 
               `${game.name} - Week ${expenseWeek.week_number}` : 
-              `Week ${expenseWeek.week_number} (${formattedStartDate})`;
+              `Week ${expenseWeek.week_number} (${formatDateStringForShortDisplay(expenseWeek.start_date)})`;
             
             if (weeklyData[weekKey]) {
               if (expense.is_donation) {
