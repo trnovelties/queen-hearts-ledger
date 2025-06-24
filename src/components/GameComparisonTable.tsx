@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,10 @@ interface GameComparisonTableProps {
 export function GameComparisonTable({ games, formatCurrency }: GameComparisonTableProps) {
   // Calculate performance metrics for each game
   const gameMetrics = games.map(game => {
+    console.log(`=== GAME COMPARISON DEBUG: ${game.name} ===`);
+    console.log('Game start_date raw:', game.start_date);
+    console.log('Game end_date raw:', game.end_date);
+    
     const profitMargin = game.total_sales > 0 ? 
       ((game.organization_net_profit / game.total_sales) * 100) : 0;
     
@@ -107,91 +110,103 @@ export function GameComparisonTable({ games, formatCurrency }: GameComparisonTab
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedGames.map((game, index) => (
-                <TableRow 
-                  key={game.id} 
-                  className={`border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/50 transition-colors ${
-                    index === 0 ? 'bg-[#A1E96C]/5' : ''
-                  }`}
-                >
-                  <TableCell className="font-medium">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        {index === 0 && (
-                          <Trophy className="h-4 w-4 text-yellow-500" />
+              {sortedGames.map((game, index) => {
+                console.log(`=== COMPARISON TABLE ROW DEBUG: ${game.name} ===`);
+                console.log('Game start_date raw:', game.start_date);
+                console.log('Game end_date raw:', game.end_date);
+                
+                const startDateFormatted = formatDateStringShort(game.start_date);
+                const endDateFormatted = game.end_date ? formatDateStringShort(game.end_date) : null;
+                
+                console.log('formatDateStringShort start result:', startDateFormatted);
+                console.log('formatDateStringShort end result:', endDateFormatted);
+                
+                return (
+                  <TableRow 
+                    key={game.id} 
+                    className={`border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/50 transition-colors ${
+                      index === 0 ? 'bg-[#A1E96C]/5' : ''
+                    }`}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {index === 0 && (
+                            <Trophy className="h-4 w-4 text-yellow-500" />
+                          )}
+                          <span className="font-semibold text-[#1F4E4A]">{game.name}</span>
+                        </div>
+                        <div className="text-xs text-[#132E2C]/60">
+                          {startDateFormatted}
+                          {endDateFormatted && ` - ${endDateFormatted}`}
+                        </div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="text-center">
+                        <div className="font-semibold text-[#1F4E4A]">{game.duration}</div>
+                        <div className="text-xs text-[#132E2C]/60">weeks</div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="font-semibold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="text-center">
+                        <div className="font-semibold text-[#1F4E4A]">{game.ticketsSold.toLocaleString()}</div>
+                        <div className="text-xs text-[#132E2C]/60">tickets</div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="font-semibold text-[#1F4E4A]">{formatCurrency(game.total_payouts)}</div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className={`font-semibold ${getPerformanceColor(game.organization_net_profit)}`}>
+                        {formatCurrency(game.organization_net_profit)}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {game.profitMargin >= 0 ? (
+                          <TrendingUp className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600" />
                         )}
-                        <span className="font-semibold text-[#1F4E4A]">{game.name}</span>
+                        <span className={`font-semibold ${getPerformanceColor(game.profitMargin)}`}>
+                          {game.profitMargin.toFixed(1)}%
+                        </span>
                       </div>
-                      <div className="text-xs text-[#132E2C]/60">
-                        {formatDateStringShort(game.start_date)}
-                        {game.end_date && ` - ${formatDateStringShort(game.end_date)}`}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {game.roi >= 0 ? (
+                          <TrendingUp className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600" />
+                        )}
+                        <span className={`font-semibold ${getPerformanceColor(game.roi)}`}>
+                          {game.roi.toFixed(1)}%
+                        </span>
                       </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="text-center">
-                      <div className="font-semibold text-[#1F4E4A]">{game.duration}</div>
-                      <div className="text-xs text-[#132E2C]/60">weeks</div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="font-semibold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="text-center">
-                      <div className="font-semibold text-[#1F4E4A]">{game.ticketsSold.toLocaleString()}</div>
-                      <div className="text-xs text-[#132E2C]/60">tickets</div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="font-semibold text-[#1F4E4A]">{formatCurrency(game.total_payouts)}</div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className={`font-semibold ${getPerformanceColor(game.organization_net_profit)}`}>
-                      {formatCurrency(game.organization_net_profit)}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {game.profitMargin >= 0 ? (
-                        <TrendingUp className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-600" />
-                      )}
-                      <span className={`font-semibold ${getPerformanceColor(game.profitMargin)}`}>
-                        {game.profitMargin.toFixed(1)}%
-                      </span>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {game.roi >= 0 ? (
-                        <TrendingUp className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-600" />
-                      )}
-                      <span className={`font-semibold ${getPerformanceColor(game.roi)}`}>
-                        {game.roi.toFixed(1)}%
-                      </span>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="font-semibold text-[#1F4E4A]">{formatCurrency(game.avgWeeklyRevenue)}</div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    {getStatusBadge(game)}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="font-semibold text-[#1F4E4A]">{formatCurrency(game.avgWeeklyRevenue)}</div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      {getStatusBadge(game)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

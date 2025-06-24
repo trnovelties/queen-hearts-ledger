@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,10 +83,29 @@ export function GameManagement() {
       console.log('GameManagement: Successfully fetched games:', gamesData);
       console.log('GameManagement: Number of games found:', gamesData?.length || 0);
       
-      // Log each game's start_date for debugging
+      // DEBUG: Log each game's start_date extensively
       if (gamesData) {
         gamesData.forEach((game, index) => {
-          console.log(`Game ${index} start_date from DB:`, game.start_date, 'type:', typeof game.start_date);
+          console.log(`=== GAME ${index} DATE DEBUG ===`);
+          console.log('Game name:', game.name);
+          console.log('Raw start_date from DB:', game.start_date);
+          console.log('start_date type:', typeof game.start_date);
+          console.log('start_date length:', game.start_date?.length);
+          console.log('start_date JSON:', JSON.stringify(game.start_date));
+          
+          // Test our formatting function
+          const formattedDate = formatDateStringShort(game.start_date);
+          console.log('formatDateStringShort result:', formattedDate);
+          
+          // Test what happens if we create a Date object (this should cause issues)
+          if (game.start_date) {
+            const dateObj = new Date(game.start_date);
+            console.log('Date object created:', dateObj);
+            console.log('Date object toDateString():', dateObj.toDateString());
+            console.log('Date object toLocaleDateString():', dateObj.toLocaleDateString());
+            console.log('User timezone offset:', dateObj.getTimezoneOffset());
+          }
+          console.log('=== END GAME DATE DEBUG ===');
         });
       }
       
@@ -186,13 +206,14 @@ export function GameManagement() {
           {games.map((game) => {
             const gameStatus = getGameStatus(game);
             
-            console.log(`=== Processing game card for game: ${game.name} ===`);
+            console.log(`=== RENDERING GAME CARD FOR: ${game.name} ===`);
             console.log('Raw start_date from game object:', game.start_date);
             console.log('start_date type:', typeof game.start_date);
             
             // Use formatDateStringShort for consistent display - NO Date objects
             const displayDate = formatDateStringShort(game.start_date);
-            console.log('formatDateStringShort display date:', displayDate);
+            console.log('Final display date for card:', displayDate);
+            console.log('=== END GAME CARD RENDER DEBUG ===');
             
             return (
               <Card key={game.id} className="hover:shadow-lg transition-shadow">
