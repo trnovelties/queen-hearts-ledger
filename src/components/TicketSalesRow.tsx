@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
-import { formatDateForDatabase } from "@/lib/dateUtils";
+import { getTodayDateString } from "@/lib/dateUtils";
 
 interface TicketSalesRowProps {
   gameId: string;
@@ -35,7 +36,7 @@ export function TicketSalesRow({
   onCancel 
 }: TicketSalesRowProps) {
   const [formData, setFormData] = useState({
-    date: new Date(),
+    date: getTodayDateString(), // Use string instead of Date object
     ticketsSold: '',
     ticketPrice: gameData.ticket_price
   });
@@ -86,13 +87,13 @@ export function TicketSalesRow({
       // Calculate new jackpot contributions total
       const newJackpotContributions = totalJackpotContributions;
 
-      // Insert ticket sales record using timezone-neutral date formatting
+      // Insert ticket sales record using timezone-neutral date string
       const { error: insertError } = await supabase
         .from('ticket_sales')
         .insert({
           game_id: gameId,
           week_id: weekId,
-          date: formatDateForDatabase(formData.date),
+          date: formData.date, // Use the date string directly
           tickets_sold: ticketsSold,
           ticket_price: formData.ticketPrice,
           amount_collected: amountCollected,
@@ -127,6 +128,11 @@ export function TicketSalesRow({
     }
   };
 
+  const handleDateChange = (dateString: string) => {
+    console.log('TicketSalesRow: Date changed to:', dateString);
+    setFormData({ ...formData, date: dateString });
+  };
+
   return (
     <Card className="w-full max-w-md border-[#1F4E4A]/20 shadow-sm">
       <CardHeader className="pb-4">
@@ -137,11 +143,13 @@ export function TicketSalesRow({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="date" className="text-sm font-semibold text-[#132E2C]">Date</Label>
-            <DatePickerWithInput
-              date={formData.date}
-              setDate={(date) => setFormData({ ...formData, date: date || new Date() })}
-              placeholder="Select date"
-              className="w-full"
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="border-[#1F4E4A]/20 focus:ring-[#A1E96C] font-medium"
+              required
             />
           </div>
 

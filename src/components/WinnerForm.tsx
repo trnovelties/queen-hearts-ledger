@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
-import { formatDateForDatabase } from "@/lib/dateUtils";
+import { getTodayDateString } from "@/lib/dateUtils";
 
 interface WinnerFormProps {
   open: boolean;
@@ -214,11 +214,11 @@ export function WinnerForm({
         carryoverAmount = newEndingJackpot;
         newEndingJackpot = 0;
         
-        // Update game end date and carryover
+        // Update game end date and carryover - use getTodayDateString for timezone-neutral date
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            end_date: formatDateForDatabase(new Date()),
+            end_date: getTodayDateString(), // Use string instead of Date object
             carryover_jackpot: carryoverAmount,
             total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
@@ -258,7 +258,7 @@ export function WinnerForm({
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId,
-        date: formatDateForDatabase(new Date())
+        date: getTodayDateString() // Use string instead of Date object
       };
 
       toast.success("Winner details saved successfully!");
