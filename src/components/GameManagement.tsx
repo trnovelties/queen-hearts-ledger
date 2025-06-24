@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { ExpenseModal } from "./ExpenseModal";
 import { GameDetailsModal } from "./GameDetailsModal";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
+import { formatDateStringForDisplay } from "@/lib/dateUtils";
 
 export function GameManagement() {
   const { user, isAdmin } = useAuth();
@@ -80,6 +82,20 @@ export function GameManagement() {
 
       console.log('GameManagement: Successfully fetched games:', gamesData);
       console.log('GameManagement: Number of games found:', gamesData?.length || 0);
+      
+      // Add debugging for date handling
+      if (gamesData && gamesData.length > 0) {
+        console.log('=== DATE DISPLAY DEBUGGING ===');
+        gamesData.forEach((game, index) => {
+          console.log(`Game ${index + 1}:`);
+          console.log(`  start_date from DB: "${game.start_date}" (type: ${typeof game.start_date})`);
+          console.log(`  end_date from DB: "${game.end_date}" (type: ${typeof game.end_date})`);
+          console.log(`  formatDateStringForDisplay(start_date): "${formatDateStringForDisplay(game.start_date)}"`);
+          if (game.end_date) {
+            console.log(`  formatDateStringForDisplay(end_date): "${formatDateStringForDisplay(game.end_date)}"`);
+          }
+        });
+      }
       
       setGames(gamesData || []);
     } catch (error) {
@@ -192,7 +208,7 @@ export function GameManagement() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-4 h-4 text-gray-500" />
-                      <span>Started: {new Date(game.start_date).toLocaleDateString()}</span>
+                      <span>Started: {formatDateStringForDisplay(game.start_date)}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <DollarSign className="w-4 h-4 text-gray-500" />
