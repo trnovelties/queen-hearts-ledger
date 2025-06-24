@@ -11,7 +11,23 @@ import { ExpenseModal } from "./ExpenseModal";
 import { GameDetailsModal } from "./GameDetailsModal";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
-import { formatDateStringForDisplay } from "@/lib/dateUtils";
+
+// Simple date formatter - NO Date objects, pure string manipulation
+const formatSimpleDate = (dateString: string): string => {
+  if (!dateString) return dateString;
+  
+  const [year, month, day] = dateString.split('-');
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = monthNames[monthIndex];
+  const dayNumber = parseInt(day, 10);
+  
+  return `${monthName} ${dayNumber}, ${year}`;
+};
 
 export function GameManagement() {
   const { user, isAdmin } = useAuth();
@@ -191,9 +207,9 @@ export function GameManagement() {
             console.log('Raw start_date from game object:', game.start_date);
             console.log('start_date type:', typeof game.start_date);
             
-            // Display raw database date without any conversion
-            const displayDate = formatDateStringForDisplay(game.start_date);
-            console.log('Formatted display date:', displayDate);
+            // Use simple string formatting - NO Date objects
+            const displayDate = formatSimpleDate(game.start_date);
+            console.log('Simple formatted display date:', displayDate);
             
             return (
               <Card key={game.id} className="hover:shadow-lg transition-shadow">
