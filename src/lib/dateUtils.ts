@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for timezone-neutral date handling
  * These functions ensure dates are handled consistently regardless of user timezone
@@ -25,17 +26,20 @@ export function isValidDateString(dateString: string): boolean {
   if (!dateRegex.test(dateString)) return false;
   
   const [year, month, day] = dateString.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
   
-  return date.getFullYear() === year && 
-         date.getMonth() === month - 1 && 
-         date.getDate() === day;
+  // Basic validation without creating Date objects
+  if (year < 1900 || year > 2100) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  
+  return true;
 }
 
 /**
- * Formats a date string for display
+ * Formats a date string for display - PURE STRING MANIPULATION
  * Input: YYYY-MM-DD string
- * Output: Human readable format
+ * Output: Human readable format (e.g., "June 24, 2025")
+ * NO DATE OBJECTS - NO TIMEZONE ISSUES
  */
 export function formatDateStringForDisplay(dateString: string): string {
   console.log('=== formatDateStringForDisplay DEBUG ===');
@@ -51,7 +55,12 @@ export function formatDateStringForDisplay(dateString: string): string {
     return dateString;
   }
   
-  const [year, month, day] = dateString.split('-').map(Number);
+  // Parse the date string components directly - NO Date() constructor
+  const [yearStr, monthStr, dayStr] = dateString.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  
   console.log('Parsed values - year:', year, 'month:', month, 'day:', day);
   
   const monthNames = [
@@ -59,6 +68,7 @@ export function formatDateStringForDisplay(dateString: string): string {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   
+  // Format using pure string manipulation - no Date objects involved
   const formattedDate = `${monthNames[month - 1]} ${day}, ${year}`;
   console.log('Formatted result:', formattedDate);
   console.log('=== END formatDateStringForDisplay DEBUG ===');
