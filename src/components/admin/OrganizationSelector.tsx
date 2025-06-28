@@ -8,6 +8,7 @@ import { Eye, ArrowLeft, Building, Users, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
+import { formatDateStringForDisplay } from '@/lib/dateUtils';
 
 type Organization = {
   id: string;
@@ -62,6 +63,15 @@ export function OrganizationSelector() {
       about: org.about,
       role: org.role
     });
+  };
+
+  // Safe date formatting function
+  const formatJoinedDate = (dateString: string) => {
+    if (!dateString) return 'Unknown';
+    
+    // Extract just the date part if it's a full timestamp
+    const datePart = dateString.split('T')[0];
+    return formatDateStringForDisplay(datePart);
   };
 
   if (loading) {
@@ -132,7 +142,7 @@ export function OrganizationSelector() {
               )}
               
               <div className="text-xs text-gray-500">
-                Joined: {new Date(org.created_at).toLocaleDateString()}
+                Joined: {formatJoinedDate(org.created_at)}
               </div>
 
               <div className="flex gap-2 pt-2">

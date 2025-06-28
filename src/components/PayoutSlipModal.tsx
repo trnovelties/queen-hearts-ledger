@@ -2,10 +2,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { format, isValid, parseISO } from "date-fns";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateStringForDisplay, formatDateStringShort, getTodayDateString } from '@/lib/dateUtils';
 
 interface PayoutSlipModalProps {
   open: boolean;
@@ -62,20 +62,30 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
   if (!winnerData) return null;
 
-  // Safe date formatting function
-  const formatSafeDate = (dateValue: any, formatString: string = 'MMM d, yyyy') => {
+  // Safe date formatting function using timezone-neutral string functions
+  const formatSafeDate = (dateValue: any, formatType: 'full' | 'short' = 'full') => {
     if (!dateValue) return 'N/A';
     
-    let date: Date;
+    // Handle various input types and convert to string
+    let dateString: string;
     if (typeof dateValue === 'string') {
-      date = parseISO(dateValue);
+      dateString = dateValue;
     } else if (dateValue instanceof Date) {
-      date = dateValue;
+      // Convert Date to YYYY-MM-DD string (this might have timezone issues but is legacy support)
+      const year = dateValue.getFullYear();
+      const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+      const day = String(dateValue.getDate()).padStart(2, '0');
+      dateString = `${year}-${month}-${day}`;
     } else {
       return 'N/A';
     }
     
-    return isValid(date) ? format(date, formatString) : 'N/A';
+    // Use our timezone-neutral formatting functions
+    if (formatType === 'short') {
+      return formatDateStringShort(dateString);
+    } else {
+      return formatDateStringForDisplay(dateString);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -129,7 +139,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </div>
             <div className="text-right space-y-1">
               <p className="font-semibold">Prepared By: Finance Department</p>
-              <p className="text-sm text-gray-600">Date Prepared: {formatSafeDate(new Date())}</p>
+              <p className="text-sm text-gray-600">Date Prepared: {formatSafeDate(getTodayDateString())}</p>
             </div>
           </div>
           
@@ -234,7 +244,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                   <div className="space-y-1 text-sm">
                     {expenses.filter(e => !e.is_donation).slice(0, 5).map((expense, index) => (
                       <div key={index} className="flex justify-between">
-                        <span>{formatSafeDate(expense.date, 'MM/dd')} - {expense.memo || 'Expense'}</span>
+                        <span>{formatSafeDate(expense.date, 'short')} - {expense.memo || 'Expense'}</span>
                         <span>{formatCurrency(expense.amount)}</span>
                       </div>
                     ))}
@@ -250,7 +260,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                   <div className="space-y-1 text-sm">
                     {expenses.filter(e => e.is_donation).slice(0, 5).map((donation, index) => (
                       <div key={index} className="flex justify-between">
-                        <span>{formatSafeDate(donation.date, 'MM/dd')} - {donation.memo || 'Donation'}</span>
+                        <span>{formatSafeDate(donation.date, 'short')} - {donation.memo || 'Donation'}</span>
                         <span>{formatCurrency(donation.amount)}</span>
                       </div>
                     ))}
