@@ -233,7 +233,16 @@ export function WinnerForm({
 
       if (updateSaleError) throw updateSaleError;
 
-      // Prepare winner data for distribution slip - use string date
+      // Fetch the week data to get proper dates for the payout slip
+      const { data: weekData, error: weekDataError } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('id', weekId)
+        .single();
+
+      if (weekDataError) throw weekDataError;
+
+      // Prepare winner data for distribution slip - use string date and include all necessary info
       const todayDateString = getTodayDateString();
       const winnerData = {
         winnerName: formData.winnerName,
@@ -243,7 +252,11 @@ export function WinnerForm({
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId,
-        date: todayDateString // Pure string, no Date conversion
+        date: todayDateString, // Pure string, no Date conversion
+        weekNumber: weekData.week_number,
+        weekStartDate: weekData.start_date,
+        weekEndDate: weekData.end_date,
+        winnerPresent: formData.winnerPresent
       };
 
       toast.success("Winner details saved successfully!");

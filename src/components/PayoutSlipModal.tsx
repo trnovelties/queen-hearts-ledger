@@ -17,12 +17,14 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [weekData, setWeekData] = useState<any>(null);
+  const [gameData, setGameData] = useState<any>(null);
   const slipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (winnerData && open) {
       fetchWeekExpenses();
       fetchWeekData();
+      fetchGameData();
     }
   }, [winnerData, open]);
 
@@ -57,6 +59,23 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
       setWeekData(data);
     } catch (error) {
       console.error('Error fetching week data:', error);
+    }
+  };
+
+  const fetchGameData = async () => {
+    if (!winnerData?.gameId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', winnerData.gameId)
+        .single();
+      
+      if (error) throw error;
+      setGameData(data);
+    } catch (error) {
+      console.error('Error fetching game data:', error);
     }
   };
 
@@ -109,7 +128,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         const imgWidth = 210;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save(`payout-slip-${winnerData.winnerName}-week-${winnerData.weekNumber}.pdf`);
+        pdf.save(`payout-slip-${winnerData.winnerName}-week-${weekData?.week_number || 'N/A'}.pdf`);
       } catch (error) {
         console.error('Error generating PDF:', error);
       } finally {
@@ -121,7 +140,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   // Calculate totals
   const totalExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
   const totalDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
-  const grossWinnings = winnerData.payoutAmount || weekData?.weekly_payout || 0;
+  const grossWinnings = winnerData.amountWon || weekData?.weekly_payout || 0;
   const netPayout = grossWinnings; // Assuming no deductions for now
 
   return (
@@ -144,10 +163,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           </div>
           
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">WEEK {winnerData.weekNumber} PAYOUT</h2>
-            <p className="text-lg font-semibold">{winnerData.gameName}</p>
+            <h2 className="text-2xl font-bold">WEEK {weekData?.week_number || 'N/A'} PAYOUT</h2>
+            <p className="text-lg font-semibold">{gameData?.name || 'Game Name N/A'}</p>
             <p className="text-sm text-gray-600">
-              Week Period: {formatSafeDate(winnerData.weekStartDate)} - {formatSafeDate(winnerData.weekEndDate)}
+              Week Period: {formatSafeDate(weekData?.start_date)} - {formatSafeDate(weekData?.end_date)}
             </p>
           </div>
 
@@ -156,7 +175,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
               <div>
                 <span className="font-semibold">Winner Name:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1 text-lg">
-                  {winnerData.winnerName || 'N/A'}
+                  {winnerData.winnerName || weekData?.winner_name || 'N/A'}
                 </div>
               </div>
               <div>
@@ -168,7 +187,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
               <div>
                 <span className="font-semibold">Slot Selected:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  #{winnerData.slotChosen || 'N/A'}
+                  #{winnerData.slotChosen || weekData?.slot_chosen || 'N/A'}
                 </div>
               </div>
             </div>
@@ -177,19 +196,19 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
               <div>
                 <span className="font-semibold">Card Drawn:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1 text-lg font-semibold">
-                  {winnerData.cardSelected || 'N/A'}
+                  {winnerData.cardSelected || weekData?.card_selected || 'N/A'}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Winner Present:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.winnerPresent ? 'Yes' : 'No'}
+                  {weekData?.winner_present !== undefined ? (weekData.winner_present ? 'Yes' : 'No') : 'N/A'}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Authorized By:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.authorizedSignatureName || 'N/A'}
+                  {winnerData.authorizedSignatureName || weekData?.authorized_signature_name || 'N/A'}
                 </div>
               </div>
             </div>
