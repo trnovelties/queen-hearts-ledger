@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
+import { useCalculationValidation } from "@/hooks/useCalculationValidation";
 import { getTodayDateString } from "@/lib/dateUtils";
 
 interface TicketSalesRowProps {
@@ -41,6 +42,8 @@ export function TicketSalesRow({
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const { validateTicketSales, validateJackpot, validateAndLog } = useCalculationValidation();
+
   // Calculate current jackpot contributions
   const currentJackpotContribution = (parseFloat(formData.ticketsSold) || 0) * formData.ticketPrice * (gameData.jackpot_percentage / 100);
   const totalJackpotContributions = previousJackpotContributions + currentJackpotContribution;
@@ -69,6 +72,63 @@ export function TicketSalesRow({
         return;
       }
 
+      // Validate ticket sales calculation with audit logging
+      const { result: calculationResults, validation } = await validateAndLog(
+        'ticket_sales_calculation',
+        {
+          ticketsSold,
+          ticketPrice: formData.ticketPrice,
+          organizationPercentage: gameData.organization_percentage,
+          jackpotPercentage: gameData.jackpot_percentage
+        },
+        () => {
+          const amountCollected = ticketsSold * formData.ticketPrice;
+          const organizationTotal = amountCollected * (gameData.organization_percentage / 100);
+          const jackpotTotal = amountCollected * (gameData.jackpot_percentage / 100);
+          
+          return {
+            amountCollected,
+            organizationTotal,
+            jackpotTotal
+          };
+        },
+        (result) => validateTicketSales(
+          ticketsSold,
+          formData.ticketPrice,
+          gameData.organization_percentage,
+          gameData.jackpot_percentage,
+          false
+        ),
+        gameId,
+        weekId
+      );
+
+      if (validation && !validation.isValid) {
+        toast.error("Calculation validation failed", {
+          description: validation.errors.join(', ')
+        });
+        return;
+      }
+
+      // Validate jackpot calculation with audit logging
+      const { validation: jackpotValidation } = await validateAndLog(
+        'jackpot_calculation',
+        {
+          jackpotContributions: totalJackpotContributions,
+          minimumJackpot: gameData.minimum_starting_jackpot,
+          carryoverJackpot: gameData.carryover_jackpot
+        },
+        () => ({ displayedJackpot }),
+        (result) => validateJackpot(
+          totalJackpotContributions,
+          gameData.minimum_starting_jackpot,
+          gameData.carryover_jackpot,
+          false
+        ),
+        gameId,
+        weekId
+      );
+
       // CRITICAL: Log the exact date being sent to database
       console.log('=== TICKET SALES DATE DEBUG ===');
       console.log('1. formData.date (raw):', formData.date);
@@ -80,10 +140,6 @@ export function TicketSalesRow({
       const dateToSave = String(formData.date).trim();
       console.log('5. dateToSave (final):', dateToSave);
 
-      const amountCollected = ticketsSold * formData.ticketPrice;
-      const organizationTotal = amountCollected * (gameData.organization_percentage / 100);
-      const jackpotTotal = amountCollected * (gameData.jackpot_percentage / 100);
-
       // Get cumulative collected for this game
       const { data: existingSales, error: salesError } = await supabase
         .from('ticket_sales')
@@ -92,10 +148,7 @@ export function TicketSalesRow({
 
       if (salesError) throw salesError;
 
-      const cumulativeCollected = (existingSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0) + amountCollected;
-
-      // Calculate new jackpot contributions total
-      const newJackpotContributions = totalJackpotContributions;
+      const cumulativeCollected = (existingSales?.reduce((sum, sale) => sum + sale.amount_collected, 0) || 0) + calculationResults.amountCollected;
 
       // Insert ticket sales record - CRITICAL: Use dateToSave directly as string
       const insertData = {
@@ -104,11 +157,11 @@ export function TicketSalesRow({
         date: dateToSave, // Pure string, no Date object conversion
         tickets_sold: ticketsSold,
         ticket_price: formData.ticketPrice,
-        amount_collected: amountCollected,
+        amount_collected: calculationResults.amountCollected,
         cumulative_collected: cumulativeCollected,
-        organization_total: organizationTotal,
-        jackpot_total: jackpotTotal,
-        jackpot_contributions_total: newJackpotContributions,
+        organization_total: calculationResults.organizationTotal,
+        jackpot_total: calculationResults.jackpotTotal,
+        jackpot_contributions_total: totalJackpotContributions,
         displayed_jackpot_total: displayedJackpot,
         ending_jackpot_total: displayedJackpot,
         user_id: user.id
@@ -129,15 +182,28 @@ export function TicketSalesRow({
       console.log('10. DB returned date:', insertResult?.[0]?.date);
       console.log('11. Date match check:', dateToSave === insertResult?.[0]?.date);
 
-      // Update game totals
-      const { error: updateError } = await supabase
-        .from('games')
-        .update({
-          total_sales: cumulativeCollected
-        })
-        .eq('id', gameId);
+      // Update game totals with audit logging
+      await validateAndLog(
+        'game_totals_update',
+        {
+          gameId,
+          previousTotalSales: cumulativeCollected - calculationResults.amountCollected,
+          newSales: calculationResults.amountCollected
+        },
+        async () => {
+          const { error: updateError } = await supabase
+            .from('games')
+            .update({
+              total_sales: cumulativeCollected
+            })
+            .eq('id', gameId);
 
-      if (updateError) throw updateError;
+          if (updateError) throw updateError;
+          return { updatedTotalSales: cumulativeCollected };
+        },
+        undefined,
+        gameId
+      );
 
       toast.success("Ticket sales added successfully!");
       onSuccess();
