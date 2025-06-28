@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,36 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { Calendar } from "@/components/ui/calendar"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command"
-
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/currencyUtils";
@@ -49,12 +25,11 @@ import { CreateWeekModal } from "@/components/CreateWeekModal";
 import { DonationModal } from "@/components/DonationModal";
 import { ExpenseModal } from "@/components/ExpenseModal";
 import { EditGameModal } from "@/components/EditGameModal";
-import { getTodayDateString } from "@/lib/dateUtils";
 
 interface Game {
   id: string;
   name: string;
-  organization_id: string;
+  user_id: string;
   total_donations: number;
   organization_net_profit: number;
   carryover_jackpot: number;
@@ -80,11 +55,7 @@ export default function Dashboard() {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isEditGameModalOpen, setIsEditGameModalOpen] = useState(false);
   const [selectedGameName, setSelectedGameName] = useState<string>("");
-  const [selectedWeekNumber, setSelectedWeekNumber] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [expandedGames, setExpandedGames] = useState(new Set<string>());
-
-  const [date, setDate] = useState<Date>();
 
   const toggleGameExpanded = (gameId: string) => {
     const newExpandedGames = new Set(expandedGames);
@@ -111,7 +82,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('games')
         .select('*')
-        .eq('organization_id', user.id);
+        .eq('user_id', user.id);
 
       if (error) {
         throw error;
@@ -174,9 +145,26 @@ export default function Dashboard() {
         return;
       }
 
+      // Get the current game count for this user to set game_number
+      const { data: existingGames } = await supabase
+        .from('games')
+        .select('game_number')
+        .eq('user_id', user.id)
+        .order('game_number', { ascending: false })
+        .limit(1);
+
+      const nextGameNumber = existingGames && existingGames.length > 0 
+        ? existingGames[0].game_number + 1 
+        : 1;
+
       const { data, error } = await supabase
         .from('games')
-        .insert([{ name: newGameName, organization_id: user.id }])
+        .insert([{ 
+          name: newGameName, 
+          user_id: user.id,
+          game_number: nextGameNumber,
+          start_date: new Date().toISOString().split('T')[0]
+        }])
         .select();
 
       if (error) {
@@ -288,7 +276,7 @@ export default function Dashboard() {
                   Edit Game
                 </Button>
                 <CollapsibleTrigger asChild>
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => toggleGameExpanded(game.id)}>
                     {expandedGames.has(game.id) ? "Collapse" : "Expand"}
                   </Button>
                 </CollapsibleTrigger>
@@ -305,6 +293,7 @@ export default function Dashboard() {
                       setSelectedGameId(game.id);
                       setSelectedGameName(game.name);
                       setIsCreateWeekModalOpen(true);
+                      fetchWeeks(game.id);
                     }}
                     className="mb-4 bg-[#1F4E4A] text-white hover:bg-[#317873] hover:text-white"
                   >
@@ -312,87 +301,87 @@ export default function Dashboard() {
                   </Button>
 
                   {/* Weeks Mapping */}
-                  {weeks.map((week) => {
+                  {weeks.filter(week => week.game_id === game.id).map((week) => {
                     // Week calculations
-                    const weekTotalTickets = week.ticket_sales?.reduce((sum, sale) => sum + sale.number_of_tickets, 0) || 0;
-                    const weekTotalSales = week.ticket_sales?.reduce((sum, sale) => sum + sale.total_value, 0) || 0;
-                    const weekOrganizationTotal = week.ticket_sales?.reduce((sum, sale) => sum + sale.organization_net, 0) || 0;
-                    const weekJackpotTotal = week.ticket_sales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0;
+                    const weekTotalTickets = week.ticket_sales?.reduce((sum, sale) => sum + (sale.tickets_sold || 0), 0) || 0;
+                    const weekTotalSales = week.ticket_sales?.reduce((sum, sale) => sum + (sale.amount_collected || 0), 0) || 0;
+                    const weekOrganizationTotal = week.ticket_sales?.reduce((sum, sale) => sum + (sale.organization_total || 0), 0) || 0;
+                    const weekJackpotTotal = week.ticket_sales?.reduce((sum, sale) => sum + (sale.jackpot_total || 0), 0) || 0;
                     
                     // Calculate proper ending jackpot total
                     let endingJackpotTotal = 0;
                     
-                    if (week.ticket_sales && week.ticket_sales.length > 0) {
-                      // Get the previous week's ending jackpot or game carryover
-                      const previousWeeks = weeks.filter(w => w.game_id === game.id && w.week_number < week.week_number);
-                      const previousWeek = previousWeeks.sort((a, b) => b.week_number - a.week_number)[0];
-                      
-                      let startingJackpot = 0;
-                      if (previousWeek && previousWeek.ticket_sales && previousWeek.ticket_sales.length > 0) {
-                        // Use the previous week's ending jackpot
-                        const prevLatestEntry = previousWeek.ticket_sales.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                        startingJackpot = prevLatestEntry?.ending_jackpot_total || 0;
-                      } else {
-                        // First week of the game, use carryover jackpot
-                        startingJackpot = game.carryover_jackpot || 0;
-                      }
-                      
-                      // Calculate ending jackpot: Starting + This Week's Contributions - Weekly Payout
-                      endingJackpotTotal = startingJackpot + weekJackpotTotal - (week.weekly_payout || 0);
+                    // Get the previous week's ending jackpot or game carryover
+                    const previousWeeks = weeks.filter(w => w.game_id === game.id && w.week_number < week.week_number);
+                    const previousWeek = previousWeeks.sort((a, b) => b.week_number - a.week_number)[0];
+                    
+                    let startingJackpot = 0;
+                    if (previousWeek && previousWeek.ticket_sales && previousWeek.ticket_sales.length > 0) {
+                      // Use the previous week's ending jackpot from the last ticket sale entry
+                      const prevLatestEntry = previousWeek.ticket_sales.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                      startingJackpot = prevLatestEntry?.ending_jackpot_total || 0;
+                    } else {
+                      // First week of the game, use carryover jackpot
+                      startingJackpot = game.carryover_jackpot || 0;
                     }
+                    
+                    // Calculate ending jackpot: Starting + This Week's Contributions - Weekly Payout
+                    endingJackpotTotal = startingJackpot + weekJackpotTotal - (week.weekly_payout || 0);
 
-                    return <div>
-                      {/* Week Details Header */}
-                      <div className="font-semibold text-gray-700 mb-2">Week {week.week_number}</div>
+                    return (
+                      <div key={week.id} className="mb-6">
+                        {/* Week Details Header */}
+                        <div className="font-semibold text-gray-700 mb-2">Week {week.week_number}</div>
 
-                      {/* Winner Information Section */}
-                      {week.ticket_sales?.map((ticketSale) => (
-                        <div key={ticketSale.id} className="mb-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="text-sm text-gray-500">
-                            Date: {new Date(ticketSale.date).toLocaleDateString()}
+                        {/* Winner Information Section */}
+                        {week.ticket_sales?.map((ticketSale) => (
+                          <div key={ticketSale.id} className="mb-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="text-sm text-gray-500">
+                              Date: {new Date(ticketSale.date).toLocaleDateString()}
+                            </div>
+                            <div className="text-blue-600 font-medium">Winner: {ticketSale.winner_name || "N/A"}</div>
+                            <div className="text-gray-700">Tickets Sold: {ticketSale.tickets_sold || 0}</div>
+                            <div className="text-green-600">Total Value: {formatCurrency(ticketSale.amount_collected || 0)}</div>
+                            {ticketSale.memo && <div className="text-gray-600">Memo: {ticketSale.memo}</div>}
                           </div>
-                          <div className="text-blue-600 font-medium">Winner: {ticketSale.winner_name || "N/A"}</div>
-                          <div className="text-gray-700">Tickets Sold: {ticketSale.number_of_tickets}</div>
-                          <div className="text-green-600">Total Value: {formatCurrency(ticketSale.total_value)}</div>
-                          {ticketSale.memo && <div className="text-gray-600">Memo: {ticketSale.memo}</div>}
+                        ))}
+                        
+                        {/* Week Summary Stats - 5 columns with proper Ending Jackpot calculation */}
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+                          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
+                            <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
+                          </div>
+                          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                            <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
+                            <div className="text-sm text-green-600 font-medium">Ticket Sales</div>
+                          </div>
+                          <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
+                            <div className="text-sm text-purple-600 font-medium">Organization Net</div>
+                          </div>
+                          <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                            <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
+                            <div className="text-sm text-orange-600 font-medium">Jackpot Total</div>
+                          </div>
+                          <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                            <div className="text-2xl font-bold text-indigo-700">{formatCurrency(endingJackpotTotal)}</div>
+                            <div className="text-sm text-indigo-600 font-medium">Ending Jackpot</div>
+                          </div>
                         </div>
-                      ))}
-                      
-                      {/* Week Summary Stats - Updated to 5 columns with proper Ending Jackpot calculation */}
-                      <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
-                        <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
-                          <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
-                          <div className="text-sm text-green-600 font-medium">Ticket Sales</div>
-                        </div>
-                        <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                          <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
-                          <div className="text-sm text-purple-600 font-medium">Organization Net</div>
-                        </div>
-                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                          <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
-                          <div className="text-sm text-orange-600 font-medium">Jackpot Total</div>
-                        </div>
-                        <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                          <div className="text-2xl font-bold text-indigo-700">{formatCurrency(endingJackpotTotal)}</div>
-                          <div className="text-sm text-indigo-600 font-medium">Ending Jackpot</div>
-                        </div>
-                      </div>
-                      
-                      {/* Weekly Payout Display */}
-                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
-                        <div className="text-xl font-bold text-yellow-700">
-                          Weekly Payout: {formatCurrency(week.weekly_payout || 0)}
+                        
+                        {/* Weekly Payout Display */}
+                        <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
+                          <div className="text-xl font-bold text-yellow-700">
+                            Weekly Payout: {formatCurrency(week.weekly_payout || 0)}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    );
                   })}
 
                   {/* No Weeks Message */}
-                  {weeks.length === 0 && (
+                  {weeks.filter(week => week.game_id === game.id).length === 0 && (
                     <div className="text-gray-500 text-center">No weeks created for this game yet.</div>
                   )}
                 </div>
