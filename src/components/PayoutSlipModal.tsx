@@ -311,76 +311,83 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           </div>
 
           {/* Daily Entries Table */}
-          {ticketSales.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Daily Entries:</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-auto border-collapse border border-gray-400">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="border border-gray-400 px-3 py-2 text-left">Date</th>
-                      <th className="border border-gray-400 px-3 py-2 text-center">Tickets Sold</th>
-                      <th className="border border-gray-400 px-3 py-2 text-right">Amount Collected</th>
-                      <th className="border border-gray-400 px-3 py-2 text-right">Organization Share</th>
-                      <th className="border border-gray-400 px-3 py-2 text-right">Jackpot Share</th>
-                      <th className="border border-gray-400 px-3 py-2 text-right">Cumulative Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ticketSales.map((sale, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-400 px-3 py-2">{formatSafeDate(sale.date)}</td>
-                        <td className="border border-gray-400 px-3 py-2 text-center">{sale.tickets_sold}</td>
-                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.amount_collected)}</td>
-                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.organization_total)}</td>
-                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.jackpot_total)}</td>
-                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.cumulative_collected)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Financial Distribution Details */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">Financial Distribution Details:</h3>
+            <h3 className="font-semibold text-lg border-b pb-2">Daily Entries:</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full table-auto border-collapse border border-gray-400">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="border border-gray-400 px-4 py-2 text-left">Description</th>
-                    <th className="border border-gray-400 px-4 py-2 text-right">Amount</th>
+                    <th className="border border-gray-400 px-3 py-2 text-left">Date</th>
+                    <th className="border border-gray-400 px-3 py-2 text-center">Tickets Sold</th>
+                    <th className="border border-gray-400 px-3 py-2 text-right">Amount Collected</th>
+                    <th className="border border-gray-400 px-3 py-2 text-right">Organization Share</th>
+                    <th className="border border-gray-400 px-3 py-2 text-right">Jackpot Share</th>
+                    <th className="border border-gray-400 px-3 py-2 text-right">Cumulative Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="border border-gray-400 px-4 py-2">Gross Winnings</td>
-                    <td className="border border-gray-400 px-4 py-2 text-right font-semibold">
-                      {formatCurrency(grossWinnings)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-400 px-4 py-2">Less: Tax Withholding</td>
-                    <td className="border border-gray-400 px-4 py-2 text-right">
-                      {formatCurrency(0)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-400 px-4 py-2">Less: Other Deductions</td>
-                    <td className="border border-gray-400 px-4 py-2 text-right">
-                      {formatCurrency(0)}
-                    </td>
-                  </tr>
-                  <tr className="bg-yellow-50">
-                    <td className="border border-gray-400 px-4 py-2 font-bold">Net Payout to Winner</td>
-                    <td className="border border-gray-400 px-4 py-2 text-right font-bold text-lg">
-                      {formatCurrency(netPayout)}
-                    </td>
-                  </tr>
+                  {ticketSales.length > 0 ? ticketSales.map((sale, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="border border-gray-400 px-3 py-2">{formatSafeDate(sale.date)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-center">{sale.tickets_sold}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.amount_collected)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.organization_total)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.jackpot_total)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.cumulative_collected)}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="border border-gray-400 px-3 py-2 text-center text-gray-500">
+                        No daily entries found for this week
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* Payout Information */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Payout Information:</h3>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Gross Winnings:</span>
+                    <span className="font-bold text-lg">{formatCurrency(grossWinnings)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Tax Withholding:</span>
+                    <span>{formatCurrency(0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Other Deductions:</span>
+                    <span>{formatCurrency(0)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between">
+                    <span className="font-bold text-lg">Net Payout:</span>
+                    <span className="font-bold text-xl text-green-600">{formatCurrency(netPayout)}</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Card Selected:</span>
+                    <span className="font-semibold">{displayData.cardSelected}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Slot Chosen:</span>
+                    <span className="font-semibold">#{displayData.slotChosen}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Winner Present:</span>
+                    <span className={`font-semibold ${displayData.winnerPresent ? 'text-green-600' : 'text-red-600'}`}>
+                      {displayData.winnerPresent !== undefined ? (displayData.winnerPresent ? '✓ Yes' : '✗ No') : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
