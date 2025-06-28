@@ -290,37 +290,34 @@ export default function Dashboard() {
       cumulativeCollected += amountCollected;
 
       // Calculate ending jackpot total correctly
-      // Start with carryover jackpot from the game
+      // Start with carryover jackpot
       let endingJackpotTotal = game.carryover_jackpot || 0;
       
       // Add jackpot contributions from all sales up to and including this entry
       if (allGameSales) {
-        // Process all sales chronologically up to this entry
-        const salesUpToThisEntry = allGameSales.filter(sale => {
+        // Get all sales that should be included (before or on this date, excluding current entry if updating)
+        for (const sale of allGameSales) {
           const saleDate = new Date(sale.date);
           const currentEntryDate = new Date(entryDate);
-          return saleDate <= currentEntryDate && sale.id !== existingEntry?.id;
-        });
-        
-        // Add jackpot contributions from previous sales
-        for (const sale of salesUpToThisEntry) {
-          endingJackpotTotal += sale.jackpot_total;
+          
+          if (saleDate < currentEntryDate || (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id)) {
+            endingJackpotTotal += sale.jackpot_total;
+          }
         }
       }
       
-      // Add this entry's contribution
+      // Add this entry's jackpot contribution
       endingJackpotTotal += jackpotTotal;
 
-      // Subtract any payouts that have already been made
-      // Get all weeks that have been completed (have payouts) before this entry
-      const completedWeeks = game.weeks.filter((w: any) => {
+      // Subtract payouts from completed weeks that ended before or on this date
+      for (const w of game.weeks) {
         const weekEndDate = new Date(w.end_date);
         const currentEntryDate = new Date(entryDate);
-        return weekEndDate < currentEntryDate && w.weekly_payout > 0;
-      });
-      
-      for (const completedWeek of completedWeeks) {
-        endingJackpotTotal -= completedWeek.weekly_payout;
+        
+        // If week ended before this entry date and had a payout, subtract it
+        if (weekEndDate <= currentEntryDate && w.weekly_payout > 0) {
+          endingJackpotTotal -= w.weekly_payout;
+        }
       }
 
       // Optimistically update local state first
