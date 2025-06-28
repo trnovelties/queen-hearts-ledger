@@ -32,20 +32,29 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   }, [winnerData, open, user?.id]);
 
   const fetchAllData = async () => {
-    if (!winnerData?.gameId || !user?.id) {
-      console.log('PayoutSlipModal - Missing gameId or user ID');
+    if (!user?.id) {
+      console.log('PayoutSlipModal - Missing user ID');
+      return;
+    }
+    
+    // Use gameId and weekId from winnerData, or fallback to winnerData properties
+    const gameId = winnerData?.gameId || winnerData?.game_id;
+    const weekId = winnerData?.weekId || winnerData?.week_id;
+    
+    if (!gameId) {
+      console.log('PayoutSlipModal - Missing gameId');
       return;
     }
     
     setLoading(true);
     try {
-      console.log('Fetching data for gameId:', winnerData.gameId, 'weekId:', winnerData.weekId);
+      console.log('Fetching data for gameId:', gameId, 'weekId:', weekId);
       
       // Fetch game data
       const { data: gameData, error: gameError } = await supabase
         .from('games')
         .select('*')
-        .eq('id', winnerData.gameId)
+        .eq('id', gameId)
         .eq('user_id', user.id)
         .single();
       
@@ -57,11 +66,11 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
       }
 
       // Fetch week data if weekId is provided
-      if (winnerData.weekId) {
+      if (weekId) {
         const { data: weekData, error: weekError } = await supabase
           .from('weeks')
           .select('*')
-          .eq('id', winnerData.weekId)
+          .eq('id', weekId)
           .eq('user_id', user.id)
           .single();
         
@@ -76,7 +85,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         const { data: salesData, error: salesError } = await supabase
           .from('ticket_sales')
           .select('*')
-          .eq('week_id', winnerData.weekId)
+          .eq('week_id', weekId)
           .eq('user_id', user.id)
           .order('date', { ascending: true });
         
@@ -92,7 +101,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
       const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
         .select('*')
-        .eq('game_id', winnerData.gameId)
+        .eq('game_id', gameId)
         .eq('user_id', user.id)
         .order('date', { ascending: false });
       
