@@ -290,48 +290,38 @@ export default function Dashboard() {
       cumulativeCollected += amountCollected;
 
       // Calculate ending jackpot total correctly
-      // Find the previous ending jackpot total by getting all sales before this date
-      let previousJackpotTotal = game.carryover_jackpot || 0;
+      // Start with carryover jackpot from the game
+      let endingJackpotTotal = game.carryover_jackpot || 0;
       
-      // Get all sales entries for this game ordered by date
-      const salesBeforeThisEntry = allGameSales?.filter(sale => {
-        const saleDate = new Date(sale.date);
-        const currentEntryDate = new Date(entryDate);
-        // Include entries before this date, or same date but different entry (if updating)
-        return saleDate < currentEntryDate || 
-               (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id);
-      }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      // Calculate the running jackpot total up to this point
-      let runningJackpotTotal = game.carryover_jackpot || 0;
-      
-      if (salesBeforeThisEntry && salesBeforeThisEntry.length > 0) {
-        // Process each previous entry chronologically
-        for (const prevSale of salesBeforeThisEntry) {
-          runningJackpotTotal += prevSale.jackpot_total;
-          
-          // Check if there was a payout in the week this sale belongs to
-          const prevSaleWeek = game.weeks.find((w: any) => 
-            w.ticket_sales && w.ticket_sales.some((ts: any) => ts.id === prevSale.id)
-          );
-          
-          // If this was the last entry of a week and there was a winner, subtract the payout
-          if (prevSaleWeek && prevSaleWeek.weekly_payout > 0) {
-            const weekSales = prevSaleWeek.ticket_sales.sort((a: any, b: any) => 
-              new Date(a.date).getTime() - new Date(b.date).getTime()
-            );
-            const lastSaleInWeek = weekSales[weekSales.length - 1];
-            
-            // If this is the last sale in the week, subtract the payout
-            if (lastSaleInWeek && lastSaleInWeek.id === prevSale.id) {
-              runningJackpotTotal -= prevSaleWeek.weekly_payout;
-            }
-          }
+      // Add jackpot contributions from all sales up to and including this entry
+      if (allGameSales) {
+        // Process all sales chronologically up to this entry
+        const salesUpToThisEntry = allGameSales.filter(sale => {
+          const saleDate = new Date(sale.date);
+          const currentEntryDate = new Date(entryDate);
+          return saleDate <= currentEntryDate && sale.id !== existingEntry?.id;
+        });
+        
+        // Add jackpot contributions from previous sales
+        for (const sale of salesUpToThisEntry) {
+          endingJackpotTotal += sale.jackpot_total;
         }
       }
+      
+      // Add this entry's contribution
+      endingJackpotTotal += jackpotTotal;
 
-      // Now add this entry's jackpot contribution
-      const endingJackpotTotal = runningJackpotTotal + jackpotTotal;
+      // Subtract any payouts that have already been made
+      // Get all weeks that have been completed (have payouts) before this entry
+      const completedWeeks = game.weeks.filter((w: any) => {
+        const weekEndDate = new Date(w.end_date);
+        const currentEntryDate = new Date(entryDate);
+        return weekEndDate < currentEntryDate && w.weekly_payout > 0;
+      });
+      
+      for (const completedWeek of completedWeeks) {
+        endingJackpotTotal -= completedWeek.weekly_payout;
+      }
 
       // Optimistically update local state first
       setGames(prevGames => prevGames.map(g => {
