@@ -1,11 +1,12 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateStringForDisplay, formatDateStringShort, getTodayDateString } from '@/lib/dateUtils';
+import { useAuth } from '@/context/AuthContext';
 
 interface PayoutSlipModalProps {
   open: boolean;
@@ -14,68 +15,82 @@ interface PayoutSlipModalProps {
 }
 
 export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipModalProps) {
+  const { user } = useAuth();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [weekData, setWeekData] = useState<any>(null);
   const [gameData, setGameData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const slipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (winnerData && open) {
-      fetchWeekExpenses();
-      fetchWeekData();
-      fetchGameData();
+    if (winnerData && open && user?.id) {
+      console.log('PayoutSlipModal - Winner data received:', winnerData);
+      fetchAllData();
     }
-  }, [winnerData, open]);
+  }, [winnerData, open, user?.id]);
 
-  const fetchWeekExpenses = async () => {
-    if (!winnerData?.gameId) return;
+  const fetchAllData = async () => {
+    if (!winnerData?.gameId || !user?.id) {
+      console.log('PayoutSlipModal - Missing gameId or user ID');
+      return;
+    }
     
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('game_id', winnerData.gameId)
-        .order('date', { ascending: false });
+      console.log('Fetching data for gameId:', winnerData.gameId, 'weekId:', winnerData.weekId);
       
-      if (error) throw error;
-      setExpenses(data || []);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-    }
-  };
-
-  const fetchWeekData = async () => {
-    if (!winnerData?.weekId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('weeks')
-        .select('*')
-        .eq('id', winnerData.weekId)
-        .single();
-      
-      if (error) throw error;
-      setWeekData(data);
-    } catch (error) {
-      console.error('Error fetching week data:', error);
-    }
-  };
-
-  const fetchGameData = async () => {
-    if (!winnerData?.gameId) return;
-    
-    try {
-      const { data, error } = await supabase
+      // Fetch game data
+      const { data: gameData, error: gameError } = await supabase
         .from('games')
         .select('*')
         .eq('id', winnerData.gameId)
+        .eq('user_id', user.id)
         .single();
       
-      if (error) throw error;
-      setGameData(data);
+      if (gameError) {
+        console.error('Error fetching game data:', gameError);
+      } else {
+        console.log('Game data fetched:', gameData);
+        setGameData(gameData);
+      }
+
+      // Fetch week data if weekId is provided
+      if (winnerData.weekId) {
+        const { data: weekData, error: weekError } = await supabase
+          .from('weeks')
+          .select('*')
+          .eq('id', winnerData.weekId)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (weekError) {
+          console.error('Error fetching week data:', weekError);
+        } else {
+          console.log('Week data fetched:', weekData);
+          setWeekData(weekData);
+        }
+      }
+      
+      // Fetch expenses for this game
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('game_id', winnerData.gameId)
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      
+      if (expensesError) {
+        console.error('Error fetching expenses:', expensesError);
+      } else {
+        console.log('Expenses data fetched:', expensesData);
+        setExpenses(expensesData || []);
+      }
+      
     } catch (error) {
-      console.error('Error fetching game data:', error);
+      console.error('Error fetching payout slip data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,7 +143,9 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         const imgWidth = 210;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        pdf.save(`payout-slip-${winnerData.winnerName}-week-${weekData?.week_number || 'N/A'}.pdf`);
+        
+        const fileName = `payout-slip-${winnerData.winnerName || 'winner'}-week-${weekData?.week_number || winnerData.weekNumber || 'N/A'}.pdf`;
+        pdf.save(fileName);
       } catch (error) {
         console.error('Error generating PDF:', error);
       } finally {
@@ -140,15 +157,39 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   // Calculate totals
   const totalExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
   const totalDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
-  const grossWinnings = winnerData.amountWon || weekData?.weekly_payout || 0;
+  const grossWinnings = winnerData.amountWon || winnerData.payoutAmount || weekData?.weekly_payout || 0;
   const netPayout = grossWinnings; // Assuming no deductions for now
+
+  // Use data from winnerData first, then fallback to fetched data
+  const displayData = {
+    winnerName: winnerData.winnerName || weekData?.winner_name || 'N/A',
+    cardSelected: winnerData.cardSelected || weekData?.card_selected || 'N/A',
+    slotChosen: winnerData.slotChosen || weekData?.slot_chosen || 'N/A',
+    gameName: winnerData.gameName || gameData?.name || 'N/A',
+    weekNumber: winnerData.weekNumber || weekData?.week_number || 'N/A',
+    weekStartDate: winnerData.weekStartDate || weekData?.start_date,
+    weekEndDate: winnerData.weekEndDate || weekData?.end_date,
+    winnerPresent: winnerData.winnerPresent !== undefined ? winnerData.winnerPresent : weekData?.winner_present,
+    authorizedSignatureName: winnerData.authorizedSignatureName || weekData?.authorized_signature_name || 'N/A',
+    drawingDate: winnerData.date || getTodayDateString()
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payout Distribution Slip</DialogTitle>
+          <DialogDescription>
+            Review and download the payout distribution slip for {displayData.winnerName}
+          </DialogDescription>
         </DialogHeader>
+        
+        {loading && (
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-2">Loading slip data...</span>
+          </div>
+        )}
         
         <div ref={slipRef} className="bg-white p-8 space-y-6">
           <div className="flex justify-between items-center border-b pb-4">
@@ -163,10 +204,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           </div>
           
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">WEEK {weekData?.week_number || 'N/A'} PAYOUT</h2>
-            <p className="text-lg font-semibold">{gameData?.name || 'Game Name N/A'}</p>
+            <h2 className="text-2xl font-bold">WEEK {displayData.weekNumber} PAYOUT</h2>
+            <p className="text-lg font-semibold">{displayData.gameName}</p>
             <p className="text-sm text-gray-600">
-              Week Period: {formatSafeDate(weekData?.start_date)} - {formatSafeDate(weekData?.end_date)}
+              Week Period: {formatSafeDate(displayData.weekStartDate)} - {formatSafeDate(displayData.weekEndDate)}
             </p>
           </div>
 
@@ -175,19 +216,19 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
               <div>
                 <span className="font-semibold">Winner Name:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1 text-lg">
-                  {winnerData.winnerName || weekData?.winner_name || 'N/A'}
+                  {displayData.winnerName}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Date of Drawing:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {formatSafeDate(winnerData.date)}
+                  {formatSafeDate(displayData.drawingDate)}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Slot Selected:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  #{winnerData.slotChosen || weekData?.slot_chosen || 'N/A'}
+                  #{displayData.slotChosen}
                 </div>
               </div>
             </div>
@@ -196,19 +237,19 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
               <div>
                 <span className="font-semibold">Card Drawn:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1 text-lg font-semibold">
-                  {winnerData.cardSelected || weekData?.card_selected || 'N/A'}
+                  {displayData.cardSelected}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Winner Present:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {weekData?.winner_present !== undefined ? (weekData.winner_present ? 'Yes' : 'No') : 'N/A'}
+                  {displayData.winnerPresent !== undefined ? (displayData.winnerPresent ? 'Yes' : 'No') : 'N/A'}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Authorized By:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {winnerData.authorizedSignatureName || weekData?.authorized_signature_name || 'N/A'}
+                  {displayData.authorizedSignatureName}
                 </div>
               </div>
             </div>
@@ -318,7 +359,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button onClick={generatePDF} disabled={isGeneratingPdf}>
+          <Button onClick={generatePDF} disabled={isGeneratingPdf || loading}>
             {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
           </Button>
         </div>
