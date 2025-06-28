@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +24,7 @@ interface WinnerFormProps {
     carryover_jackpot: number;
     total_payouts: number;
     card_payouts?: any;
+    user_id?: string;
   };
   currentJackpotTotal?: number;
   jackpotContributions?: number;
@@ -70,17 +70,35 @@ export function WinnerForm({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // First try to get card distributions from the game data (game-specific)
-        if (gameData?.card_payouts) {
-          const distributionsData = gameData.card_payouts;
+        // Determine which user's config to load - prioritize game's user_id if available
+        const targetUserId = gameData?.user_id || user.id;
+        console.log('Loading card distributions for user:', targetUserId);
+
+        // Try to get card distributions from user-specific configuration
+        const { data: config, error } = await supabase
+          .from('configurations')
+          .select('*')
+          .eq('user_id', targetUserId)
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching configuration:", error);
+          toast.error("Failed to load configuration");
+          return;
+        }
+
+        if (config?.card_payouts) {
+          const distributionsData = typeof config.card_payouts === 'string' 
+            ? JSON.parse(config.card_payouts) 
+            : config.card_payouts;
           
           if (Array.isArray(distributionsData)) {
             setCardDistributions(distributionsData.map(distribution => ({
               card: distribution.card || '',
               distribution: distribution.payout || 0
             })));
-          } else if (typeof distributionsData === 'object') {
-            // Convert object format to array
+          } else {
             const distributionsArray = Object.entries(distributionsData)
               .filter(([card, distribution]) => card !== 'Queen of Hearts')
               .map(([card, distribution]) => ({
@@ -89,54 +107,13 @@ export function WinnerForm({
               }));
             setCardDistributions(distributionsArray);
           }
-        } else {
-          // Fallback to current user-specific configuration if game doesn't have card distributions
-          const { data: config, error } = await supabase
-            .from('configurations')
-            .select('*')
-            .eq('user_id', user.id)
-            .limit(1)
-            .single();
 
-          if (error) {
-            console.error("Error fetching configuration:", error);
-            toast.error("Failed to load configuration");
-            return;
-          }
-
-          if (config?.card_payouts) {
-            const distributionsData = typeof config.card_payouts === 'string' ? JSON.parse(config.card_payouts) : config.card_payouts;
-            
-            if (Array.isArray(distributionsData)) {
-              setCardDistributions(distributionsData.map(distribution => ({
-                card: distribution.card || '',
-                distribution: distribution.payout || 0
-              })));
-            } else {
-              const distributionsArray = Object.entries(distributionsData)
-                .filter(([card, distribution]) => card !== 'Queen of Hearts')
-                .map(([card, distribution]) => ({
-                  card,
-                  distribution: typeof distribution === 'number' ? distribution : 0
-                }));
-              setCardDistributions(distributionsArray);
-            }
-          }
-
-          setPenaltyPercentage(config?.penalty_percentage || 0);
-        }
-
-        // Get penalty percentage from current user-specific configuration
-        const { data: config, error: configError } = await supabase
-          .from('configurations')
-          .select('penalty_percentage')
-          .eq('user_id', user.id)
-          .limit(1)
-          .single();
-
-        if (!configError && config) {
           setPenaltyPercentage(config.penalty_percentage || 0);
+        } else {
+          console.log('No card distributions found in user configuration');
+          toast.error("No card distribution configuration found. Please set up your card distributions first.");
         }
+
       } catch (error) {
         console.error("Error loading game configuration:", error);
         toast.error("Failed to load game configuration");

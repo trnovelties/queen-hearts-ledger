@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useAdmin } from "@/context/AdminContext";
 
 interface CardDistribution {
   card: string;
@@ -15,6 +16,8 @@ interface CardDistribution {
 
 export function CardPayoutConfig() {
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
+  const { viewingOrganization, isViewingOtherOrganization } = useAdmin();
   const [loading, setLoading] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
   const [configVersion, setConfigVersion] = useState<number>(1);
@@ -81,22 +84,39 @@ export function CardPayoutConfig() {
     { card: "Joker", distribution: 50 },
   ]);
   
-  // Fetch configuration on component mount
   useEffect(() => {
-    fetchConfig();
-  }, []);
+    if (user?.id) {
+      fetchConfig();
+    }
+  }, [user?.id, viewingOrganization]);
 
   const fetchConfig = async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     try {
+      // Determine which user's config to fetch
+      const targetUserId = isViewingOtherOrganization && viewingOrganization 
+        ? viewingOrganization.id 
+        : user.id;
+
+      console.log('Fetching config for user:', targetUserId);
+      
+      // Fetch user-specific configuration
       const { data, error } = await supabase
         .from('configurations')
         .select('*')
+        .eq('user_id', targetUserId)
         .limit(1)
         .maybeSingle();
         
       if (error) {
         console.error('Error fetching configuration:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load configuration settings.",
+          variant: "destructive",
+        });
         return;
       }
       
@@ -128,6 +148,11 @@ export function CardPayoutConfig() {
             });
           }
         }
+      } else {
+        // No config found, reset to defaults and clear configId
+        setConfigId(null);
+        setConfigVersion(1);
+        console.log('No configuration found for user, using defaults');
       }
     } catch (error: any) {
       console.error('Error in fetchConfig:', error);
@@ -143,6 +168,20 @@ export function CardPayoutConfig() {
   
   // Handle saving card distributions
   const handleSaveCardDistributions = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save configurations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Determine which user's config to save
+    const targetUserId = isViewingOtherOrganization && viewingOrganization 
+      ? viewingOrganization.id 
+      : user.id;
+
     // Validate card distributions
     const invalidCardDistributions = cardDistributions.filter(
       card => !card.card.trim() || (typeof card.distribution === "number" && (isNaN(card.distribution) || card.distribution < 0))
@@ -183,6 +222,7 @@ export function CardPayoutConfig() {
       
       const configData = {
         card_payouts: distributionsObject,
+        user_id: targetUserId,
         updated_at: new Date().toISOString()
       };
 
@@ -193,9 +233,10 @@ export function CardPayoutConfig() {
           .from('configurations')
           .update(configData)
           .eq('id', configId)
+          .eq('user_id', targetUserId)
           .select();
       } else {
-        // Insert new configuration with minimal required fields
+        // Insert new configuration with all required fields
         const newConfigData = {
           ...configData,
           ticket_price: 2,
@@ -228,7 +269,7 @@ export function CardPayoutConfig() {
       
       toast({
         title: "Card Distributions Saved",
-        description: "Card distribution settings have been updated successfully.",
+        description: `Card distribution settings have been updated successfully${isViewingOtherOrganization ? ` for ${viewingOrganization?.organization_name || viewingOrganization?.email}` : ''}.`,
       });
     } catch (error: any) {
       console.error('Error saving card distributions:', error);
@@ -269,7 +310,14 @@ export function CardPayoutConfig() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Card Distribution Configuration</CardTitle>
+        <CardTitle>
+          Card Distribution Configuration
+          {isViewingOtherOrganization && (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              (Viewing: {viewingOrganization?.organization_name || viewingOrganization?.email})
+            </span>
+          )}
+        </CardTitle>
         <CardDescription>
           Set distribution amounts for each card in the deck. The Queen of Hearts is always set to "jackpot".
         </CardDescription>

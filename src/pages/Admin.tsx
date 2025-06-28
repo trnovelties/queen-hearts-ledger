@@ -8,12 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useAdmin } from "@/context/AdminContext";
 import { CardPayoutConfig } from "@/components/CardPayoutConfig";
 import { OrganizationRules } from "@/components/OrganizationRules";
 
 export default function Admin() {
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const { viewingOrganization, isViewingOtherOrganization } = useAdmin();
   const [gameSettings, setGameSettings] = useState({
     ticketPrice: 2,
     organizationPercentage: 40,
@@ -28,47 +30,84 @@ export default function Admin() {
   
   // Fetch configuration on component mount
   useEffect(() => {
-    async function fetchConfig() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('configurations')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-          
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-        
-        if (data) {
-          setConfigId(data.id);
-          setGameSettings({
-            ticketPrice: data.ticket_price,
-            organizationPercentage: data.organization_percentage,
-            jackpotPercentage: data.jackpot_percentage,
-            penaltyPercentage: data.penalty_percentage,
-            penaltyToOrganization: data.penalty_to_organization || false,
-            minimumStartingJackpot: data.minimum_starting_jackpot || 500
-          });
-        }
-      } catch (error: any) {
-        console.error('Error fetching configuration:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load configuration settings.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
+    if (user?.id) {
+      fetchConfig();
     }
+  }, [user?.id, viewingOrganization, isViewingOtherOrganization]);
+
+  const fetchConfig = async () => {
+    if (!user?.id) return;
     
-    fetchConfig();
-  }, [toast]);
+    setLoading(true);
+    try {
+      // Determine which user's config to fetch
+      const targetUserId = isViewingOtherOrganization && viewingOrganization 
+        ? viewingOrganization.id 
+        : user.id;
+
+      console.log('Fetching config for user:', targetUserId);
+
+      const { data, error } = await supabase
+        .from('configurations')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .limit(1)
+        .maybeSingle();
+          
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      if (data) {
+        setConfigId(data.id);
+        setGameSettings({
+          ticketPrice: data.ticket_price,
+          organizationPercentage: data.organization_percentage,
+          jackpotPercentage: data.jackpot_percentage,
+          penaltyPercentage: data.penalty_percentage,
+          penaltyToOrganization: data.penalty_to_organization || false,
+          minimumStartingJackpot: data.minimum_starting_jackpot || 500
+        });
+      } else {
+        // No config found, reset to defaults
+        setConfigId(null);
+        setGameSettings({
+          ticketPrice: 2,
+          organizationPercentage: 40,
+          jackpotPercentage: 60,
+          penaltyPercentage: 10,
+          penaltyToOrganization: false,
+          minimumStartingJackpot: 500
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load configuration settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Handle saving game settings
   const handleSaveGameSettings = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save configurations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Determine which user's config to save
+    const targetUserId = isViewingOtherOrganization && viewingOrganization 
+      ? viewingOrganization.id 
+      : user.id;
+
     // Validate percentages
     if (gameSettings.organizationPercentage + gameSettings.jackpotPercentage !== 100) {
       toast({
@@ -106,6 +145,7 @@ export default function Admin() {
         penalty_percentage: gameSettings.penaltyPercentage,
         penalty_to_organization: gameSettings.penaltyToOrganization,
         minimum_starting_jackpot: gameSettings.minimumStartingJackpot,
+        user_id: targetUserId,
         updated_at: new Date().toISOString()
       };
 
@@ -115,7 +155,8 @@ export default function Admin() {
         result = await supabase
           .from('configurations')
           .update(configData)
-          .eq('id', configId);
+          .eq('id', configId)
+          .eq('user_id', targetUserId);
       } else {
         // Insert new configuration
         result = await supabase
@@ -133,7 +174,7 @@ export default function Admin() {
       
       toast({
         title: "Settings Saved",
-        description: "Default game settings have been updated.",
+        description: `Default game settings have been updated${isViewingOtherOrganization ? ` for ${viewingOrganization?.organization_name || viewingOrganization?.email}` : ''}.`,
       });
     } catch (error: any) {
       console.error('Error saving game settings:', error);
@@ -149,7 +190,14 @@ export default function Admin() {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
+      <h1 className="text-3xl font-bold mb-8">
+        Admin Panel
+        {isViewingOtherOrganization && (
+          <span className="ml-2 text-lg font-normal text-muted-foreground">
+            (Viewing: {viewingOrganization?.organization_name || viewingOrganization?.email})
+          </span>
+        )}
+      </h1>
       
       <Tabs defaultValue="settings" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
