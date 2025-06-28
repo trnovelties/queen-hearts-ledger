@@ -20,6 +20,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   const [expenses, setExpenses] = useState<any[]>([]);
   const [weekData, setWeekData] = useState<any>(null);
   const [gameData, setGameData] = useState<any>(null);
+  const [ticketSales, setTicketSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const slipRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +70,21 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         } else {
           console.log('Week data fetched:', weekData);
           setWeekData(weekData);
+        }
+
+        // Fetch ticket sales for this week
+        const { data: salesData, error: salesError } = await supabase
+          .from('ticket_sales')
+          .select('*')
+          .eq('week_id', winnerData.weekId)
+          .eq('user_id', user.id)
+          .order('date', { ascending: true });
+        
+        if (salesError) {
+          console.error('Error fetching ticket sales:', salesError);
+        } else {
+          console.log('Ticket sales data fetched:', salesData);
+          setTicketSales(salesData || []);
         }
       }
       
@@ -154,7 +170,13 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     }
   };
 
-  // Calculate totals
+  // Calculate totals from ticket sales
+  const weekTotalTickets = ticketSales.reduce((sum, sale) => sum + sale.tickets_sold, 0);
+  const weekTotalSales = ticketSales.reduce((sum, sale) => sum + sale.amount_collected, 0);
+  const weekOrganizationTotal = ticketSales.reduce((sum, sale) => sum + sale.organization_total, 0);
+  const weekJackpotTotal = ticketSales.reduce((sum, sale) => sum + sale.jackpot_total, 0);
+  
+  // Calculate expenses
   const totalExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
   const totalDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
   const grossWinnings = winnerData.amountWon || winnerData.payoutAmount || weekData?.weekly_payout || 0;
@@ -176,11 +198,11 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payout Distribution Slip</DialogTitle>
           <DialogDescription>
-            Review and download the payout distribution slip for {displayData.winnerName}
+            Complete payout distribution slip for {displayData.winnerName} - Week {displayData.weekNumber}
           </DialogDescription>
         </DialogHeader>
         
@@ -211,6 +233,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </p>
           </div>
 
+          {/* Winner Information */}
           <div className="grid grid-cols-2 gap-8 text-sm">
             <div className="space-y-4">
               <div>
@@ -255,6 +278,63 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </div>
           </div>
 
+          {/* Week Summary Stats */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Week {displayData.weekNumber} Summary:</h3>
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
+                <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
+                <div className="text-sm text-green-600 font-medium">Total Sales</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
+                <div className="text-sm text-purple-600 font-medium">Organization Share</div>
+              </div>
+              <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
+                <div className="text-sm text-orange-600 font-medium">Jackpot Contribution</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Entries Table */}
+          {ticketSales.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Daily Entries:</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto border-collapse border border-gray-400">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="border border-gray-400 px-3 py-2 text-left">Date</th>
+                      <th className="border border-gray-400 px-3 py-2 text-center">Tickets Sold</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Amount Collected</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Organization Share</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Jackpot Share</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Cumulative Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ticketSales.map((sale, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="border border-gray-400 px-3 py-2">{formatSafeDate(sale.date)}</td>
+                        <td className="border border-gray-400 px-3 py-2 text-center">{sale.tickets_sold}</td>
+                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.amount_collected)}</td>
+                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.organization_total)}</td>
+                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.jackpot_total)}</td>
+                        <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.cumulative_collected)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Financial Distribution Details */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">Financial Distribution Details:</h3>
             <div className="overflow-x-auto">
@@ -295,12 +375,13 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </div>
           </div>
 
+          {/* Game Expenses Summary */}
           {expenses.length > 0 && (
             <div className="space-y-4">
               <h3 className="font-semibold text-lg border-b pb-2">Game Expenses & Donations Summary:</h3>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-medium mb-2">Expenses</h4>
+                  <h4 className="font-medium mb-2">Recent Expenses</h4>
                   <div className="space-y-1 text-sm">
                     {expenses.filter(e => !e.is_donation).slice(0, 5).map((expense, index) => (
                       <div key={index} className="flex justify-between">
@@ -316,7 +397,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                 </div>
                 
                 <div>
-                  <h4 className="font-medium mb-2">Donations</h4>
+                  <h4 className="font-medium mb-2">Recent Donations</h4>
                   <div className="space-y-1 text-sm">
                     {expenses.filter(e => e.is_donation).slice(0, 5).map((donation, index) => (
                       <div key={index} className="flex justify-between">
@@ -334,6 +415,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </div>
           )}
 
+          {/* Signature Section */}
           <div className="flex justify-between items-end text-sm pt-8 border-t">
             <div className="space-y-2">
               <p className="font-semibold">Authorized Signature:</p>
