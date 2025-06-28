@@ -293,13 +293,13 @@ export default function Dashboard() {
       // Start with carryover jackpot
       let endingJackpotTotal = game.carryover_jackpot || 0;
       
-      // Add jackpot contributions from all sales up to and including this entry
+      // Add jackpot contributions from all previous sales (before this entry)
       if (allGameSales) {
-        // Get all sales that should be included (before or on this date, excluding current entry if updating)
         for (const sale of allGameSales) {
           const saleDate = new Date(sale.date);
           const currentEntryDate = new Date(entryDate);
           
+          // Only include sales that are strictly before this entry (not same date, not same entry)
           if (saleDate < currentEntryDate || (saleDate.toDateString() === currentEntryDate.toDateString() && sale.id !== existingEntry?.id)) {
             endingJackpotTotal += sale.jackpot_total;
           }
@@ -309,13 +309,13 @@ export default function Dashboard() {
       // Add this entry's jackpot contribution
       endingJackpotTotal += jackpotTotal;
 
-      // Subtract payouts from completed weeks that ended before or on this date
+      // Subtract payouts from weeks that completed before this entry date
       for (const w of game.weeks) {
         const weekEndDate = new Date(w.end_date);
         const currentEntryDate = new Date(entryDate);
         
-        // If week ended before this entry date and had a payout, subtract it
-        if (weekEndDate <= currentEntryDate && w.weekly_payout > 0) {
+        // Only subtract payout if the week ended before this entry date and has a payout
+        if (weekEndDate < currentEntryDate && w.weekly_payout > 0) {
           endingJackpotTotal -= w.weekly_payout;
         }
       }
