@@ -25,15 +25,46 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   console.log('PayoutSlipModal rendered:', { open, winnerData });
 
   useEffect(() => {
-    if (open && winnerData && user?.id) {
-      console.log('Effect triggered - fetching slip data...');
-      fetchSlipData();
+    if (open && winnerData) {
+      console.log('PayoutSlipModal opening with winnerData:', winnerData);
+      
+      // Check if we have database IDs to fetch additional data
+      const gameId = winnerData.gameId || winnerData.game_id;
+      const weekId = winnerData.weekId || winnerData.week_id;
+      
+      if (gameId && weekId && user?.id) {
+        console.log('Found IDs, fetching database data...');
+        fetchSlipData();
+      } else {
+        console.log('No database IDs found, using provided winnerData directly');
+        // Use the winnerData directly if no database IDs are available
+        setSlipData({
+          game: {
+            name: winnerData.gameName || 'N/A',
+            game_number: winnerData.gameNumber || 'N/A',
+            ticket_price: 2, // Default value
+            organization_percentage: 40, // Default value
+            jackpot_percentage: 60 // Default value
+          },
+          week: {
+            week_number: winnerData.weekNumber || 'N/A',
+            start_date: winnerData.weekStartDate || null,
+            end_date: winnerData.weekEndDate || null,
+            winner_name: winnerData.winnerName || 'N/A',
+            slot_chosen: winnerData.slotChosen || 'N/A',
+            card_selected: winnerData.cardSelected || 'N/A',
+            weekly_payout: winnerData.payoutAmount || 0,
+            winner_present: winnerData.winnerPresent !== false // Default to true if not specified
+          },
+          ticketSales: [], // Empty array since we don't have daily data
+          winnerData: winnerData
+        });
+      }
     }
   }, [open, winnerData, user?.id]);
 
   const fetchSlipData = async () => {
     if (!user?.id || !winnerData) {
-      console.error('Missing user or winner data:', { userId: user?.id, winnerData });
       setError('Missing user or winner data');
       return;
     }
@@ -42,13 +73,8 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     setError(null);
     
     try {
-      console.log('Fetching slip data with winner data:', winnerData);
-      
-      // Extract IDs from winnerData - try multiple possible field names
       const gameId = winnerData.gameId || winnerData.game_id;
       const weekId = winnerData.weekId || winnerData.week_id;
-      
-      console.log('Extracted IDs:', { gameId, weekId });
       
       if (!gameId || !weekId) {
         throw new Error(`Missing game or week ID. GameId: ${gameId}, WeekId: ${weekId}`);
@@ -66,7 +92,6 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         console.error('Game fetch error:', gameError);
         throw new Error(`Failed to fetch game: ${gameError.message}`);
       }
-      console.log('Game data:', gameData);
 
       // Fetch week data
       const { data: weekData, error: weekError } = await supabase
@@ -80,7 +105,6 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         console.error('Week fetch error:', weekError);
         throw new Error(`Failed to fetch week: ${weekError.message}`);
       }
-      console.log('Week data:', weekData);
 
       // Fetch ticket sales for this week
       const { data: ticketSales, error: salesError } = await supabase
@@ -92,9 +116,8 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
       if (salesError) {
         console.error('Ticket sales fetch error:', salesError);
-        throw new Error(`Failed to fetch ticket sales: ${salesError.message}`);
+        // Don't throw error for ticket sales, just use empty array
       }
-      console.log('Ticket sales data:', ticketSales);
 
       // Combine all data
       const combinedData = {
@@ -163,10 +186,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" aria-describedby="loading-description">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Payout Distribution Slip</DialogTitle>
-            <DialogDescription id="loading-description">
+            <DialogDescription>
               Loading slip data, please wait...
             </DialogDescription>
           </DialogHeader>
@@ -183,10 +206,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (error) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" aria-describedby="error-description">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Payout Distribution Slip</DialogTitle>
-            <DialogDescription id="error-description">
+            <DialogDescription>
               There was an error loading the slip data
             </DialogDescription>
           </DialogHeader>
@@ -205,10 +228,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (!slipData) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" aria-describedby="no-data-description">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Payout Distribution Slip</DialogTitle>
-            <DialogDescription id="no-data-description">
+            <DialogDescription>
               No slip data available
             </DialogDescription>
           </DialogHeader>
@@ -228,11 +251,11 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="slip-description">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payout Distribution Slip</DialogTitle>
-          <DialogDescription id="slip-description">
-            Distribution slip for {slipData.week?.winner_name || 'N/A'} - Week {slipData.week?.week_number || 'N/A'}
+          <DialogDescription>
+            Distribution slip for {slipData.week?.winner_name || winnerData?.winnerName || 'N/A'} - Week {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'}
           </DialogDescription>
         </DialogHeader>
         
@@ -251,10 +274,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           
           {/* Game & Week Info */}
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">WEEK {slipData.week?.week_number || 'N/A'} PAYOUT</h2>
-            <p className="text-lg font-semibold">{slipData.game?.name || 'N/A'}</p>
+            <h2 className="text-2xl font-bold">WEEK {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'} PAYOUT</h2>
+            <p className="text-lg font-semibold">{slipData.game?.name || winnerData?.gameName || 'N/A'}</p>
             <p className="text-sm text-gray-600">
-              Week Period: {formatDate(slipData.week?.start_date)} - {formatDate(slipData.week?.end_date)}
+              Week Period: {formatDate(slipData.week?.start_date || winnerData?.weekStartDate)} - {formatDate(slipData.week?.end_date || winnerData?.weekEndDate)}
             </p>
           </div>
 
@@ -292,59 +315,61 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                 <span className="font-semibold">Winner Present:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
                   {slipData.week?.winner_present !== undefined ? (slipData.week.winner_present ? 'Yes' : 'No') : 
-                   winnerData?.winnerPresent !== undefined ? (winnerData.winnerPresent ? 'Yes' : 'No') : 'N/A'}
+                   winnerData?.winnerPresent !== undefined ? (winnerData.winnerPresent ? 'Yes' : 'No') : 'Yes'}
                 </div>
               </div>
               <div>
                 <span className="font-semibold">Authorized By:</span>
                 <div className="border-b border-gray-300 pb-1 mt-1">
-                  {slipData.week?.authorized_signature_name || winnerData?.authorizedSignatureName || 'N/A'}
+                  {slipData.week?.authorized_signature_name || 'Finance Manager'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Week Summary Stats */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">Week {slipData.week?.week_number || 'N/A'} Summary:</h3>
-            <div className="grid grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
-                <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
-                <div className="text-sm text-green-600 font-medium">Total Sales</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
-                <div className="text-sm text-purple-600 font-medium">Organization Share</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
-                <div className="text-sm text-orange-600 font-medium">Jackpot Contribution</div>
+          {/* Week Summary Stats - only show if we have ticket sales data */}
+          {slipData.ticketSales && slipData.ticketSales.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Week {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'} Summary:</h3>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
+                  <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
+                  <div className="text-sm text-green-600 font-medium">Total Sales</div>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
+                  <div className="text-sm text-purple-600 font-medium">Organization Share</div>
+                </div>
+                <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
+                  <div className="text-sm text-orange-600 font-medium">Jackpot Contribution</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Daily Entries Table */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">Daily Entries:</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-auto border-collapse border border-gray-400">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="border border-gray-400 px-3 py-2 text-left">Date</th>
-                    <th className="border border-gray-400 px-3 py-2 text-center">Tickets Sold</th>
-                    <th className="border border-gray-400 px-3 py-2 text-right">Amount Collected</th>
-                    <th className="border border-gray-400 px-3 py-2 text-right">Organization Share</th>
-                    <th className="border border-gray-400 px-3 py-2 text-right">Jackpot Share</th>
-                    <th className="border border-gray-400 px-3 py-2 text-right">Cumulative Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slipData.ticketSales && slipData.ticketSales.length > 0 ? 
-                    slipData.ticketSales.map((sale: any, index: number) => (
+          {/* Daily Entries Table - only show if we have ticket sales data */}
+          {slipData.ticketSales && slipData.ticketSales.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Daily Entries:</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto border-collapse border border-gray-400">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="border border-gray-400 px-3 py-2 text-left">Date</th>
+                      <th className="border border-gray-400 px-3 py-2 text-center">Tickets Sold</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Amount Collected</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Organization Share</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Jackpot Share</th>
+                      <th className="border border-gray-400 px-3 py-2 text-right">Cumulative Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slipData.ticketSales.map((sale: any, index: number) => (
                       <tr key={sale.id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="border border-gray-400 px-3 py-2">{formatDate(sale.date)}</td>
                         <td className="border border-gray-400 px-3 py-2 text-center">{sale.tickets_sold || 0}</td>
@@ -353,27 +378,22 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                         <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.jackpot_total)}</td>
                         <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.cumulative_collected)}</td>
                       </tr>
-                    )) : (
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-100 font-semibold">
                     <tr>
-                      <td colSpan={6} className="border border-gray-400 px-3 py-2 text-center text-gray-500">
-                        No daily entries found for this week
-                      </td>
+                      <td className="border border-gray-400 px-3 py-2">TOTALS</td>
+                      <td className="border border-gray-400 px-3 py-2 text-center">{weekTotalTickets}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekTotalSales)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekOrganizationTotal)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekJackpotTotal)}</td>
+                      <td className="border border-gray-400 px-3 py-2 text-right">-</td>
                     </tr>
-                  )}
-                </tbody>
-                <tfoot className="bg-gray-100 font-semibold">
-                  <tr>
-                    <td className="border border-gray-400 px-3 py-2">TOTALS</td>
-                    <td className="border border-gray-400 px-3 py-2 text-center">{weekTotalTickets}</td>
-                    <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekTotalSales)}</td>
-                    <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekOrganizationTotal)}</td>
-                    <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekJackpotTotal)}</td>
-                    <td className="border border-gray-400 px-3 py-2 text-right">-</td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Payout Information */}
           <div className="space-y-4">
@@ -383,11 +403,11 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="font-medium">Gross Winnings:</span>
-                    <span className="font-bold text-lg">{formatCurrency(slipData.week?.weekly_payout || winnerData?.amountWon || 0)}</span>
+                    <span className="font-bold text-lg">{formatCurrency(slipData.week?.weekly_payout || winnerData?.payoutAmount || 0)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="font-bold text-lg">Net Payout:</span>
-                    <span className="font-bold text-xl text-green-600">{formatCurrency(slipData.week?.weekly_payout || winnerData?.amountWon || 0)}</span>
+                    <span className="font-bold text-xl text-green-600">{formatCurrency(slipData.week?.weekly_payout || winnerData?.payoutAmount || 0)}</span>
                   </div>
                 </div>
                 
@@ -402,9 +422,9 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Winner Present:</span>
-                    <span className={`font-semibold ${(slipData.week?.winner_present || winnerData?.winnerPresent) ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`font-semibold ${(slipData.week?.winner_present !== false || winnerData?.winnerPresent !== false) ? 'text-green-600' : 'text-red-600'}`}>
                       {slipData.week?.winner_present !== undefined ? (slipData.week.winner_present ? '✓ Yes' : '✗ No') : 
-                       winnerData?.winnerPresent !== undefined ? (winnerData.winnerPresent ? '✓ Yes' : '✗ No') : 'N/A'}
+                       winnerData?.winnerPresent !== undefined ? (winnerData.winnerPresent ? '✓ Yes' : '✗ No') : '✓ Yes'}
                     </span>
                   </div>
                 </div>
