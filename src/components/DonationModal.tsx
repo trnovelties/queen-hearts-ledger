@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,9 +15,10 @@ interface DonationModalProps {
   gameId: string;
   gameName: string;
   defaultDate?: string;
+  onSuccess?: () => void;
 }
 
-export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDate }: DonationModalProps) {
+export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDate, onSuccess }: DonationModalProps) {
   const { toast } = useToast();
   const [donationData, setDonationData] = useState({
     amount: "",
@@ -125,6 +127,11 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
       setSelectedDate(defaultDate || getTodayDateString());
       
       onOpenChange(false);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: any) {
       console.error('Error adding donation:', error);
       toast({

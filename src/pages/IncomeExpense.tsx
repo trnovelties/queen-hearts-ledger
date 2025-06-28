@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -382,7 +383,7 @@ export default function IncomeExpense() {
               </CollapsibleTrigger>
               
               <CollapsibleContent className="space-y-4">
-                <DetailedFinancialTable game={game} formatCurrency={formatCurrency} />
+                <DetailedFinancialTable games={[game]} formatCurrency={formatCurrency} />
               </CollapsibleContent>
             </Collapsible>
           ))}
@@ -399,15 +400,15 @@ export default function IncomeExpense() {
       <ExpenseModal
         open={showExpenseModal}
         onOpenChange={setShowExpenseModal}
-        gameId={selectedGameForExpense}
-        onSuccess={fetchGames}
+        gameId={selectedGameForExpense || ""}
+        gameName={selectedGameForExpense ? games.find(g => g.id === selectedGameForExpense)?.name || "" : ""}
       />
 
       <DonationModal
         open={showDonationModal}
         onOpenChange={setShowDonationModal}
-        gameId={selectedGameForDonation}
-        onSuccess={fetchGames}
+        gameId={selectedGameForDonation || ""}
+        gameName={selectedGameForDonation ? games.find(g => g.id === selectedGameForDonation)?.name || "" : ""}
       />
 
       <CalculationAuditModal

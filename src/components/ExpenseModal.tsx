@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,9 +14,10 @@ interface ExpenseModalProps {
   onOpenChange: (open: boolean) => void;
   gameId: string;
   gameName: string;
+  onSuccess?: () => void;
 }
 
-export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseModalProps) {
+export function ExpenseModal({ open, onOpenChange, gameId, gameName, onSuccess }: ExpenseModalProps) {
   const { toast } = useToast();
   const [expenseData, setExpenseData] = useState({
     amount: "",
@@ -127,6 +129,11 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName }: ExpenseMo
       setSelectedDate(getTodayDateString());
       
       onOpenChange(false);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: any) {
       console.error('Error adding expense:', error);
       toast({
