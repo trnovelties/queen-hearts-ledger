@@ -37,9 +37,11 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
       return;
     }
     
-    // Use gameId and weekId from winnerData, or fallback to winnerData properties
+    // Extract IDs from winnerData
     const gameId = winnerData?.gameId || winnerData?.game_id;
     const weekId = winnerData?.weekId || winnerData?.week_id;
+    
+    console.log('Fetching data with gameId:', gameId, 'weekId:', weekId);
     
     if (!gameId) {
       console.log('PayoutSlipModal - Missing gameId');
@@ -48,8 +50,6 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     
     setLoading(true);
     try {
-      console.log('Fetching data for gameId:', gameId, 'weekId:', weekId);
-      
       // Fetch game data
       const { data: gameData, error: gameError } = await supabase
         .from('games')
@@ -81,7 +81,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           setWeekData(weekData);
         }
 
-        // Fetch ticket sales for this week
+        // Fetch ticket sales for this specific week
         const { data: salesData, error: salesError } = await supabase
           .from('ticket_sales')
           .select('*')
@@ -121,16 +121,13 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
   if (!winnerData) return null;
 
-  // Safe date formatting function using timezone-neutral string functions
   const formatSafeDate = (dateValue: any, formatType: 'full' | 'short' = 'full') => {
     if (!dateValue) return 'N/A';
     
-    // Handle various input types and convert to string
     let dateString: string;
     if (typeof dateValue === 'string') {
       dateString = dateValue;
     } else if (dateValue instanceof Date) {
-      // Convert Date to YYYY-MM-DD string (this might have timezone issues but is legacy support)
       const year = dateValue.getFullYear();
       const month = String(dateValue.getMonth() + 1).padStart(2, '0');
       const day = String(dateValue.getDate()).padStart(2, '0');
@@ -139,7 +136,6 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
       return 'N/A';
     }
     
-    // Use our timezone-neutral formatting functions
     if (formatType === 'short') {
       return formatDateStringShort(dateString);
     } else {
@@ -179,17 +175,18 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     }
   };
 
-  // Calculate totals from ticket sales
-  const weekTotalTickets = ticketSales.reduce((sum, sale) => sum + sale.tickets_sold, 0);
-  const weekTotalSales = ticketSales.reduce((sum, sale) => sum + sale.amount_collected, 0);
-  const weekOrganizationTotal = ticketSales.reduce((sum, sale) => sum + sale.organization_total, 0);
-  const weekJackpotTotal = ticketSales.reduce((sum, sale) => sum + sale.jackpot_total, 0);
+  // Calculate totals from ticket sales data
+  const weekTotalTickets = ticketSales.reduce((sum, sale) => sum + (sale.tickets_sold || 0), 0);
+  const weekTotalSales = ticketSales.reduce((sum, sale) => sum + (sale.amount_collected || 0), 0);
+  const weekOrganizationTotal = ticketSales.reduce((sum, sale) => sum + (sale.organization_total || 0), 0);
+  const weekJackpotTotal = ticketSales.reduce((sum, sale) => sum + (sale.jackpot_total || 0), 0);
   
   // Calculate expenses
   const totalExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
   const totalDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
-  const grossWinnings = winnerData.amountWon || winnerData.payoutAmount || weekData?.weekly_payout || 0;
-  const netPayout = grossWinnings; // Assuming no deductions for now
+  
+  // Get payout amount from various sources
+  const grossWinnings = winnerData.payoutAmount || winnerData.amountWon || weekData?.weekly_payout || 0;
 
   // Use data from winnerData first, then fallback to fetched data
   const displayData = {
@@ -327,7 +324,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                 </thead>
                 <tbody>
                   {ticketSales.length > 0 ? ticketSales.map((sale, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr key={sale.id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="border border-gray-400 px-3 py-2">{formatSafeDate(sale.date)}</td>
                       <td className="border border-gray-400 px-3 py-2 text-center">{sale.tickets_sold}</td>
                       <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(sale.amount_collected)}</td>
@@ -343,6 +340,16 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                     </tr>
                   )}
                 </tbody>
+                <tfoot className="bg-gray-100 font-semibold">
+                  <tr>
+                    <td className="border border-gray-400 px-3 py-2">TOTALS</td>
+                    <td className="border border-gray-400 px-3 py-2 text-center">{weekTotalTickets}</td>
+                    <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekTotalSales)}</td>
+                    <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekOrganizationTotal)}</td>
+                    <td className="border border-gray-400 px-3 py-2 text-right">{formatCurrency(weekJackpotTotal)}</td>
+                    <td className="border border-gray-400 px-3 py-2 text-right">-</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -358,16 +365,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                     <span className="font-bold text-lg">{formatCurrency(grossWinnings)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-medium">Tax Withholding:</span>
-                    <span>{formatCurrency(0)}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="font-medium">Other Deductions:</span>
                     <span>{formatCurrency(0)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between">
                     <span className="font-bold text-lg">Net Payout:</span>
-                    <span className="font-bold text-xl text-green-600">{formatCurrency(netPayout)}</span>
+                    <span className="font-bold text-xl text-green-600">{formatCurrency(grossWinnings)}</span>
                   </div>
                 </div>
                 
