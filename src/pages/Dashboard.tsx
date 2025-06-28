@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { WinnerForm } from "@/components/WinnerForm";
-import { PayoutSlip } from "@/components/PayoutSlip";
+import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
@@ -66,6 +66,9 @@ interface TicketSale {
   weekly_payout_amount: number | null;
   ending_jackpot_total: number | null;
   displayed_jackpot_total: number | null;
+  amount_collected: number;
+  cumulative_collected: number;
+  organization_total: number;
 }
 
 interface WinnerData {
@@ -217,6 +220,12 @@ const Dashboard = () => {
     setIsLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("User not authenticated");
+        return;
+      }
+
       // Determine the next week number
       const nextWeekNumber = weeks.length > 0 ? Math.max(...weeks.map(week => week.week_number)) + 1 : 1;
 
@@ -228,9 +237,10 @@ const Dashboard = () => {
         .from('weeks')
         .insert([{
           game_id: selectedGame.id,
+          user_id: user.id,
           week_number: nextWeekNumber,
-          start_date: todayDateString, // Use the formatted date string
-          end_date: todayDateString // Use the formatted date string
+          start_date: todayDateString,
+          end_date: todayDateString
         }])
         .select('*')
         .single();
@@ -281,8 +291,15 @@ const Dashboard = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("User not authenticated");
+        return;
+      }
+
       const jackpotTotal = calculateJackpot(ticketsSold, ticketPrice, selectedGame.jackpot_percentage);
       const totalSales = calculateTotalSales(ticketsSold, ticketPrice);
+      const organizationTotal = ticketsSold * ticketPrice * (selectedGame.organization_percentage / 100);
 
       // Calculate ending jackpot total correctly
       let previousJackpotTotal = selectedGame.carryover_jackpot || 0;
@@ -303,26 +320,32 @@ const Dashboard = () => {
       }
 
       // Subtract any completed weekly payouts (from weeks that have winners)
-      if (selectedGame.weeks) {
-        for (const week of selectedGame.weeks) {
-          if (week.weekly_payout > 0) {
-            // Check if this week's sales are all before our current entry
-            const weekSales = week.ticket_sales || [];
-            const lastWeekSaleDate = weekSales.length > 0 
-              ? Math.max(...weekSales.map((sale: any) => new Date(sale.date).getTime()))
-              : 0;
-            const currentEntryTime = new Date(entryDate).getTime();
-            
-            // If the week's last sale is before our current entry, subtract the payout
-            if (lastWeekSaleDate < currentEntryTime) {
-              runningJackpotTotal -= week.weekly_payout;
-            }
+      const completedWeeks = weeks.filter(week => 
+        week.weekly_payout && week.weekly_payout > 0 && week.winner_name
+      );
+      
+      for (const week of completedWeeks) {
+        // Get the last sale date for this week to determine if it's before our current entry
+        const weekSales = allGameSales?.filter(sale => sale.week_id === week.id) || [];
+        if (weekSales.length > 0) {
+          const lastWeekSaleDate = Math.max(...weekSales.map(sale => new Date(sale.date).getTime()));
+          const currentEntryTime = new Date(entryDate).getTime();
+          
+          // If the week's last sale is before our current entry, subtract the payout
+          if (lastWeekSaleDate < currentEntryTime) {
+            runningJackpotTotal -= week.weekly_payout;
           }
         }
       }
 
       // Add this entry's jackpot contribution to get the ending total
       const endingJackpotTotal = runningJackpotTotal + jackpotTotal;
+
+      // Calculate cumulative collected for this game up to this entry
+      let cumulativeCollected = totalSales;
+      for (const prevSale of salesBeforeThisEntry) {
+        cumulativeCollected += prevSale.amount_collected;
+      }
 
       // Optimistically update the state
       const newTicketSale = {
@@ -347,11 +370,17 @@ const Dashboard = () => {
 
       // Update the database
       const upsertData = {
+        game_id: gameId,
+        user_id: user.id,
         week_id: weekId,
         date: entryDate,
         tickets_sold: ticketsSold,
+        ticket_price: ticketPrice,
+        amount_collected: totalSales,
+        cumulative_collected: cumulativeCollected,
+        organization_total: organizationTotal,
         jackpot_total: jackpotTotal,
-        weekly_payout_amount: existingEntry?.weekly_payout_amount || null,
+        weekly_payout_amount: existingEntry?.weekly_payout_amount || 0,
         ending_jackpot_total: endingJackpotTotal,
         displayed_jackpot_total: endingJackpotTotal
       };
@@ -692,12 +721,10 @@ const Dashboard = () => {
 
           {/* Payout Slip Dialog */}
           {winnerData && (
-            <PayoutSlip
+            <PayoutSlipModal
               open={isPayoutSlipOpen}
               onOpenChange={handleClosePayoutSlip}
               winnerData={winnerData}
-              gameDetails={getGameDetails(winnerData.gameId)}
-              weekDetails={getWeekDetails(winnerData.weekId)}
             />
           )}
         </>
