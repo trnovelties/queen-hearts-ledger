@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { DatePickerWithInput } from "@/components/ui/datepicker";
 import { ExpenseModal } from "@/components/ExpenseModal";
+import { DonationModal } from "@/components/DonationModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<"game" | "week" | "entry" | "expense">('game');
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [donationModalOpen, setDonationModalOpen] = useState(false);
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
   const {
@@ -64,6 +65,9 @@ export default function Dashboard() {
     memo: '',
     gameId: ''
   });
+
+  // New state for daily donation modal
+  const [dailyDonationDate, setDailyDonationDate] = useState<string>('');
 
   useEffect(() => {
     if (user?.id) {
@@ -539,6 +543,7 @@ export default function Dashboard() {
     setDeleteType(type);
     setDeleteDialogOpen(true);
   };
+
   const confirmDelete = async () => {
     if (!deleteItemId || !user?.id) {
       toast({
@@ -767,11 +772,22 @@ export default function Dashboard() {
       setDeleteItemId(null);
     }
   };
+
   const openExpenseModal = (gameId: string, gameName: string) => {
     setCurrentGameId(gameId);
     setCurrentGameName(gameName);
     setExpenseModalOpen(true);
   };
+
+  const openDonationModal = (gameId: string, gameName: string, date?: string) => {
+    setCurrentGameId(gameId);
+    setCurrentGameName(gameName);
+    if (date) {
+      setDailyDonationDate(date);
+    }
+    setDonationModalOpen(true);
+  };
+
   const handleOpenPayoutSlip = (winnerData: any) => {
     setPayoutSlipData(winnerData);
     setPayoutSlipOpen(true);
@@ -789,6 +805,7 @@ export default function Dashboard() {
       minimumFractionDigits: 2
     }).format(amount);
   };
+
   const generateGamePdfReport = async (game: any) => {
     try {
       toast({
@@ -1068,42 +1085,7 @@ export default function Dashboard() {
       });
     }
   };
-  const handleDailyDonation = async (date: string, amount: number) => {
-    if (!currentGameId || amount <= 0 || !user?.id) return;
-    try {
-      const {
-        error
-      } = await supabase.from('expenses').insert([{
-        game_id: currentGameId,
-        date: date,
-        amount: amount,
-        memo: 'Daily donation',
-        is_donation: true,
-        user_id: user.id
-      }]);
-      if (error) throw error;
 
-      // Update game totals
-      const game = games.find(g => g.id === currentGameId);
-      if (game) {
-        await supabase.from('games').update({
-          total_donations: game.total_donations + amount,
-          organization_net_profit: game.organization_net_profit - amount
-        }).eq('id', currentGameId).eq('user_id', user.id);
-      }
-      toast({
-        title: "Donation Added",
-        description: `Daily donation of ${formatCurrency(amount)} has been recorded.`
-      });
-    } catch (error: any) {
-      console.error('Error adding daily donation:', error);
-      toast({
-        title: "Error",
-        description: `Failed to add donation: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  };
   const handleDailyExpense = async () => {
     if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0 || !user?.id) return;
     try {
@@ -1156,6 +1138,7 @@ export default function Dashboard() {
     });
     setDailyExpenseModalOpen(true);
   };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -1414,10 +1397,7 @@ export default function Dashboard() {
                                                   <label className="text-xs font-medium text-gray-600">Quick Add</label>
                                                   <Select onValueChange={value => {
                                     if (value === 'donation') {
-                                      const amount = prompt('Enter donation amount:');
-                                      if (amount && !isNaN(parseFloat(amount))) {
-                                        handleDailyDonation(entryDate.toISOString().split('T')[0], parseFloat(amount));
-                                      }
+                                      openDonationModal(game.id, game.name, entryDate.toISOString().split('T')[0]);
                                     } else if (value === 'expense') {
                                       openDailyExpenseModal(entryDate.toISOString().split('T')[0], game.id);
                                     }
@@ -1585,6 +1565,15 @@ export default function Dashboard() {
       
       {/* Expense Modal */}
       <ExpenseModal open={expenseModalOpen} onOpenChange={setExpenseModalOpen} gameId={currentGameId || ''} gameName={currentGameName} />
+      
+      {/* Donation Modal */}
+      <DonationModal 
+        open={donationModalOpen} 
+        onOpenChange={setDonationModalOpen} 
+        gameId={currentGameId || ''} 
+        gameName={currentGameName} 
+        defaultDate={dailyDonationDate}
+      />
       
       {/* Payout Slip Modal */}
       <PayoutSlipModal open={payoutSlipOpen} onOpenChange={setPayoutSlipOpen} winnerData={payoutSlipData} />
