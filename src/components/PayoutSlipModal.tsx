@@ -22,18 +22,19 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   const [error, setError] = useState<string | null>(null);
   const slipRef = useRef<HTMLDivElement>(null);
 
-  console.log('PayoutSlipModal Props:', { open, winnerData, userId: user?.id });
+  console.log('PayoutSlipModal rendered:', { open, winnerData });
 
   useEffect(() => {
     if (open && winnerData && user?.id) {
-      console.log('Fetching slip data...');
+      console.log('Effect triggered - fetching slip data...');
       fetchSlipData();
     }
   }, [open, winnerData, user?.id]);
 
   const fetchSlipData = async () => {
     if (!user?.id || !winnerData) {
-      console.error('Missing user or winner data');
+      console.error('Missing user or winner data:', { userId: user?.id, winnerData });
+      setError('Missing user or winner data');
       return;
     }
     
@@ -41,20 +42,19 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
     setError(null);
     
     try {
-      console.log('Winner data received:', winnerData);
+      console.log('Fetching slip data with winner data:', winnerData);
       
-      // Extract IDs from winnerData
+      // Extract IDs from winnerData - try multiple possible field names
       const gameId = winnerData.gameId || winnerData.game_id;
       const weekId = winnerData.weekId || winnerData.week_id;
       
       console.log('Extracted IDs:', { gameId, weekId });
       
       if (!gameId || !weekId) {
-        throw new Error('Missing game or week ID in winner data');
+        throw new Error(`Missing game or week ID. GameId: ${gameId}, WeekId: ${weekId}`);
       }
 
       // Fetch game data
-      console.log('Fetching game data for ID:', gameId);
       const { data: gameData, error: gameError } = await supabase
         .from('games')
         .select('*')
@@ -63,14 +63,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         .single();
 
       if (gameError) {
-        console.error('Error fetching game data:', gameError);
-        throw new Error(`Failed to fetch game data: ${gameError.message}`);
+        console.error('Game fetch error:', gameError);
+        throw new Error(`Failed to fetch game: ${gameError.message}`);
       }
-
-      console.log('Game data fetched:', gameData);
+      console.log('Game data:', gameData);
 
       // Fetch week data
-      console.log('Fetching week data for ID:', weekId);
       const { data: weekData, error: weekError } = await supabase
         .from('weeks')
         .select('*')
@@ -79,14 +77,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         .single();
 
       if (weekError) {
-        console.error('Error fetching week data:', weekError);
-        throw new Error(`Failed to fetch week data: ${weekError.message}`);
+        console.error('Week fetch error:', weekError);
+        throw new Error(`Failed to fetch week: ${weekError.message}`);
       }
-
-      console.log('Week data fetched:', weekData);
+      console.log('Week data:', weekData);
 
       // Fetch ticket sales for this week
-      console.log('Fetching ticket sales for week ID:', weekId);
       const { data: ticketSales, error: salesError } = await supabase
         .from('ticket_sales')
         .select('*')
@@ -95,11 +91,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         .order('date', { ascending: true });
 
       if (salesError) {
-        console.error('Error fetching ticket sales:', salesError);
+        console.error('Ticket sales fetch error:', salesError);
         throw new Error(`Failed to fetch ticket sales: ${salesError.message}`);
       }
-
-      console.log('Ticket sales fetched:', ticketSales);
+      console.log('Ticket sales data:', ticketSales);
 
       // Combine all data
       const combinedData = {
@@ -109,11 +104,11 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         winnerData: winnerData
       };
 
-      console.log('Combined slip data:', combinedData);
+      console.log('Final combined slip data:', combinedData);
       setSlipData(combinedData);
 
     } catch (error: any) {
-      console.error('Error fetching slip data:', error);
+      console.error('Error in fetchSlipData:', error);
       setError(error.message || 'Failed to fetch slip data');
     } finally {
       setLoading(false);
@@ -168,9 +163,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl" aria-describedby="loading-description">
           <DialogHeader>
             <DialogTitle>Payout Distribution Slip</DialogTitle>
+            <DialogDescription id="loading-description">
+              Loading slip data, please wait...
+            </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center items-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -185,9 +183,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (error) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl" aria-describedby="error-description">
           <DialogHeader>
             <DialogTitle>Payout Distribution Slip</DialogTitle>
+            <DialogDescription id="error-description">
+              There was an error loading the slip data
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col justify-center items-center p-8">
             <div className="text-red-600 mb-4">Error: {error}</div>
@@ -204,9 +205,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (!slipData) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl" aria-describedby="no-data-description">
           <DialogHeader>
             <DialogTitle>Payout Distribution Slip</DialogTitle>
+            <DialogDescription id="no-data-description">
+              No slip data available
+            </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center items-center p-8">
             <div>No data available</div>
@@ -224,10 +228,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" aria-describedby="slip-description">
         <DialogHeader>
           <DialogTitle>Payout Distribution Slip</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="slip-description">
             Distribution slip for {slipData.week?.winner_name || 'N/A'} - Week {slipData.week?.week_number || 'N/A'}
           </DialogDescription>
         </DialogHeader>
