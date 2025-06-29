@@ -1,7 +1,9 @@
 
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
+import { Edit } from 'lucide-react';
 
 interface DailyEntryRowProps {
   dayIndex: number;
@@ -14,6 +16,9 @@ interface DailyEntryRowProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
+  onEditEntry?: (entry: any) => void;
+  onOpenExpenseModal?: (date: string, gameId: string) => void;
+  onOpenDonationModal?: (date: string, gameId: string) => void;
 }
 
 export const DailyEntryRow = ({
@@ -26,11 +31,24 @@ export const DailyEntryRow = ({
   onInputSubmit,
   currentGameId,
   games,
-  setGames
+  setGames,
+  onEditEntry,
+  onOpenExpenseModal,
+  onOpenDonationModal
 }: DailyEntryRowProps) => {
   const weekStartDate = new Date(week.start_date);
   const entryDate = new Date(weekStartDate);
   entryDate.setDate(entryDate.getDate() + dayIndex);
+  
+  const dateString = entryDate.toISOString().split('T')[0];
+
+  const handleQuickAdd = (value: string) => {
+    if (value === 'donation' && onOpenDonationModal && currentGameId) {
+      onOpenDonationModal(dateString, currentGameId);
+    } else if (value === 'expense' && onOpenExpenseModal && currentGameId) {
+      onOpenExpenseModal(dateString, currentGameId);
+    }
+  };
 
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
@@ -39,7 +57,7 @@ export const DailyEntryRow = ({
           Day {dayIndex + 1}
         </div>
         <div className="text-sm text-gray-600">
-          {formatDateStringForDisplay(entryDate.toISOString().split('T')[0])}
+          {formatDateStringForDisplay(dateString)}
         </div>
         {!existingEntry && (
           <div className="text-xs text-orange-600 font-medium">
@@ -71,13 +89,7 @@ export const DailyEntryRow = ({
         
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">Quick Add</label>
-          <Select onValueChange={(value) => {
-            if (value === 'donation') {
-              // Handle donation modal opening
-            } else if (value === 'expense') {
-              // Handle expense modal opening
-            }
-          }}>
+          <Select onValueChange={handleQuickAdd}>
             <SelectTrigger className="w-24 h-9">
               <SelectValue placeholder="+" />
             </SelectTrigger>
@@ -98,6 +110,20 @@ export const DailyEntryRow = ({
             {existingEntry ? formatCurrency(existingEntry.amount_collected) : 'N/A'}
           </div>
         </div>
+
+        {existingEntry && onEditEntry && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">Actions</label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEditEntry(existingEntry)}
+              className="h-9 px-3"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

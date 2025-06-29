@@ -9,6 +9,7 @@ import { WeekSummaryStats } from './WeekSummaryStats';
 import { WinnerInfoDisplay } from './WinnerInfoDisplay';
 import { DailyEntriesList } from './DailyEntriesList';
 import { WinnerSelectionSection } from './WinnerSelectionSection';
+import { DailyEntryEditModal } from './DailyEntryEditModal';
 
 interface TicketSalesTableProps {
   week: any;
@@ -18,6 +19,10 @@ interface TicketSalesTableProps {
   setGames: (games: any[]) => void;
   onToggleWeek: (weekId: string | null) => void;
   onOpenWinnerForm?: (gameId: string, weekId: string) => void;
+  onOpenPayoutSlip?: (winnerData: any) => void;
+  onOpenExpenseModal?: (date: string, gameId: string) => void;
+  onOpenDonationModal?: (date: string, gameId: string) => void;
+  onRefreshData?: () => void;
 }
 
 export const TicketSalesTable = ({
@@ -27,10 +32,16 @@ export const TicketSalesTable = ({
   games,
   setGames,
   onToggleWeek,
-  onOpenWinnerForm
+  onOpenWinnerForm,
+  onOpenPayoutSlip,
+  onOpenExpenseModal,
+  onOpenDonationModal,
+  onRefreshData
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -65,6 +76,17 @@ export const TicketSalesTable = ({
     
     if (onOpenWinnerForm) {
       onOpenWinnerForm(game.id, week.id);
+    }
+  };
+
+  const handleEditEntry = (entry: any) => {
+    setSelectedEntry(entry);
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (onRefreshData) {
+      onRefreshData();
     }
   };
 
@@ -148,7 +170,11 @@ export const TicketSalesTable = ({
         />
         
         {/* Winner Information */}
-        <WinnerInfoDisplay week={week} formatCurrency={formatCurrency} />
+        <WinnerInfoDisplay 
+          week={week} 
+          formatCurrency={formatCurrency}
+          onOpenPayoutSlip={onOpenPayoutSlip}
+        />
       </div>
       
       {/* 7 Daily Entries */}
@@ -161,6 +187,9 @@ export const TicketSalesTable = ({
         currentGameId={currentGameId}
         games={games}
         setGames={setGames}
+        onEditEntry={handleEditEntry}
+        onOpenExpenseModal={onOpenExpenseModal}
+        onOpenDonationModal={onOpenDonationModal}
       />
 
       {/* Winner Selection Section */}
@@ -169,6 +198,14 @@ export const TicketSalesTable = ({
         isWeekComplete={isWeekComplete()}
         hasWinner={hasWinner()}
         onWinnerButtonClick={handleWinnerButtonClick}
+      />
+
+      {/* Daily Entry Edit Modal */}
+      <DailyEntryEditModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        entry={selectedEntry}
+        onSave={handleSaveEdit}
       />
     </div>
   );

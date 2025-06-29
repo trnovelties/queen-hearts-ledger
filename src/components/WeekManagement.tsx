@@ -18,6 +18,8 @@ interface WeekManagementProps {
   games: any[];
   setGames: (games: any[]) => void;
   onRefreshData?: () => void;
+  onOpenExpenseModal?: (date: string, gameId: string) => void;
+  onOpenDonationModal?: (date: string, gameId: string) => void;
 }
 
 export const WeekManagement = ({
@@ -30,7 +32,9 @@ export const WeekManagement = ({
   setCurrentGameId,
   games,
   setGames,
-  onRefreshData
+  onRefreshData,
+  onOpenExpenseModal,
+  onOpenDonationModal
 }: WeekManagementProps) => {
   const [winnerFormOpen, setWinnerFormOpen] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
@@ -63,7 +67,13 @@ export const WeekManagement = ({
   };
 
   const handleOpenPayoutSlip = (winnerData: any) => {
-    setPayoutSlipData(winnerData);
+    // Enhance winnerData with game information
+    const enhancedWinnerData = {
+      ...winnerData,
+      gameName: game.name,
+      gameNumber: game.game_number
+    };
+    setPayoutSlipData(enhancedWinnerData);
     setPayoutSlipOpen(true);
   };
 
@@ -148,6 +158,10 @@ export const WeekManagement = ({
               setGames={setGames}
               onToggleWeek={onToggleWeek}
               onOpenWinnerForm={handleOpenWinnerForm}
+              onOpenPayoutSlip={handleOpenPayoutSlip}
+              onOpenExpenseModal={onOpenExpenseModal}
+              onOpenDonationModal={onOpenDonationModal}
+              onRefreshData={onRefreshData}
             />
           )}
         </div>
