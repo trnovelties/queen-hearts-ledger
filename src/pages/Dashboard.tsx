@@ -99,12 +99,6 @@ export default function Dashboard() {
     setWeekFormOpen(true);
   };
 
-  const openWinnerForm = (gameId: string, weekId: string) => {
-    setCurrentGameId(gameId);
-    setCurrentWeekId(weekId);
-    setWinnerFormOpen(true);
-  };
-
   const createWeek = async () => {
     if (!currentGameId || !user?.id) return;
     
@@ -319,7 +313,6 @@ export default function Dashboard() {
               onToggleWeek={toggleWeek}
               onToggleExpenses={toggleExpenses}
               onOpenWeekForm={openWeekForm}
-              onOpenWinnerForm={openWinnerForm}
               onOpenDeleteConfirm={openDeleteConfirm}
               onGeneratePdfReport={generateGamePdfReport}
               onOpenExpenseModal={openExpenseModal}

@@ -16,7 +16,6 @@ interface GameCardProps {
   onToggleWeek: (weekId: string) => void;
   onToggleExpenses: (gameId: string) => void;
   onOpenWeekForm: (gameId: string) => void;
-  onOpenWinnerForm: (gameId: string, weekId: string) => void;
   onOpenDeleteConfirm: (id: string, type: "game" | "week" | "entry" | "expense") => void;
   onGeneratePdfReport: (game: any) => void;
   onOpenExpenseModal: (gameId: string, gameName: string) => void;
@@ -35,7 +34,6 @@ export const GameCard = ({
   onToggleWeek,
   onToggleExpenses,
   onOpenWeekForm,
-  onOpenWinnerForm,
   onOpenDeleteConfirm,
   onGeneratePdfReport,
   onOpenExpenseModal,
@@ -128,7 +126,6 @@ export const GameCard = ({
             expandedWeek={expandedWeek}
             onToggleWeek={onToggleWeek}
             onOpenWeekForm={onOpenWeekForm}
-            onOpenWinnerForm={onOpenWinnerForm}
             onGeneratePdfReport={onGeneratePdfReport}
             currentGameId={currentGameId}
             setCurrentGameId={setCurrentGameId}

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 import { useTicketSales } from '@/hooks/useTicketSales';
 import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
@@ -15,7 +15,6 @@ interface TicketSalesTableProps {
   games: any[];
   setGames: (games: any[]) => void;
   onToggleWeek: (weekId: string | null) => void;
-  onOpenWinnerForm: (gameId: string, weekId: string) => void;
 }
 
 export const TicketSalesTable = ({
@@ -24,8 +23,7 @@ export const TicketSalesTable = ({
   currentGameId,
   games,
   setGames,
-  onToggleWeek,
-  onOpenWinnerForm
+  onToggleWeek
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const { calculateWeekEndingJackpot } = useFinancialCalculations();
@@ -44,11 +42,6 @@ export const TicketSalesTable = ({
   const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
   const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
   const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
-
-  // Check if all 7 days are complete and week has no winner
-  const isWeekComplete = week.ticket_sales.length === 7 && 
-    week.ticket_sales.every((entry: any) => entry.tickets_sold > 0);
-  const needsWinnerEntry = isWeekComplete && !week.winner_name;
 
   // Calculate proper week-level ending jackpot
   useEffect(() => {
@@ -88,25 +81,6 @@ export const TicketSalesTable = ({
             </button>
           </div>
         </div>
-        
-        {/* Add Winner Details Button - Show when all 7 days complete but no winner */}
-        {needsWinnerEntry && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h5 className="text-lg font-semibold text-green-800 mb-1">Week Complete!</h5>
-                <p className="text-green-700 text-sm">All 7 days have been entered. Click to add winner details for this week.</p>
-              </div>
-              <Button
-                onClick={() => onOpenWinnerForm(game.id, week.id)}
-                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-              >
-                <UserPlus className="h-4 w-4" />
-                Add Winner Details
-              </Button>
-            </div>
-          </div>
-        )}
         
         {/* Week Summary Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
