@@ -8,6 +8,7 @@ import { useTicketSales } from '@/hooks/useTicketSales';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface TicketSalesTableProps {
   week: any;
@@ -31,6 +32,7 @@ export const TicketSalesTable = ({
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -51,9 +53,20 @@ export const TicketSalesTable = ({
     return week.winner_name && week.winner_name.trim() !== '';
   };
 
-  // Should show "Add Winner Details" button
-  const shouldShowWinnerButton = () => {
-    return isWeekComplete() && !hasWinner();
+  // Handle winner button click with validation
+  const handleWinnerButtonClick = () => {
+    if (!isWeekComplete()) {
+      toast({
+        title: "Week Incomplete",
+        description: "Please complete all 7 days with ticket sales before adding winner details.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (onOpenWinnerForm) {
+      onOpenWinnerForm(game.id, week.id);
+    }
   };
 
   // Calculate week totals from daily entries
@@ -197,24 +210,6 @@ export const TicketSalesTable = ({
             </div>
           </div>
         )}
-
-        {/* Add Winner Details Button */}
-        {shouldShowWinnerButton() && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h5 className="text-lg font-semibold text-green-800 mb-1">Week Complete!</h5>
-                <p className="text-sm text-green-700">All 7 days have ticket sales. Ready to select a winner.</p>
-              </div>
-              <Button
-                onClick={() => onOpenWinnerForm && onOpenWinnerForm(game.id, week.id)}
-                className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] font-semibold px-6 py-2"
-              >
-                Add Winner Details
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
       
       {/* 7 Daily Entries */}
@@ -300,6 +295,39 @@ export const TicketSalesTable = ({
               </div>
             );
           })}
+        </div>
+
+        {/* Always Visible Add Winner Details Button */}
+        <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h5 className={`text-lg font-semibold mb-1 ${
+                hasWinner() ? 'text-green-800' : 
+                isWeekComplete() ? 'text-blue-800' : 'text-gray-600'
+              }`}>
+                {hasWinner() ? 'Winner Selected!' : 
+                 isWeekComplete() ? 'Ready for Winner Selection' : 'Complete All 7 Days First'}
+              </h5>
+              <p className={`text-sm ${
+                hasWinner() ? 'text-green-700' : 
+                isWeekComplete() ? 'text-blue-700' : 'text-gray-500'
+              }`}>
+                {hasWinner() ? `Winner: ${week.winner_name} - ${week.card_selected}` :
+                 isWeekComplete() ? 'All 7 days have ticket sales. Ready to select a winner.' :
+                 `${week.ticket_sales.filter((entry: any) => entry.tickets_sold > 0).length}/7 days completed`}
+              </p>
+            </div>
+            <Button
+              onClick={handleWinnerButtonClick}
+              className={`font-semibold px-6 py-2 ${
+                hasWinner() ? 'bg-green-600 hover:bg-green-700 text-white' :
+                isWeekComplete() ? 'bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]' :
+                'bg-gray-300 hover:bg-gray-400 text-gray-600'
+              }`}
+            >
+              {hasWinner() ? 'View Winner Details' : 'Add Winner Details'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
