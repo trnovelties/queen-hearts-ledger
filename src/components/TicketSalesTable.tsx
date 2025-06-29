@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { WinnerInformation } from './WinnerInformation';
 import { DailyEntriesList } from './DailyEntriesList';
 import { WeekSummaryStats } from './WeekSummaryStats';
 import { formatDateStringForDisplay, getTodayDateString } from '@/lib/dateUtils';
+import { useTicketSales } from '@/hooks/useTicketSales';
 
 interface TicketSalesTableProps {
   week: any;
@@ -43,18 +45,14 @@ export const TicketSalesTable = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [salesData, setSalesData] = useState<any[]>([]);
-  const [newEntry, setNewEntry] = useState({
-    date: getTodayDateString(),
-    tickets_sold: 0,
-    jackpot_total: 0,
-    game_id: game.id,
-    week_id: week.id,
-    user_id: user?.id,
-  });
-  const [isAddingEntry, setIsAddingEntry] = useState(false);
   const [totalTicketsSold, setTotalTicketsSold] = useState(0);
   const [totalJackpot, setTotalJackpot] = useState(0);
-  const [winner, setWinner] = useState<any>(null);
+  
+  const { 
+    handleTicketInputChange, 
+    handleTicketInputSubmit, 
+    tempTicketInputs 
+  } = useTicketSales();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -86,70 +84,11 @@ export const TicketSalesTable = ({
     }
   };
 
-  const fetchWinner = async () => {
-    if (!week?.id || !user?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('winners')
-        .select('*')
-        .eq('week_id', week.id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== '404') throw error;
-
-      setWinner(data || null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to fetch winner: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
   const calculateTotals = () => {
     const tickets = salesData.reduce((acc, entry) => acc + entry.tickets_sold, 0);
     const jackpot = salesData.reduce((acc, entry) => acc + entry.jackpot_total, 0);
     setTotalTicketsSold(tickets);
     setTotalJackpot(jackpot);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewEntry(prevState => ({
-      ...prevState,
-      [name]: name === 'tickets_sold' || name === 'jackpot_total' ? parseFloat(value) : value
-    }));
-  };
-
-  const addDailyEntry = async () => {
-    if (!user?.id) return;
-    setIsAddingEntry(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('ticket_sales')
-        .insert([newEntry])
-        .select();
-
-      if (error) throw error;
-
-      setSalesData([...salesData, data![0]]);
-      setNewEntry({ ...newEntry, tickets_sold: 0, jackpot_total: 0 });
-      toast({
-        title: "Entry Added",
-        description: "Daily entry has been added successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to add entry: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsAddingEntry(false);
-    }
   };
 
   const handleDeleteWeek = async (weekId: string) => {
@@ -191,12 +130,32 @@ export const TicketSalesTable = ({
 
   useEffect(() => {
     fetchSalesData();
-    fetchWinner();
   }, [week?.id, user?.id]);
 
   useEffect(() => {
     calculateTotals();
   }, [salesData]);
+
+  // Calculate week summary stats
+  const weekTotalTickets = week?.ticket_sales?.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0) || 0;
+  const weekTotalSales = week?.ticket_sales?.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0) || 0;
+  const weekOrganizationTotal = week?.ticket_sales?.reduce((sum: number, sale: any) => sum + sale.organization_total, 0) || 0;
+  const weekJackpotTotal = week?.ticket_sales?.reduce((sum: number, sale: any) => sum + sale.jackpot_total, 0) || 0;
+  const displayedEndingJackpot = week?.ticket_sales?.[week.ticket_sales.length - 1]?.displayed_jackpot_total || 0;
+  const hasWinner = week?.winner_name ? true : false;
+
+  // Create winners array for WinnerInformation component
+  const winners = hasWinner ? [{
+    name: week.winner_name,
+    slot: week.slot_chosen,
+    card: week.card_selected,
+    amount: week.weekly_payout || 0,
+    present: week.winner_present,
+    date: week.end_date,
+    gameName: game.name,
+    gameNumber: game.game_number,
+    weekNumber: week.week_number
+  }] : [];
 
   return (
     <Card className="mt-4 border-2 border-[#A1E96C] bg-white">
@@ -208,79 +167,31 @@ export const TicketSalesTable = ({
         />
         
         <WeekSummaryStats
-          totalTicketsSold={totalTicketsSold}
-          totalJackpot={totalJackpot}
-          game={game}
-          week={week}
-          onOpenExpenseModal={onOpenExpenseModal}
-          onOpenDonationModal={onOpenDonationModal}
+          weekTotalTickets={weekTotalTickets}
+          weekTotalSales={weekTotalSales}
+          weekOrganizationTotal={weekOrganizationTotal}
+          weekJackpotTotal={weekJackpotTotal}
+          displayedEndingJackpot={displayedEndingJackpot}
+          hasWinner={hasWinter}
+          formatCurrency={formatCurrency}
         />
 
         <WinnerInformation
-          winner={winner}
-          week={week}
-          game={game}
-          onOpenWinnerForm={onOpenWinnerForm}
-          onOpenPayoutSlip={onOpenPayoutSlip}
+          winners={winners}
+          formatCurrency={formatCurrency}
         />
 
-        <div className="mb-4">
-          <h4 className="text-lg font-semibold mb-2">Add Daily Entry</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                type="date"
-                id="date"
-                name="date"
-                value={newEntry.date}
-                onChange={handleInputChange}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tickets_sold">Tickets Sold</Label>
-              <Input
-                type="number"
-                id="tickets_sold"
-                name="tickets_sold"
-                value={newEntry.tickets_sold === 0 ? '' : newEntry.tickets_sold}
-                onChange={handleInputChange}
-                className="w-full"
-                placeholder="0"
-                min="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="jackpot_total">Jackpot Total</Label>
-              <Input
-                type="number"
-                id="jackpot_total"
-                name="jackpot_total"
-                value={newEntry.jackpot_total === 0 ? '' : newEntry.jackpot_total}
-                onChange={handleInputChange}
-                className="w-full"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-          </div>
-          <Button
-            onClick={addDailyEntry}
-            disabled={isAddingEntry}
-            className="mt-4 bg-[#1F4E4A] hover:bg-[#1F4E4A]/90"
-          >
-            {isAddingEntry ? "Adding..." : <><Plus className="h-4 w-4 mr-2" /> Add Entry</>}
-          </Button>
-        </div>
-
         <DailyEntriesList
-          salesData={salesData}
-          setSalesData={setSalesData}
           week={week}
+          tempTicketInputs={tempTicketInputs}
           formatCurrency={formatCurrency}
-          fetchSalesData={fetchSalesData}
+          onInputChange={handleTicketInputChange}
+          onInputSubmit={handleTicketInputSubmit}
+          currentGameId={currentGameId}
+          games={games}
+          setGames={setGames}
+          onOpenExpenseModal={onOpenExpenseModal}
+          onOpenDonationModal={onOpenDonationModal}
         />
       </CardContent>
     </Card>
