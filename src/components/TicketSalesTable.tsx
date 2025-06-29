@@ -1,14 +1,17 @@
-
-import { useTicketSales } from '@/hooks/useTicketSales';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from "@/context/AuthContext";
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus, DollarSign, Gift } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import { WeekHeader } from './WeekHeader';
-import { WeekSummaryStats } from './WeekSummaryStats';
-import { WinnerInfoDisplay } from './WinnerInfoDisplay';
+import { WinnerInformation } from './WinnerInformation';
 import { DailyEntriesList } from './DailyEntriesList';
-import { WinnerSelectionSection } from './WinnerSelectionSection';
+import { WeekSummaryStats } from './WeekSummaryStats';
+import { formatDateStringForDisplay, getTodayDateString } from '@/lib/dateUtils';
 
 interface TicketSalesTableProps {
   week: any;
@@ -17,8 +20,8 @@ interface TicketSalesTableProps {
   games: any[];
   setGames: (games: any[]) => void;
   onToggleWeek: (weekId: string | null) => void;
-  onOpenWinnerForm?: (gameId: string, weekId: string) => void;
-  onOpenPayoutSlip?: (winnerData: any) => void;
+  onOpenWinnerForm: (gameId: string, weekId: string) => void;
+  onOpenPayoutSlip: (winnerData: any) => void;
   onOpenExpenseModal?: (date: string, gameId: string) => void;
   onOpenDonationModal?: (date: string, gameId: string) => void;
   onRefreshData?: () => void;
@@ -37,10 +40,21 @@ export const TicketSalesTable = ({
   onOpenDonationModal,
   onRefreshData
 }: TicketSalesTableProps) => {
-  const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
-  const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
   const { user } = useAuth();
   const { toast } = useToast();
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [newEntry, setNewEntry] = useState({
+    date: getTodayDateString(),
+    tickets_sold: 0,
+    jackpot_total: 0,
+    game_id: game.id,
+    week_id: week.id,
+    user_id: user?.id,
+  });
+  const [isAddingEntry, setIsAddingEntry] = useState(false);
+  const [totalTicketsSold, setTotalTicketsSold] = useState(0);
+  const [totalJackpot, setTotalJackpot] = useState(0);
+  const [winner, setWinner] = useState<any>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -50,142 +64,225 @@ export const TicketSalesTable = ({
     }).format(amount);
   };
 
-  // Check if week is complete (has entries for all 7 days, regardless of ticket count)
-  const isWeekComplete = () => {
-    return week.ticket_sales.length === 7;
-  };
+  const fetchSalesData = async () => {
+    if (!user?.id || !week?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('week_id', week.id)
+        .eq('user_id', user.id)
+        .order('date', { ascending: true });
 
-  // Check if week already has a winner
-  const hasWinner = () => {
-    return week.winner_name && week.winner_name.trim() !== '';
-  };
+      if (error) throw error;
 
-  // Handle winner button click with validation
-  const handleWinnerButtonClick = () => {
-    if (!isWeekComplete()) {
+      setSalesData(data || []);
+    } catch (error: any) {
       toast({
-        title: "Week Incomplete",
-        description: "Please enter ticket sales for all 7 days before adding winner details.",
+        title: "Error",
+        description: `Failed to fetch ticket sales: ${error.message}`,
         variant: "destructive",
       });
-      return;
-    }
-    
-    if (onOpenWinnerForm) {
-      onOpenWinnerForm(game.id, week.id);
     }
   };
 
-  // Calculate week totals from daily entries
-  const weekTotalTickets = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
-  const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
-  const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
-  const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
+  const fetchWinner = async () => {
+    if (!week?.id || !user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('winners')
+        .select('*')
+        .eq('week_id', week.id)
+        .eq('user_id', user.id)
+        .single();
 
-  // Calculate displayed ending jackpot based on week completion status
-  useEffect(() => {
-    const calculateDisplayedEndingJackpot = async () => {
-      if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - use the stored ending jackpot value from database
-        console.log('Using stored ending jackpot for completed week:', week.ending_jackpot);
-        setDisplayedEndingJackpot(week.ending_jackpot);
-      } else {
-        // Week is not completed - calculate current jackpot dynamically
-        try {
-          // Get previous week's stored ending jackpot as starting point
-          let previousEndingJackpot = 0;
-          if (week.week_number > 1) {
-            const { data: previousWeek, error } = await supabase
-              .from('weeks')
-              .select('ending_jackpot')
-              .eq('game_id', game.id)
-              .eq('week_number', week.week_number - 1)
-              .eq('user_id', user?.id)
-              .single();
+      if (error && error.code !== '404') throw error;
 
-            if (!error && previousWeek && previousWeek.ending_jackpot !== null) {
-              previousEndingJackpot = previousWeek.ending_jackpot;
-              console.log('Found previous week ending jackpot:', previousEndingJackpot);
-            } else {
-              // Fallback to game carryover if previous week not found or has no ending jackpot
-              console.log('No previous week ending jackpot found, using game carryover:', game.carryover_jackpot);
-              previousEndingJackpot = game.carryover_jackpot || 0;
-            }
-          } else {
-            // Week 1 starts with game's carryover jackpot
-            previousEndingJackpot = game.carryover_jackpot || 0;
-            console.log('Week 1, using game carryover jackpot:', previousEndingJackpot);
-          }
+      setWinner(data || null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to fetch winner: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
 
-          // Add current week's jackpot contributions to get the current running total
-          const currentJackpotTotal = previousEndingJackpot + weekJackpotTotal;
-          console.log('Calculating current jackpot for incomplete week:');
-          console.log('Previous ending jackpot:', previousEndingJackpot);
-          console.log('Current week contributions:', weekJackpotTotal);
-          console.log('Current total jackpot:', currentJackpotTotal);
-          
-          setDisplayedEndingJackpot(currentJackpotTotal);
-        } catch (error) {
-          console.error('Error calculating current jackpot:', error);
-          // Fallback calculation
-          const fallbackJackpot = (game.carryover_jackpot || 0) + weekJackpotTotal;
-          console.log('Using fallback calculation:', fallbackJackpot);
-          setDisplayedEndingJackpot(fallbackJackpot);
-        }
+  const calculateTotals = () => {
+    const tickets = salesData.reduce((acc, entry) => acc + entry.tickets_sold, 0);
+    const jackpot = salesData.reduce((acc, entry) => acc + entry.jackpot_total, 0);
+    setTotalTicketsSold(tickets);
+    setTotalJackpot(jackpot);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewEntry(prevState => ({
+      ...prevState,
+      [name]: name === 'tickets_sold' || name === 'jackpot_total' ? parseFloat(value) : value
+    }));
+  };
+
+  const addDailyEntry = async () => {
+    if (!user?.id) return;
+    setIsAddingEntry(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('ticket_sales')
+        .insert([newEntry])
+        .select();
+
+      if (error) throw error;
+
+      setSalesData([...salesData, data![0]]);
+      setNewEntry({ ...newEntry, tickets_sold: 0, jackpot_total: 0 });
+      toast({
+        title: "Entry Added",
+        description: "Daily entry has been added successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to add entry: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingEntry(false);
+    }
+  };
+
+  const handleDeleteWeek = async (weekId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      // Delete all ticket sales for this week first
+      await supabase
+        .from('ticket_sales')
+        .delete()
+        .eq('week_id', weekId)
+        .eq('user_id', user.id);
+      
+      // Delete the week
+      await supabase
+        .from('weeks')
+        .delete()
+        .eq('id', weekId)
+        .eq('user_id', user.id);
+      
+      toast({
+        title: "Week Deleted",
+        description: "Week and all associated data have been deleted successfully.",
+      });
+      
+      // Close the expanded week and refresh data
+      onToggleWeek(null);
+      if (onRefreshData) {
+        onRefreshData();
       }
-    };
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete week",
+        variant: "destructive",
+      });
+    }
+  };
 
-    calculateDisplayedEndingJackpot();
-  }, [week, game.id, game.carryover_jackpot, weekJackpotTotal, user?.id]);
+  useEffect(() => {
+    fetchSalesData();
+    fetchWinner();
+  }, [week?.id, user?.id]);
+
+  useEffect(() => {
+    calculateTotals();
+  }, [salesData]);
 
   return (
-    <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
-      {/* Week Details Header */}
-      <div className="pb-6 border-b border-gray-200">
-        <WeekHeader week={week} onToggleWeek={onToggleWeek} />
-        
-        {/* Week Summary Stats */}
-        <WeekSummaryStats
-          weekTotalTickets={weekTotalTickets}
-          weekTotalSales={weekTotalSales}
-          weekOrganizationTotal={weekOrganizationTotal}
-          weekJackpotTotal={weekJackpotTotal}
-          displayedEndingJackpot={displayedEndingJackpot}
-          hasWinner={hasWinner()}
-          formatCurrency={formatCurrency}
-        />
-        
-        {/* Winner Information */}
-        <WinnerInfoDisplay 
+    <Card className="mt-4 border-2 border-[#A1E96C] bg-white">
+      <CardContent className="p-6">
+        <WeekHeader 
           week={week} 
-          formatCurrency={formatCurrency}
-          onOpenPayoutSlip={onOpenPayoutSlip}
-          onOpenWinnerForm={onOpenWinnerForm}
-          gameId={game.id}
+          onToggleWeek={onToggleWeek}
+          onDeleteWeek={handleDeleteWeek}
         />
-      </div>
-      
-      {/* 7 Daily Entries */}
-      <DailyEntriesList
-        week={week}
-        tempTicketInputs={tempTicketInputs}
-        formatCurrency={formatCurrency}
-        onInputChange={handleTicketInputChange}
-        onInputSubmit={handleTicketInputSubmit}
-        currentGameId={currentGameId}
-        games={games}
-        setGames={setGames}
-        onOpenExpenseModal={onOpenExpenseModal}
-        onOpenDonationModal={onOpenDonationModal}
-      />
+        
+        <WeekSummaryStats
+          totalTicketsSold={totalTicketsSold}
+          totalJackpot={totalJackpot}
+          game={game}
+          week={week}
+          onOpenExpenseModal={onOpenExpenseModal}
+          onOpenDonationModal={onOpenDonationModal}
+        />
 
-      {/* Winner Selection Section */}
-      <WinnerSelectionSection
-        week={week}
-        isWeekComplete={isWeekComplete()}
-        hasWinner={hasWinner()}
-        onWinnerButtonClick={handleWinnerButtonClick}
-      />
-    </div>
+        <WinnerInformation
+          winner={winner}
+          week={week}
+          game={game}
+          onOpenWinnerForm={onOpenWinnerForm}
+          onOpenPayoutSlip={onOpenPayoutSlip}
+        />
+
+        <div className="mb-4">
+          <h4 className="text-lg font-semibold mb-2">Add Daily Entry</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="date">Date</Label>
+              <Input
+                type="date"
+                id="date"
+                name="date"
+                value={newEntry.date}
+                onChange={handleInputChange}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tickets_sold">Tickets Sold</Label>
+              <Input
+                type="number"
+                id="tickets_sold"
+                name="tickets_sold"
+                value={newEntry.tickets_sold === 0 ? '' : newEntry.tickets_sold}
+                onChange={handleInputChange}
+                className="w-full"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="jackpot_total">Jackpot Total</Label>
+              <Input
+                type="number"
+                id="jackpot_total"
+                name="jackpot_total"
+                value={newEntry.jackpot_total === 0 ? '' : newEntry.jackpot_total}
+                onChange={handleInputChange}
+                className="w-full"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+          </div>
+          <Button
+            onClick={addDailyEntry}
+            disabled={isAddingEntry}
+            className="mt-4 bg-[#1F4E4A] hover:bg-[#1F4E4A]/90"
+          >
+            {isAddingEntry ? "Adding..." : <><Plus className="h-4 w-4 mr-2" /> Add Entry</>}
+          </Button>
+        </div>
+
+        <DailyEntriesList
+          salesData={salesData}
+          setSalesData={setSalesData}
+          week={week}
+          formatCurrency={formatCurrency}
+          fetchSalesData={fetchSalesData}
+        />
+      </CardContent>
+    </Card>
   );
 };
