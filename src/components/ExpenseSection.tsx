@@ -40,17 +40,6 @@ export const ExpenseSection = ({
             )}
           </div>
         </h3>
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenExpenseModal(game.id, game.name);
-          }}
-          size="sm"
-          variant="outline"
-          className="text-sm"
-        >
-          Add Expense/Donation
-        </Button>
       </div>
       
       {expandedExpenses === game.id && (
