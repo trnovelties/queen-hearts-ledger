@@ -1,12 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { useFinancialCalculations } from './useFinancialCalculations';
 
 export const useTicketSalesOperations = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const { calculateEndingJackpotTotal } = useFinancialCalculations();
 
   const updateWeekTotals = async (weekId: string) => {
@@ -71,7 +69,8 @@ export const useTicketSalesOperations = () => {
     ticketsSold: number,
     currentGameId: string,
     games: any[],
-    setGames: (games: any[]) => void
+    setGames: (games: any[]) => void,
+    onError?: (message: string) => void
   ) => {
     if (!currentGameId || !user?.id) return;
 
@@ -125,7 +124,7 @@ export const useTicketSalesOperations = () => {
       }
       cumulativeCollected += amountCollected;
 
-      // Calculate ending jackpot total using the improved calculation
+      // Calculate ending jackpot total using the corrected calculation
       const endingJackpotTotal = await calculateEndingJackpotTotal(
         currentGameId,
         entryDate.toISOString().split('T')[0],
@@ -234,11 +233,9 @@ export const useTicketSalesOperations = () => {
 
     } catch (error: any) {
       console.error('Error updating daily entry:', error);
-      toast({
-        title: "Error",
-        description: `Failed to update daily entry: ${error.message}`,
-        variant: "destructive",
-      });
+      if (onError) {
+        onError(`Failed to update daily entry: ${error.message}`);
+      }
     }
   };
 

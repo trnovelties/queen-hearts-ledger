@@ -1,8 +1,10 @@
 
+import { useToast } from "@/hooks/use-toast";
 import { useTicketInputs } from './useTicketInputs';
 import { useTicketSalesOperations } from './useTicketSalesOperations';
 
 export const useTicketSales = () => {
+  const { toast } = useToast();
   const { tempTicketInputs, handleTicketInputChange, clearTicketInput } = useTicketInputs();
   const { updateDailyEntry } = useTicketSalesOperations();
 
@@ -17,11 +19,35 @@ export const useTicketSales = () => {
     const ticketsSold = parseInt(value) || 0;
     
     clearTicketInput(weekId, dayIndex);
-    updateDailyEntry(weekId, dayIndex, ticketsSold, currentGameId, games, setGames);
+    
+    // Pass error handler to show toast notifications
+    updateDailyEntry(
+      weekId, 
+      dayIndex, 
+      ticketsSold, 
+      currentGameId, 
+      games, 
+      setGames,
+      (errorMessage: string) => {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    );
   };
 
   return {
-    updateDailyEntry,
+    updateDailyEntry: (weekId: string, dayIndex: number, ticketsSold: number, currentGameId: string, games: any[], setGames: (games: any[]) => void) => {
+      updateDailyEntry(weekId, dayIndex, ticketsSold, currentGameId, games, setGames, (errorMessage: string) => {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      });
+    },
     handleTicketInputChange,
     handleTicketInputSubmit,
     tempTicketInputs

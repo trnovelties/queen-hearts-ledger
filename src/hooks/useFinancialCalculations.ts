@@ -1,11 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 
 export const useFinancialCalculations = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const calculateEndingJackpotTotal = async (
     gameId: string,
@@ -14,6 +12,12 @@ export const useFinancialCalculations = () => {
     carryoverJackpot: number = 0
   ) => {
     try {
+      console.log('=== ENDING JACKPOT CALCULATION START ===');
+      console.log('Game ID:', gameId);
+      console.log('Current Date:', currentDate);
+      console.log('Current Jackpot Total:', currentJackpotTotal);
+      console.log('Carryover Jackpot:', carryoverJackpot);
+
       // Get all ticket sales for this game ordered by date
       const { data: allGameSales, error: salesError } = await supabase
         .from('ticket_sales')
@@ -25,7 +29,7 @@ export const useFinancialCalculations = () => {
       if (salesError) throw salesError;
 
       // Start with carryover jackpot
-      let runningJackpotTotal = carryoverJackpot;
+      let totalJackpotContributions = carryoverJackpot;
 
       // Process all sales up to and including current date
       const currentDateObj = new Date(currentDate);
@@ -35,11 +39,13 @@ export const useFinancialCalculations = () => {
         
         // Include all sales up to and including current date
         if (saleDate <= currentDateObj) {
-          runningJackpotTotal += sale.jackpot_total;
+          totalJackpotContributions += sale.jackpot_total;
         }
       }
 
-      // Get all completed weeks (with winners) and subtract their payouts
+      console.log('Total Jackpot Contributions (including carryover):', totalJackpotContributions);
+
+      // Get ALL completed weeks (with winners) and subtract their payouts
       const { data: completedWeeks, error: weeksError } = await supabase
         .from('weeks')
         .select('*')
@@ -49,15 +55,26 @@ export const useFinancialCalculations = () => {
 
       if (weeksError) throw weeksError;
 
-      // Subtract payouts from completed weeks that ended before or on current date
+      console.log('Completed weeks found:', completedWeeks?.length || 0);
+
+      // Subtract ALL payouts from completed weeks (no date restriction)
+      let totalPayouts = 0;
       for (const week of completedWeeks || []) {
-        const weekEndDate = new Date(week.end_date);
-        if (weekEndDate <= currentDateObj && week.weekly_payout > 0) {
-          runningJackpotTotal -= week.weekly_payout;
+        if (week.weekly_payout > 0) {
+          console.log(`Week ${week.week_number}: Payout $${week.weekly_payout} for winner ${week.winner_name}`);
+          totalPayouts += week.weekly_payout;
         }
       }
 
-      return Math.max(0, runningJackpotTotal); // Ensure never negative
+      console.log('Total Payouts to subtract:', totalPayouts);
+
+      // Add current entry's jackpot contribution
+      const finalEndingJackpotTotal = totalJackpotContributions + currentJackpotTotal - totalPayouts;
+      
+      console.log('Final calculation:', totalJackpotContributions, '+', currentJackpotTotal, '-', totalPayouts, '=', finalEndingJackpotTotal);
+      console.log('=== ENDING JACKPOT CALCULATION END ===');
+
+      return Math.max(0, finalEndingJackpotTotal); // Ensure never negative
     } catch (error) {
       console.error('Error calculating ending jackpot total:', error);
       return carryoverJackpot + currentJackpotTotal; // Fallback to simple calculation
