@@ -296,6 +296,7 @@ export type Database = {
           card_selected: string | null
           created_at: string
           end_date: string
+          ending_jackpot: number | null
           game_id: string
           id: string
           slot_chosen: number | null
@@ -313,6 +314,7 @@ export type Database = {
           card_selected?: string | null
           created_at?: string
           end_date: string
+          ending_jackpot?: number | null
           game_id: string
           id?: string
           slot_chosen?: number | null
@@ -330,6 +332,7 @@ export type Database = {
           card_selected?: string | null
           created_at?: string
           end_date?: string
+          ending_jackpot?: number | null
           game_id?: string
           id?: string
           slot_chosen?: number | null

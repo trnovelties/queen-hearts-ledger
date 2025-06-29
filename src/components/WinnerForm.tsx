@@ -9,7 +9,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
-import { useFinancialCalculations } from "@/hooks/useFinancialCalculations";
 import { getTodayDateString } from "@/lib/dateUtils";
 
 interface WinnerFormProps {
@@ -63,7 +62,66 @@ export function WinnerForm({
     carryoverJackpot: gameData?.carryover_jackpot || 0
   });
 
-  const { calculateWeekEndingJackpot } = useFinancialCalculations();
+  // Calculate ending jackpot based on previous week's stored ending jackpot
+  const calculateEndingJackpotForWeek = async (weeklyPayout: number) => {
+    try {
+      if (!gameId || !weekId) return 0;
+
+      // Get current week data
+      const { data: currentWeek, error: weekError } = await supabase
+        .from('weeks')
+        .select('week_number')
+        .eq('id', weekId)
+        .single();
+
+      if (weekError) throw weekError;
+
+      // Get previous week's stored ending jackpot
+      let previousEndingJackpot = 0;
+      if (currentWeek.week_number > 1) {
+        const { data: previousWeek, error: prevWeekError } = await supabase
+          .from('weeks')
+          .select('ending_jackpot')
+          .eq('game_id', gameId)
+          .eq('week_number', currentWeek.week_number - 1)
+          .single();
+
+        if (prevWeekError) {
+          console.warn('Could not find previous week, using game carryover');
+          previousEndingJackpot = gameData?.carryover_jackpot || 0;
+        } else {
+          previousEndingJackpot = previousWeek.ending_jackpot || 0;
+        }
+      } else {
+        // Week 1 starts with game's carryover jackpot
+        previousEndingJackpot = gameData?.carryover_jackpot || 0;
+      }
+
+      // Get current week's jackpot contributions
+      const { data: weekSales, error: salesError } = await supabase
+        .from('ticket_sales')
+        .select('jackpot_total')
+        .eq('week_id', weekId);
+
+      if (salesError) throw salesError;
+
+      const currentWeekJackpotContributions = weekSales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0;
+
+      // Calculate ending jackpot: Previous ending jackpot + current week's contributions - payout
+      const endingJackpot = previousEndingJackpot + currentWeekJackpotContributions - weeklyPayout;
+
+      console.log('Ending Jackpot Calculation:');
+      console.log('Previous Ending Jackpot:', previousEndingJackpot);
+      console.log('Current Week Contributions:', currentWeekJackpotContributions);
+      console.log('Weekly Payout:', weeklyPayout);
+      console.log('Final Ending Jackpot:', endingJackpot);
+
+      return Math.max(0, endingJackpot);
+    } catch (error) {
+      console.error('Error calculating ending jackpot:', error);
+      return 0;
+    }
+  };
 
   useEffect(() => {
     const loadGameConfiguration = async () => {
@@ -159,7 +217,10 @@ export function WinnerForm({
         }
       }
 
-      // Update week record with winner details and payout
+      // Calculate the ending jackpot for this week
+      const endingJackpot = await calculateEndingJackpotForWeek(finalDistribution);
+
+      // Update week record with winner details, payout, and ending jackpot
       const { error: weekError } = await supabase
         .from('weeks')
         .update({
@@ -168,14 +229,12 @@ export function WinnerForm({
           slot_chosen: formData.slotChosen,
           winner_present: formData.winnerPresent,
           authorized_signature_name: formData.authorizedSignatureName,
-          weekly_payout: finalDistribution
+          weekly_payout: finalDistribution,
+          ending_jackpot: endingJackpot
         })
         .eq('id', weekId);
 
       if (weekError) throw weekError;
-
-      // Calculate the proper ending jackpot for this week
-      const endingJackpot = await calculateWeekEndingJackpot(gameId, weekId, finalDistribution);
 
       // Update the last ticket sales record with the proper ending jackpot
       const { data: lastSale, error: lastSaleError } = await supabase
