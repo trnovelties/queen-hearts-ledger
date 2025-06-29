@@ -1,0 +1,397 @@
+
+- `lodge_total`: numeric (e.g., $10,620.8 at 40%)
+- `jackpot_total`: numeric (e.g., $15,931.2 at 60%)
+- `weekly_payout_amount`: numeric (default: 0, e.g., $14,461.6)
+- `ending_jackpot_total`: numeric (e.g., $1,606.84 after payout)
+- `created_at`: timestamptz (default: now())
+
+### expenses
+
+- `id`: uuid (primary key, default: uuid_generate_v4())
+- `game_id`: uuid (foreign key to [games.id](http://games.id/))
+- `date`: date (e.g., '2024-04-15')
+- `amount`: numeric (e.g., $50)
+- `memo`: text (e.g., "Ticket rolls")
+- `is_donation`: boolean (default: false)
+- `created_at`: timestamptz (default: now())
+
+### configurations
+
+- `id`: uuid (primary key, default: uuid_generate_v4())
+- `ticket_price`: numeric (default: 2)
+- `lodge_percentage`: numeric (default: 40)
+- `jackpot_percentage`: numeric (default: 60)
+- `penalty_percentage`: numeric (default: 10)
+- `penalty_to_lodge`: boolean (default: false, false = rollover to next jackpot)
+- `card_payouts`: jsonb (default: { "2 of Hearts": 10, "3 of Hearts": 11, "4 of Hearts": 8, ..., "Queen of Hearts": "jackpot", "Joker": 100 })
+- `updated_at`: timestamptz (default: now())
+
+### 3. Pages and Navigation
+
+Use React Router to create the following pages, with a sidebar navigation (visible after login, collapsible on mobile):
+
+### Login/Signup Page
+
+- **Path**: `/`
+- **UI**:
+- Centered card with:
+- Brand logo at top (text: "Queen of Hearts Manager" in bold, blue, font: Inter).
+- Dummy paragraph: "Streamline your Queen of Hearts fundraiser with real-time tracking and reporting."
+- Toggle between Login and Signup forms (tabs or buttons).
+- **Login Form**: Email, Password, "Login" button.
+- **Signup Form**: Email, Password, Confirm Password, "Sign Up" button.
+- Error message for invalid inputs or credentials.
+- **Functionality**:
+- Use Supabase Auth for email/password authentication.
+- On successful login/signup, redirect to `/dashboard`.
+- Store JWT in local storage for session management.
+
+### Dashboard Page
+
+- **Path**: `/dashboard`
+- **UI**:
+- Header: "Queen of Hearts Manager"
+- **Create Game Button**: Opens a modal with:
+- Inputs: Game Name (text, e.g., "Game 1"), Ticket Price (number, default: 2), Lodge Percentage (number, default: 40), Jackpot Percentage (number, default: 60).
+- Validation: lodge_percentage + jackpot_percentage = 100.
+- "Create Game" button.
+- **Game Cards** (expandable, one per game, styled with border and shadow):
+- Header: Game Name, Start Date, Total Sales ($), Lodge Net Profit ($).
+- Expand to show:
+- **+Week Button**: Creates a new week card (named "Week 1", "Week 2", etc.).
+- **Week Cards** (expandable):
+- Header: Week Number, Start Date, End Date, Weekly Sales ($), Weekly Tickets Sold, Winner Name, Slot Chosen, Card Selected, Weekly Payout ($).
+- Expand to show:
+- Table with columns: Date, Tickets Sold, Ticket Price ($), Amount Collected ($), Cumulative Collected ($), Lodge Total ($), Jackpot Total ($), Weekly Payout Amount ($), Ending Jackpot Total ($).
+- **+Row Button**: Opens a modal with:
+- Inputs: Date (date picker, default: current date), Tickets Sold (number), Ticket Price (number, pre-filled from game).
+- "Add Row" button.
+- On 7th row (7th day from week’s start_date), prompt for winner details:
+- Inputs: Winner Name (text), Slot Chosen (number, 1–54), Card Selected (dropdown: 54 cards, e.g., "8 of Hearts", "Queen of Hearts"), Present (checkbox).
+- Auto-calculate payout based on configurations.card_payouts or full jackpot for "Queen of Hearts".
+- "Submit Winner" button.
+- After 7th row, collapse 7 rows into the week card, displaying summary fields.
+- **Functionality**:
+- Create games, storing in games table with ticket_price, lodge_percentage, jackpot_percentage.
+- Create week cards, storing in weeks table with start_date (first row’s date), end_date (7th row’s date), and calculated weekly_sales, weekly_tickets_sold.
+- Add rows to ticket_sales, calculating:
+- amount_collected = tickets_sold \* ticket_price.
+- lodge_total = amount_collected \* (lodge_percentage / 100).
+- jackpot_total = amount_collected \* (jackpot_percentage / 100).
+- cumulative_collected = sum(amount_collected) for game.
+- weekly_payout_amount = card_payouts\[card_selected\] or ending_jackpot_total if "Queen of Hearts".
+- ending_jackpot_total = previous ending_jackpot_total + jackpot_total - weekly_payout_amount.
+- Apply penalty_percentage (e.g., 10%) to jackpot if winner_present = false, handling per penalty_to_lodge (rollover or add to lodge_total).
+- When "Queen of Hearts" is drawn, set games.end_date, update carryover_jackpot, and prompt to create a new game.
+- Update games.total_sales, total_payouts, total_expenses, total_donations, lodge_net_profit dynamically.
+
+### Income vs. Expense Page
+
+- **Path**: `/income-expense`
+- **UI**:
+- Header: "Income vs. Expense"
+- **Filters**:
+- Game Number (dropdown: "All Games", "Game 1", ..., "Game 15").
+- Date Range (two date pickers).
+- Report Type (dropdown: "Weekly", "Game", "Cumulative").
+- **Game Cards List** (expandable, dynamic):
+- Header: Game Name, Start Date, End Date, Total Sales ($), Total Payouts ($), Total Expenses ($), Total Donations ($), Lodge Net Profit ($), Carryover Jackpot ($).
+- Expand to show:
+- **Weeks Table** (mimics spreadsheet’s weekly data, e.g., Game 11):
+- Columns: Week Number, Start Date, End Date, Tickets Sold, Weekly Sales ($), Lodge Portion ($), Jackpot Portion ($), Weekly Payout ($), Ending Jackpot ($), Winner Name, Slot Chosen, Card Selected, Winner Present.
+- Example: "Week 35, 2024-04-15, 2024-04-21, 1748, $3,496, $1,398.4, $2,097.6, $14,461.6, $1,606.84, Buddy Dickson, 31, Queen of Hearts, Yes".
+- **Expenses Table**:
+- Columns: Date, Amount ($), Memo, Type (Expense/Donation).
+- Example: "2024-04-15, $50, Ticket rolls, Expense".
+- **Game Summary** (mimics spreadsheet’s game totals):
+- Fields: Total Sales ($), Total Payouts ($), Total Expenses ($), Total Donations ($), Lodge Net Profit ($), Carryover Jackpot ($).
+- Example: "Game 11, $26,552, $14,461.6, $1,485.08, $5,994, $4,611.36, $1,606.84".
+- **Cumulative Summary** (dynamic, mimics spreadsheet’s cumulative table):
+- Table: Total Sales ($204,276), Total Payouts ($122,442), Total Expenses ($17,924.23), Total Donations ($59,467.6), Lodge Net Profit ($4,442.17).
+- Allocation Breakdown: Lodge portion percentages (e.g., 72.67% donations, 21.90% expenses, 5.43% lodge net).
+- Example: "Lodge Portion: $81,710.4; Donations: $59,467.6 (72.67%), Expenses: $17,924.23 (21.90%), Lodge Net: $4,442.17 (5.43%)".
+- **Visualizations**:
+- Chart.js bar chart: Sales, Payouts, Expenses, Donations (weekly, game, or cumulative based on filter).
+- **Buttons**:
+- "Export as PDF" (includes filtered tables and charts).
+- "Add Expense/Donation" (opens modal with Date, Amount, Memo, Type).
+- **Functionality**:
+- Fetch data from games, weeks, ticket_sales, expenses dynamically based on filters.
+- Calculate dynamically:
+- total_sales = sum(ticket_sales.amount_collected) per game or all games.
+- total_payouts = sum(weeks.weekly_payout) per game or all games.
+- total_expenses = sum(expenses.amount where is_donation = false) per game or all games.
+- total_donations = sum(expenses.amount where is_donation = true) per game or all games.
+- lodge_net_profit = sum(ticket_sales.lodge_total) - total_expenses - total_donations.
+- Allocation percentages:
+- Donations % = (total_donations / sum(lodge_total)) \* 100.
+- Expenses % = (total_expenses / sum(lodge_total)) \* 100.
+- Lodge Net % = (lodge_net_profit / sum(lodge_total)) \* 100.
+- Handle carryover_jackpot: If jackpot not fully paid (e.g., winner absent), roll over to next game or add to lodge_total per penalty_to_lodge.
+- Generate PDF with jsPDF, styled like the spreadsheet, including tables and allocation breakdown.
+- Support adding expenses/donations, updating games.total_expenses or total_donations.
+
+### Admin Panel
+
+- **Path**: `/admin` (accessible only to role: 'admin')
+- **UI**:
+- Header: "Admin Configuration"
+- Sections:
+- **Game Settings**:
+- Inputs: Default Ticket Price, Lodge Percentage, Jackpot Percentage, Penalty Percentage, Penalty to Lodge (checkbox).
+- "Save" button.
+- **Card Payouts**:
+- Table with editable fields for 54 cards (e.g., "2 of Hearts": 10, "Queen of Hearts": "jackpot").
+- "Save" button.
+- **Manage Users**:
+- Table: Email, Role, Actions (Edit Role, Delete).
+- "Add User" button (opens modal with Email, Password, Role).
+- **Functionality**:
+- Update configurations table with default settings for new games.
+- Validate lodge_percentage + jackpot_percentage = 100.
+- Manage users via Supabase Auth (create, update, delete).
+
+### Logout
+
+- **UI**: Button in sidebar ("Logout").
+- **Functionality**: Clear JWT, redirect to `/`.
+
+###
+
+### 5. Business Logic
+
+- **Ticket Sales**:
+- amount_collected = tickets_sold \* ticket_price.
+- lodge_total = amount_collected \* (lodge_percentage / 100).
+- jackpot_total = amount_collected \* (jackpot_percentage / 100).
+- cumulative_collected = sum(amount_collected) for game.
+- ending_jackpot_total = previous ending_jackpot_total + jackpot_total - weekly_payout_amount.
+- Update games.total_sales = sum(amount_collected).
+- **Winners**:
+- If card_selected = "Queen of Hearts", weekly_payout_amount = ending_jackpot_total (minus penalty if winner_present = false).
+- Else, weekly_payout_amount = card_payouts\[card_selected\] (e.g., $25 for "8 of Hearts").
+- If winner_present = false, apply penalty_percentage (e.g., 10%) to jackpot:
+- If penalty_to_lodge = true, add to lodge_total.
+- Else, add to carryover_jackpot for next game.
+- Update games.total_payouts = sum(weekly_payout).
+- **Expenses/Donations**:
+- Deduct amount from lodge_total.
+- Update games.total_expenses (if is_donation = false) or games.total_donations (if is_donation = true).
+- **Game Management**:
+- Create new game with carryover_jackpot from previous game.
+- End game when "Queen of Hearts" is drawn, setting end_date.
+- Calculate lodge_net_profit = sum(lodge_total) - total_expenses - total_donations.
+- **Reporting**:
+- Weekly: Aggregate ticket_sales, weeks, expenses for selected game/week.
+- Game: Aggregate total_sales, total_payouts, total_expenses, total_donations, lodge_net_profit per game.
+- Cumulative: Sum across all games, calculate allocation percentages.
+- Ensure carryover_jackpot is tracked (e.g., $1,606.84 from Game 11 to Game 12).
+
+### 6. User Experience
+
+- **Responsive Design**:
+- Game/week cards stack vertically on mobile.
+- Tables scroll horizontally on mobile.
+- Sidebar collapsible on mobile.
+- **Validation**:
+- Required fields: Date, Tickets Sold, Winner Name, Slot, Card.
+- Positive numbers for Tickets Sold, Amount, Percentages.
+- lodge_percentage + jackpot_percentage = 100.
+- **Feedback**:
+- Success/error messages (e.g., "Row added successfully").
+- Loading spinners for API calls.
+- **Styling**:
+- Primary color: Blue (#1E40AF).
+- Secondary color: Green (#10B981).
+- Font: Inter (Google Fonts).
+- Cards: Bordered, shadow, hover effects.
+- Tables: Bordered, striped rows, hover effects.
+- Buttons: Rounded, hover transitions.
+
+### 7. Security
+
+- Use Supabase Auth for secure email/password authentication.
+- Restrict admin routes to role: 'admin'.
+- Sanitize inputs to prevent XSS/SQL injection.
+- Enable Row-Level Security (RLS) in Supabase:
+- users: Read/write for authenticated users and they will be admin.
+- games, weeks, ticket_sales, expenses: Read/write for authenticated users.
+- configurations: Read for all, write for admin.
+
+### 8. Example Data (Seed Database)
+
+- **users**: `{ email: "admin@example.com", password: "queen2024", role: "admin" }`, `{ email: "organizer@example.com", password: "lodge2024", role: "organizer" }`.
+- **games**: Game 11 (name: "Game 11", start_date: '2023-08-21', end_date: '2024-04-21', ticket_price: 2, lodge_percentage: 40, jackpot_percentage: 60, total_sales: 26552, total_payouts: 14461.6, total_expenses: 1485.08, total_donations: 5994, lodge_net_profit: 4611.36, carryover_jackpot: 1606.84).
+- **weeks**: Week 35 (game_id: Game 11, week_number: 35, start_date: '2024-04-15', end_date: '2024-04-21', weekly_sales: 3496, weekly_tickets_sold: 1748, winner_name: "Buddy Dickson", slot_chosen: 31, card_selected: "Queen of Hearts", weekly_payout: 14461.6, winner_present: true).
+- **ticket_sales**: 2024-04-15, 1748 tickets, $3,496, $26,552 cumulative, $10,620.8 lodge, $15,931.2 jackpot, $14,461.6 payout, $1,606.84 ending jackpot.
+- **expenses**: $50, 2024-04-15, "Ticket rolls", is_donation: false; $500, 2024-04-15, "Toys for Tots", is_donation: true.
+- **configurations**: ticket_price: 2, lodge_percentage: 40, jackpot_percentage: 60, penalty_percentage: 10, penalty_to_lodge: false, card_payouts: { "2 of Hearts": 10, "3 of Hearts": 11, ..., "Queen of Hearts": "jackpot", "Joker": 100 }.
+
+### 9. Deliverables
+
+- Fully functional SPA with all pages and API integrations.
+- Supabase database with seeded data and RLS configured.
+- Responsive UI styled with Tailwind CSS.
+- PDF,CSV export for "Income vs. Expense" reports, matching spreadsheet layout.
+- Source code with clear comments.
+- Deployment instructions for Supabase and local testing.
+
+### 10. UI Instructions
+
+I am sharing all necessary UI images after this prompt, there I gave overall UI design and Instruction I gave using Red Text. colot schemes:
+
+#F7F8FC
+
+#A1E96C
+
+#1F4E4A
+
+#132E2C
+
+maintain it with that ui styles images I am going to share next prompt. so till that dont generate any code.
+
+### 10. Notes
+
+- Fully replicate the spreadsheet’s functionality:
+- Weekly data (e.g., Game 11’s 35 weeks with ticket sales, payouts, winners).
+- Game summaries (e.g., Game 11: $26,552 sales, $4,611.36 net profit).
+- Cumulative totals ($204,276 sales, 72.67% donations allocation).
+- Ensure "Income vs. Expense" page dynamically calculates and displays all financial metrics.
+- Support game transitions with carryover jackpots when Queen of Hearts is drawn.
+- Provide flexibility for lodge_percentage, ticket_price, and card_payouts.
+- Ensure week cards collapse 7 daily rows with expandable summaries.
+
+Build the app to meet these specifications, ensuring all features are implemented and tested for accuracy against the spreadsheet and transcript requirements.
+
+Modifications:
+User: Each user will count as an Organization, they will have organization name, logo_image, about on user tab. Rename user tab/page as Account. Add update, create table on database if necessary for this. Create a bucket in supabase store and name brand_image to store these associate logo images. so admin part will have only user and that is that signed inn account.
+Winner Details Enhancements (Dashboard > Game Card > Week Card > Enter Winner Details on 7th week modal) Card Selected Payout Population: When a card is selected in the "Card Selected" dropdown (on the 7th row of a week), automatically populate a dollar amount field for the winner's payout based on the organization's payout structure: 2–10 (any suit): $25.00 Jack, King (any suit): $30.00 Ace (any suit): $35.00 Queen (except Queen of Hearts, any suit): $40.00 Joker: $50.00 Queen of Hearts: Full jackpot amount for the game (calculated as the ending_jackpot_total). For Queen of Hearts, the payout field should auto-populate with the full jackpot amount without requiring manual entry. User can edit-update payouts amounts from admin and that modified payouts will be count from if any new game will create. so keep all info data properly on database.
+Non-Attendance Penalty:
+
+If the "Present" checkbox is unchecked (winner not present), reduce the Queen of Hearts payout by the configured penalty_percentage (default: 10%).
+Add a configuration option (in the admin panel) to choose whether the 10% penalty is:
+Added to the next game's jackpot (default, as per client's organization).
+Added to the organization's net profit (alternative for other organizations).
+
+4. Payout Slip:
+Add an option to generate a "Payout Slip" for each week's winner after entering winner details.
+Content of the slip (printable as PDF):
+Winner Name
+Slot Chosen
+Card Exposed (Selected)
+Amount Won
+Date of Drawing
+Game Number
+Week Number (with Start and End Dates)
+Line for "Authorized Signer" signature
+
+Include a "Print Payout Slip" button in the week card after winner details are submitted. keep all data dynamic on database properly.
+5. Game Mechanics and Jackpot Rules
+Jackpot Freeze on Sundays:
+The jackpot amount is finalized (frozen) at the end of Sunday for the Monday night drawing.
+Tickets sold on Monday (drawing day) do not contribute to the current week's jackpot but are added to the next week's jackpot.
+Weeks run from Monday to Sunday, with the drawing on Monday night for tickets sold from the previous Monday to Sunday.
+
+Minimum Starting Jackpot:
+Allow organizations to set a minimum starting jackpot amount for each game (e.g., $500 for the client's organization).
+If the Queen of Hearts is won on Monday, Monday's ticket sales (which go to the next game's jackpot) may be insufficient (e.g., a few dollars). In this case, the new game starts with the minimum amount (e.g., $500).
+Only add ticket sales to the jackpot once cumulative sales exceed the minimum amount (e.g., $500 + additional sales).
+Add an input field in the "Create Game" modal and admin panel to set the minimum starting jackpot. Keep all data on database as all value matters on this calculation..
+
+Carryover Jackpot:
+Ensure the minimum starting jackpot is factored into the carryover logic.
+On create new game modal, carryover jackpot Input field is not necessary as it will automatically counted from the last previuos game, so the first game carryover jackpot will be . Hope you understand.
+
+6. Financial Calculations
+Payouts and Expenses:
+Calculate all dataproperly dynamically as instructed.
+
+Cumulative Column Removal:
+Remove the "Cumulative Collected" column from the week card's table (under Dashboard > Game Card > Week Card).
+The client questions its purpose, and it appears redundant since cumulative totals are tracked at the game and app level.
+
+7. Terminology Change
+Replace "Lodge" with "Organization":
+Update all instances of "Lodge" (e.g., lodge_percentage, lodge_total, lodge_net_profit) to "Organization" throughout the app (UI, database, calculations).
+This reflects the app's broader applicability to various organizations, not just lodges.
+
+8. UI and Data Display Enhancements
+Week Header Dates:
+In the week card header (Dashboard > Game Card > Week Card), display both start and end dates (e.g., "April 29, 2025 - May 5, 2025") without requiring the user to expand the card.
+
+Game End Date:
+In the game card header (Dashboard and Income vs. Expense), display the end date alongside the start date (e.g., "Start: April 29, 2025 | End: May 5, 2025").
+
+Week Header Rearrangement:
+Rearrange the week card header fields in this order:
+Tickets Sold
+Ticket Sales
+Organization Net Profit
+Jackpot Total
+Winner Name
+Slot Selected
+Card Selected
+Payout Amount
+Present
+
+Ticket Sales Calculation Fix:
+The week card header's "Tickets Sold" and "Ticket Sales" do not match the detailed rows because Monday's ticket sales are incorrectly included in the current week's jackpot.
+Fix this by excluding Monday's ticket sales from the current week's jackpot and rolling them into the next week's jackpot, as weeks run Monday to Sunday with the drawing on Monday night.
+
+9. Income vs. Expense Page Redesign
+Three-Column Layout:
+Redesign the "Income vs. Expense" page to display three columns (instead of the current tables and cards):
+
+st Column: Overall Totals:
+Tickets Sold (total across all games)
+Ticket Sales ($204,276)
+Total Payouts ($122,442)
+Total Expenses ($17,924.23)
+Total Donated ($59,467.6)
+
+2nd Column: Payout Portion Allocation:
+Total Sales (60% portion, e.g., $122,565.6)
+Total Payouts ($122,442)
+
+3rd Column: Organization Portion Allocation:
+Total Sales (40% portion, e.g., $81,710.4)
+Total Expenses ($17,924.23)
+Total Donations ($59,467.6)
+Organization Net Profit ($4,442.17)
+
+Remove Percentage Column:
+Do not display allocation percentages (e.g., 72.67% donations, 21.90% expenses, 5.43% net profit) as previously shown in the cumulative summary.
+
+Game Cards:
+Retain expandable game cards below the three-column summary, showing:
+Weeks Table: Week Number, Start Date, End Date, Tickets Sold, Weekly Sales, Organization Portion, Jackpot Portion, Weekly Payout, Ending Jackpot, Winner Name, Slot Chosen, Card Selected, Winner Present.
+Expenses Table: Date, Amount, Memo, Type (Expense/Donation).
+Game Summary: Total Sales, Total Payouts, Total Expenses, Total Donations, Organization Net Profit, Carryover Jackpot.
+
+Filters and Buttons:
+Keep filters (Game Number, Date Range, Report Type) and "Export as PDF" button.
+Add "Add Expense/Donation" button with modal (Date, Amount, Memo, Type).
+
+Chart:
+Retain Chart.js bar chart for visual representation of sales, payouts, expenses, and donations, adjustable, previous current data annalysis of each game, week, cumulative etc by filter.
+
+8. Reporting and Export
+Payout Slip:
+As noted, include a printable payout slip with winner details, game/week info, and a signature line.
+
+9. Technical Clarifications
+Week Structure:
+Weeks run Monday to Sunday, with the drawing on Monday night for tickets sold from the previous Monday to Sunday.
+Ensure the app reflects this by correctly assigning ticket sales to the appropriate week's jackpot.
+
+Minimum Jackpot Logic:
+The client suggests a phone call to clarify the minimum starting jackpot logic, but the written feedback implies:
+New games start with a minimum jackpot (e.g., $500).
+Monday's ticket sales (post-drawing) contribute to the new game's jackpot but are only added after the minimum is met.
+Example: If Monday sales are $100, the jackpot remains $500 until cumulative sales exceed $500, then add the excess (e.g., $600 sales = $500 + $100).
+
+10. Additional Observations
+The client acknowledges that the prototype includes carryover jackpot functionality, which aligns with their needs.
+The feedback emphasizes usability (e.g., auto-populating payouts, displaying dates) and flexibility (e.g., penalty handling, minimum jackpot).
+The payout slip and logo upload indicate a need for organization-specific branding and formal documentation.
+
