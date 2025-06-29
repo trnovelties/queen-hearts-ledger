@@ -10,7 +10,6 @@ interface DailyEntriesListProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
-  onEditEntry?: (entry: any) => void;
   onOpenExpenseModal?: (date: string, gameId: string) => void;
   onOpenDonationModal?: (date: string, gameId: string) => void;
 }
@@ -24,7 +23,6 @@ export const DailyEntriesList = ({
   currentGameId,
   games,
   setGames,
-  onEditEntry,
   onOpenExpenseModal,
   onOpenDonationModal
 }: DailyEntriesListProps) => {
@@ -63,7 +61,6 @@ export const DailyEntriesList = ({
               currentGameId={currentGameId}
               games={games}
               setGames={setGames}
-              onEditEntry={onEditEntry}
               onOpenExpenseModal={onOpenExpenseModal}
               onOpenDonationModal={onOpenDonationModal}
             />

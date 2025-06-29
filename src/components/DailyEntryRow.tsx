@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
-import { Edit } from 'lucide-react';
 
 interface DailyEntryRowProps {
   dayIndex: number;
@@ -16,7 +15,6 @@ interface DailyEntryRowProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
-  onEditEntry?: (entry: any) => void;
   onOpenExpenseModal?: (date: string, gameId: string) => void;
   onOpenDonationModal?: (date: string, gameId: string) => void;
 }
@@ -32,7 +30,6 @@ export const DailyEntryRow = ({
   currentGameId,
   games,
   setGames,
-  onEditEntry,
   onOpenExpenseModal,
   onOpenDonationModal
 }: DailyEntryRowProps) => {
@@ -110,20 +107,6 @@ export const DailyEntryRow = ({
             {existingEntry ? formatCurrency(existingEntry.amount_collected) : 'N/A'}
           </div>
         </div>
-
-        {existingEntry && onEditEntry && (
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Actions</label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEditEntry(existingEntry)}
-              className="h-9 px-3"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
