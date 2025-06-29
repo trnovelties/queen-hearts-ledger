@@ -44,14 +44,25 @@ export const useTicketSalesOperations = () => {
         .eq('game_id', gameId)
         .eq('user_id', user?.id);
 
+      // Get total payouts from completed weeks
+      const { data: weeks } = await supabase
+        .from('weeks')
+        .select('weekly_payout')
+        .eq('game_id', gameId)
+        .eq('user_id', user?.id);
+
       const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
-      const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
+      const totalPayouts = weeks?.reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
+      
+      // Calculate organization net profit: organization portion - expenses - donations - payouts
+      const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations - totalPayouts;
 
       await supabase
         .from('games')
         .update({
           total_sales: gameTotalSales,
+          total_payouts: totalPayouts,
           total_expenses: totalExpenses,
           total_donations: totalDonations,
           organization_net_profit: organizationNetProfit
