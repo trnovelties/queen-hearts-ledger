@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
 import { getTodayDateString } from "@/lib/dateUtils";
+import { useAuth } from "@/context/AuthContext";
 
 interface WinnerFormProps {
   open: boolean;
@@ -43,6 +45,7 @@ export function WinnerForm({
   onComplete, 
   onOpenPayoutSlip 
 }: WinnerFormProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
@@ -62,19 +65,27 @@ export function WinnerForm({
     carryoverJackpot: gameData?.carryover_jackpot || 0
   });
 
-  // Calculate ending jackpot based on previous week's stored ending jackpot
+  // Calculate ending jackpot based on proper carryover logic
   const calculateEndingJackpotForWeek = async (weeklyPayout: number) => {
     try {
       if (!gameId || !weekId) return 0;
+
+      console.log('=== CALCULATING ENDING JACKPOT ===');
+      console.log('Game ID:', gameId);
+      console.log('Week ID:', weekId);
+      console.log('Weekly Payout:', weeklyPayout);
 
       // Get current week data
       const { data: currentWeek, error: weekError } = await supabase
         .from('weeks')
         .select('week_number')
         .eq('id', weekId)
+        .eq('user_id', user?.id)
         .single();
 
       if (weekError) throw weekError;
+
+      console.log('Current Week Number:', currentWeek.week_number);
 
       // Get previous week's stored ending jackpot
       let previousEndingJackpot = 0;
@@ -84,37 +95,41 @@ export function WinnerForm({
           .select('ending_jackpot')
           .eq('game_id', gameId)
           .eq('week_number', currentWeek.week_number - 1)
+          .eq('user_id', user?.id)
           .single();
 
-        if (prevWeekError) {
+        if (prevWeekError || !previousWeek || previousWeek.ending_jackpot === null) {
           console.warn('Could not find previous week, using game carryover');
           previousEndingJackpot = gameData?.carryover_jackpot || 0;
         } else {
-          previousEndingJackpot = previousWeek.ending_jackpot || 0;
+          previousEndingJackpot = previousWeek.ending_jackpot;
         }
       } else {
         // Week 1 starts with game's carryover jackpot
         previousEndingJackpot = gameData?.carryover_jackpot || 0;
       }
 
+      console.log('Previous Ending Jackpot:', previousEndingJackpot);
+
       // Get current week's jackpot contributions
       const { data: weekSales, error: salesError } = await supabase
         .from('ticket_sales')
         .select('jackpot_total')
-        .eq('week_id', weekId);
+        .eq('week_id', weekId)
+        .eq('user_id', user?.id);
 
       if (salesError) throw salesError;
 
       const currentWeekJackpotContributions = weekSales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0;
+      console.log('Current Week Jackpot Contributions:', currentWeekJackpotContributions);
 
       // Calculate ending jackpot: Previous ending jackpot + current week's contributions - payout
       const endingJackpot = previousEndingJackpot + currentWeekJackpotContributions - weeklyPayout;
 
       console.log('Ending Jackpot Calculation:');
-      console.log('Previous Ending Jackpot:', previousEndingJackpot);
-      console.log('Current Week Contributions:', currentWeekJackpotContributions);
-      console.log('Weekly Payout:', weeklyPayout);
-      console.log('Final Ending Jackpot:', endingJackpot);
+      console.log('Formula: Previous Ending Jackpot + Current Week Contributions - Weekly Payout');
+      console.log(`${previousEndingJackpot} + ${currentWeekJackpotContributions} - ${weeklyPayout} = ${endingJackpot}`);
+      console.log('=== END CALCULATION ===');
 
       return Math.max(0, endingJackpot);
     } catch (error) {
@@ -217,8 +232,12 @@ export function WinnerForm({
         }
       }
 
-      // Calculate the ending jackpot for this week
+      console.log('=== WINNER FORM SUBMISSION ===');
+      console.log('Final Distribution (Payout):', finalDistribution);
+
+      // Calculate the ending jackpot for this week using the correct formula
       const endingJackpot = await calculateEndingJackpotForWeek(finalDistribution);
+      console.log('Calculated Ending Jackpot:', endingJackpot);
 
       // Update week record with winner details, payout, and ending jackpot
       const { error: weekError } = await supabase
@@ -236,11 +255,14 @@ export function WinnerForm({
 
       if (weekError) throw weekError;
 
+      console.log('Week updated with ending jackpot:', endingJackpot);
+
       // Update the last ticket sales record with the proper ending jackpot
       const { data: lastSale, error: lastSaleError } = await supabase
         .from('ticket_sales')
         .select('*')
         .eq('week_id', weekId)
+        .eq('user_id', user?.id)
         .order('date', { ascending: false })
         .limit(1)
         .single();
@@ -262,10 +284,7 @@ export function WinnerForm({
       // Handle carryover for next game if Queen of Hearts was drawn
       if (formData.cardSelected === 'Queen of Hearts') {
         const todayDateString = getTodayDateString();
-        console.log('=== WINNER FORM DATE DEBUG ===');
-        console.log('1. getTodayDateString():', todayDateString);
-        console.log('2. typeof todayDateString:', typeof todayDateString);
-        console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+        console.log('Queen of Hearts drawn - updating game end date and carryover');
         
         // Update game end date and carryover
         const { error: gameUpdateError } = await supabase
