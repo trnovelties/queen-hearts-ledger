@@ -1,14 +1,14 @@
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
-import { formatDateStringForDisplay } from '@/lib/dateUtils';
 import { useTicketSales } from '@/hooks/useTicketSales';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { WeekHeader } from './WeekHeader';
+import { WeekSummaryStats } from './WeekSummaryStats';
+import { WinnerInfoDisplay } from './WinnerInfoDisplay';
+import { DailyEntriesList } from './DailyEntriesList';
+import { WinnerSelectionSection } from './WinnerSelectionSection';
 
 interface TicketSalesTableProps {
   week: any;
@@ -134,213 +134,42 @@ export const TicketSalesTable = ({
     <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
       {/* Week Details Header */}
       <div className="pb-6 border-b border-gray-200">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h4 className="text-2xl font-bold text-[#1F4E4A] mb-2">Week {week.week_number}</h4>
-            <p className="text-gray-600 text-lg">
-              {formatDateStringForDisplay(week.start_date)} - {formatDateStringForDisplay(week.end_date)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onToggleWeek(null)}
-              className="text-gray-400 hover:text-gray-600 text-2xl font-light w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100"
-            >
-              ×
-            </button>
-          </div>
-        </div>
+        <WeekHeader week={week} onToggleWeek={onToggleWeek} />
         
         {/* Week Summary Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="text-2xl font-bold text-blue-700">{weekTotalTickets}</div>
-            <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-            <div className="text-2xl font-bold text-green-700">{formatCurrency(weekTotalSales)}</div>
-            <div className="text-sm text-green-600 font-medium">Total Sales</div>
-          </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <div className="text-2xl font-bold text-purple-700">{formatCurrency(weekOrganizationTotal)}</div>
-            <div className="text-sm text-purple-600 font-medium">Organization Net</div>
-          </div>
-          <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-            <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
-            <div className="text-sm text-orange-600 font-medium">Jackpot Total</div>
-          </div>
-          <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-            <div className="text-2xl font-bold text-indigo-700">{formatCurrency(displayedEndingJackpot)}</div>
-            <div className="text-sm text-indigo-600 font-medium">
-              {week.winner_name ? 'Ending Jackpot' : 'Current Jackpot'}
-            </div>
-          </div>
-        </div>
+        <WeekSummaryStats
+          weekTotalTickets={weekTotalTickets}
+          weekTotalSales={weekTotalSales}
+          weekOrganizationTotal={weekOrganizationTotal}
+          weekJackpotTotal={weekJackpotTotal}
+          displayedEndingJackpot={displayedEndingJackpot}
+          hasWinner={hasWinner()}
+          formatCurrency={formatCurrency}
+        />
         
         {/* Winner Information */}
-        {week.winner_name && (
-          <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
-            <h5 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
-              🏆 Winner Information
-            </h5>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
-              <div className="space-y-1">
-                <div className="font-medium text-yellow-700">Winner Name</div>
-                <div className="text-yellow-900 font-semibold">{week.winner_name}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-medium text-yellow-700">Slot Selected</div>
-                <div className="text-yellow-900 font-semibold">#{week.slot_chosen}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-medium text-yellow-700">Card Drawn</div>
-                <div className="text-yellow-900 font-semibold">{week.card_selected}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-medium text-yellow-700">Payout Amount</div>
-                <div className="text-yellow-900 font-semibold">{formatCurrency(week.weekly_payout)}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-medium text-yellow-700">Winner Present</div>
-                <div className={`font-semibold ${week.winner_present ? 'text-green-600' : 'text-red-600'}`}>
-                  {week.winner_present ? '✓ Yes' : '✗ No'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <WinnerInfoDisplay week={week} formatCurrency={formatCurrency} />
       </div>
       
       {/* 7 Daily Entries */}
-      <div className="pt-6">
-        <h5 className="text-lg font-semibold mb-4 text-[#1F4E4A]">Daily Entries (7 Days)</h5>
-        
-        <div className="space-y-3 h-fit">
-          {Array.from({ length: 7 }, (_, dayIndex) => {
-            const weekStartDate = new Date(week.start_date);
-            const entryDate = new Date(weekStartDate);
-            entryDate.setDate(entryDate.getDate() + dayIndex);
+      <DailyEntriesList
+        week={week}
+        tempTicketInputs={tempTicketInputs}
+        formatCurrency={formatCurrency}
+        onInputChange={handleTicketInputChange}
+        onInputSubmit={handleTicketInputSubmit}
+        currentGameId={currentGameId}
+        games={games}
+        setGames={setGames}
+      />
 
-            // Find existing entry for this specific date
-            const existingEntry = week.ticket_sales.find((entry: any) => {
-              const existingDate = new Date(entry.date);
-              return existingDate.toDateString() === entryDate.toDateString();
-            });
-
-            const inputKey = `${week.id}-${dayIndex}`;
-            const tempValue = tempTicketInputs[inputKey];
-            
-            // Show actual value if entry exists, temp value if being edited, or empty string for new entries
-            const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold !== undefined ? existingEntry.tickets_sold : '');
-            
-            // Show "N/A" in the display when no entry exists yet
-            const displayValue = existingEntry ? existingEntry.tickets_sold : 'N/A';
-
-            return (
-              <div key={dayIndex} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <div className="text-base font-semibold text-gray-900">
-                    Day {dayIndex + 1}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {formatDateStringForDisplay(entryDate.toISOString().split('T')[0])}
-                  </div>
-                  {!existingEntry && (
-                    <div className="text-xs text-orange-600 font-medium">
-                      Entry Required
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">Tickets Sold</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={currentValue}
-                      onChange={(e) => handleTicketInputChange(week.id, dayIndex, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleTicketInputSubmit(week.id, dayIndex, e.currentTarget.value, currentGameId!, games, setGames);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        handleTicketInputSubmit(week.id, dayIndex, e.target.value, currentGameId!, games, setGames);
-                      }}
-                      className="w-28 h-9 text-center font-medium"
-                      placeholder="Enter tickets"
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">Quick Add</label>
-                    <Select onValueChange={(value) => {
-                      if (value === 'donation') {
-                        // Handle donation modal opening
-                      } else if (value === 'expense') {
-                        // Handle expense modal opening
-                      }
-                    }}>
-                      <SelectTrigger className="w-24 h-9">
-                        <SelectValue placeholder="+" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="donation">Donation</SelectItem>
-                        <SelectItem value="expense">Expense</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-600">Day Total</label>
-                    <div className={`text-sm font-bold px-3 py-2 rounded border min-w-[80px] text-center ${
-                      existingEntry 
-                        ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                        : 'bg-gray-100 text-gray-500 border-gray-200'
-                    }`}>
-                      {existingEntry ? formatCurrency(existingEntry.amount_collected) : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Always Visible Add Winner Details Button */}
-        <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h5 className={`text-lg font-semibold mb-1 ${
-                hasWinner() ? 'text-green-800' : 
-                isWeekComplete() ? 'text-blue-800' : 'text-gray-600'
-              }`}>
-                {hasWinner() ? 'Winner Selected!' : 
-                 isWeekComplete() ? 'Ready for Winner Selection' : 'Complete All 7 Days First'}
-              </h5>
-              <p className={`text-sm ${
-                hasWinner() ? 'text-green-700' : 
-                isWeekComplete() ? 'text-blue-700' : 'text-gray-500'
-              }`}>
-                {hasWinner() ? `Winner: ${week.winner_name} - ${week.card_selected}` :
-                 isWeekComplete() ? 'All 7 days have entries. Ready to select a winner.' :
-                 `${week.ticket_sales.length}/7 days entered`}
-              </p>
-            </div>
-            <Button
-              onClick={handleWinnerButtonClick}
-              className={`font-semibold px-6 py-2 ${
-                hasWinner() ? 'bg-green-600 hover:bg-green-700 text-white' :
-                isWeekComplete() ? 'bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]' :
-                'bg-gray-300 hover:bg-gray-400 text-gray-600'
-              }`}
-            >
-              {hasWinner() ? 'View Winner Details' : 'Add Winner Details'}
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Winner Selection Section */}
+      <WinnerSelectionSection
+        week={week}
+        isWeekComplete={isWeekComplete()}
+        hasWinner={hasWinner()}
+        onWinnerButtonClick={handleWinnerButtonClick}
+      />
     </div>
   );
 };
