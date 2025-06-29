@@ -80,7 +80,7 @@ export const useTicketSales = () => {
       );
 
       // Optimistically update local state first
-      setGames(prevGames => prevGames.map(g => {
+      const updatedGames = games.map(g => {
         if (g.id !== currentGameId) return g;
         return {
           ...g,
@@ -131,7 +131,9 @@ export const useTicketSales = () => {
             };
           })
         };
-      }));
+      });
+
+      setGames(updatedGames);
 
       if (existingEntry) {
         // Update existing entry
