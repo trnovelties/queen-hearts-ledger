@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2 } from "lucide-react";
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 import { useTicketSales } from '@/hooks/useTicketSales';
+import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
+import { useEffect, useState } from 'react';
 
 interface TicketSalesTableProps {
   week: any;
@@ -24,6 +26,8 @@ export const TicketSalesTable = ({
   onToggleWeek
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
+  const { calculateWeekEndingJackpot } = useFinancialCalculations();
+  const [weekEndingJackpot, setWeekEndingJackpot] = useState<number>(0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -38,10 +42,24 @@ export const TicketSalesTable = ({
   const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
   const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
   const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
-  
-  // Get the ending jackpot total from the most recent entry
-  const latestEntry = week.ticket_sales.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-  const endingJackpotTotal = latestEntry?.ending_jackpot_total || 0;
+
+  // Calculate proper week-level ending jackpot
+  useEffect(() => {
+    const calculateEndingJackpot = async () => {
+      if (week.winner_name && week.weekly_payout > 0) {
+        // Week is completed, calculate the ending jackpot
+        const endingJackpot = await calculateWeekEndingJackpot(game.id, week.id, week.weekly_payout);
+        setWeekEndingJackpot(endingJackpot);
+      } else {
+        // Week not completed, show current jackpot contributions total
+        const latestEntry = week.ticket_sales.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        const currentJackpotTotal = latestEntry?.jackpot_contributions_total || (game.carryover_jackpot + weekJackpotTotal);
+        setWeekEndingJackpot(currentJackpotTotal);
+      }
+    };
+
+    calculateEndingJackpot();
+  }, [week, game.id, game.carryover_jackpot, weekJackpotTotal, calculateWeekEndingJackpot]);
 
   return (
     <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
@@ -83,8 +101,10 @@ export const TicketSalesTable = ({
             <div className="text-sm text-orange-600 font-medium">Jackpot Total</div>
           </div>
           <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-            <div className="text-2xl font-bold text-indigo-700">{formatCurrency(endingJackpotTotal)}</div>
-            <div className="text-sm text-indigo-600 font-medium">Ending Jackpot</div>
+            <div className="text-2xl font-bold text-indigo-700">{formatCurrency(weekEndingJackpot)}</div>
+            <div className="text-sm text-indigo-600 font-medium">
+              {week.winner_name ? 'Ending Jackpot' : 'Current Jackpot'}
+            </div>
           </div>
         </div>
         
@@ -108,7 +128,7 @@ export const TicketSalesTable = ({
                 <div className="text-yellow-900 font-semibold">{week.card_selected}</div>
               </div>
               <div className="space-y-1">
-                <div className="font-medium text-yellow-700">Distribution Amount</div>
+                <div className="font-medium text-yellow-700">Payout Amount</div>
                 <div className="text-yellow-900 font-semibold">{formatCurrency(week.weekly_payout)}</div>
               </div>
               <div className="space-y-1">

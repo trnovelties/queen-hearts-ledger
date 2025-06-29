@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
+import { useFinancialCalculations } from "@/hooks/useFinancialCalculations";
 import { getTodayDateString } from "@/lib/dateUtils";
 
 interface WinnerFormProps {
@@ -61,6 +62,8 @@ export function WinnerForm({
     minimumJackpot: gameData?.minimum_starting_jackpot || 500,
     carryoverJackpot: gameData?.carryover_jackpot || 0
   });
+
+  const { calculateWeekEndingJackpot } = useFinancialCalculations();
 
   useEffect(() => {
     const loadGameConfiguration = async () => {
@@ -156,7 +159,7 @@ export function WinnerForm({
         }
       }
 
-      // Update week record
+      // Update week record with winner details and payout
       const { error: weekError } = await supabase
         .from('weeks')
         .update({
@@ -171,7 +174,10 @@ export function WinnerForm({
 
       if (weekError) throw weekError;
 
-      // Update the last ticket sales record with the distribution
+      // Calculate the proper ending jackpot for this week
+      const endingJackpot = await calculateWeekEndingJackpot(gameId, weekId, finalDistribution);
+
+      // Update the last ticket sales record with the proper ending jackpot
       const { data: lastSale, error: lastSaleError } = await supabase
         .from('ticket_sales')
         .select('*')
@@ -182,16 +188,20 @@ export function WinnerForm({
 
       if (lastSaleError) throw lastSaleError;
 
-      // Calculate new ending jackpot total
-      let newEndingJackpot = displayedJackpot - finalDistribution;
+      // Update ticket sales record with calculated ending jackpot
+      const { error: updateSaleError } = await supabase
+        .from('ticket_sales')
+        .update({
+          weekly_payout_amount: finalDistribution,
+          ending_jackpot_total: endingJackpot,
+          displayed_jackpot_total: endingJackpot
+        })
+        .eq('id', lastSale.id);
+
+      if (updateSaleError) throw updateSaleError;
 
       // Handle carryover for next game if Queen of Hearts was drawn
-      let carryoverAmount = 0;
       if (formData.cardSelected === 'Queen of Hearts') {
-        carryoverAmount = newEndingJackpot;
-        newEndingJackpot = 0;
-        
-        // CRITICAL: Use getTodayDateString for timezone-neutral date string
         const todayDateString = getTodayDateString();
         console.log('=== WINNER FORM DATE DEBUG ===');
         console.log('1. getTodayDateString():', todayDateString);
@@ -202,8 +212,8 @@ export function WinnerForm({
         const { error: gameUpdateError } = await supabase
           .from('games')
           .update({
-            end_date: todayDateString, // Pure string, no Date conversion
-            carryover_jackpot: carryoverAmount,
+            end_date: todayDateString,
+            carryover_jackpot: endingJackpot,
             total_payouts: (gameData?.total_payouts || 0) + finalDistribution
           })
           .eq('id', gameId);
@@ -221,18 +231,6 @@ export function WinnerForm({
         if (gameUpdateError) throw gameUpdateError;
       }
 
-      // Update ticket sales record with new ending jackpot
-      const { error: updateSaleError } = await supabase
-        .from('ticket_sales')
-        .update({
-          weekly_payout_amount: finalDistribution,
-          ending_jackpot_total: newEndingJackpot,
-          displayed_jackpot_total: newEndingJackpot
-        })
-        .eq('id', lastSale.id);
-
-      if (updateSaleError) throw updateSaleError;
-
       // Fetch the week data to get proper dates for the payout slip
       const { data: weekData, error: weekDataError } = await supabase
         .from('weeks')
@@ -242,7 +240,7 @@ export function WinnerForm({
 
       if (weekDataError) throw weekDataError;
 
-      // Prepare winner data for distribution slip - use string date and include all necessary info
+      // Prepare winner data for distribution slip
       const todayDateString = getTodayDateString();
       const winnerData = {
         winnerName: formData.winnerName,
@@ -252,7 +250,7 @@ export function WinnerForm({
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId,
-        date: todayDateString, // Pure string, no Date conversion
+        date: todayDateString,
         weekNumber: weekData.week_number,
         weekStartDate: weekData.start_date,
         weekEndDate: weekData.end_date,
