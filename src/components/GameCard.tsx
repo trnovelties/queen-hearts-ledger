@@ -23,6 +23,7 @@ interface GameCardProps {
   setCurrentGameId: (id: string | null) => void;
   games: any[];
   setGames: (games: any[]) => void;
+  onRefreshData?: () => void;
 }
 
 export const GameCard = ({
@@ -40,7 +41,8 @@ export const GameCard = ({
   currentGameId,
   setCurrentGameId,
   games,
-  setGames
+  setGames,
+  onRefreshData
 }: GameCardProps) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -131,6 +133,7 @@ export const GameCard = ({
             setCurrentGameId={setCurrentGameId}
             games={games}
             setGames={setGames}
+            onRefreshData={onRefreshData}
           />
           
           <ExpenseSection

@@ -1,7 +1,10 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
+import { WinnerForm } from './WinnerForm';
+import { PayoutSlipModal } from './PayoutSlipModal';
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 
 interface WeekManagementProps {
@@ -14,6 +17,7 @@ interface WeekManagementProps {
   setCurrentGameId: (id: string | null) => void;
   games: any[];
   setGames: (games: any[]) => void;
+  onRefreshData?: () => void;
 }
 
 export const WeekManagement = ({
@@ -25,14 +29,63 @@ export const WeekManagement = ({
   currentGameId,
   setCurrentGameId,
   games,
-  setGames
+  setGames,
+  onRefreshData
 }: WeekManagementProps) => {
+  const [winnerFormOpen, setWinnerFormOpen] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
+  const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2
     }).format(amount);
+  };
+
+  const handleOpenWinnerForm = (gameId: string, weekId: string) => {
+    setSelectedGameId(gameId);
+    setSelectedWeekId(weekId);
+    setWinnerFormOpen(true);
+  };
+
+  const handleWinnerFormComplete = () => {
+    setWinnerFormOpen(false);
+    setSelectedGameId(null);
+    setSelectedWeekId(null);
+    // Refresh the data to show updated winner information
+    if (onRefreshData) {
+      onRefreshData();
+    }
+  };
+
+  const handleOpenPayoutSlip = (winnerData: any) => {
+    setPayoutSlipData(winnerData);
+    setPayoutSlipOpen(true);
+  };
+
+  const getCurrentGameData = () => {
+    return games.find(g => g.id === selectedGameId);
+  };
+
+  const getCurrentWeekData = () => {
+    const gameData = getCurrentGameData();
+    return gameData?.weeks?.find((w: any) => w.id === selectedWeekId);
+  };
+
+  const calculateCurrentJackpotTotal = () => {
+    const gameData = getCurrentGameData();
+    const weekData = getCurrentWeekData();
+    
+    if (!gameData || !weekData) return 0;
+
+    // Get current week's jackpot contributions
+    const weekJackpotContributions = weekData.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
+    
+    return weekJackpotContributions;
   };
 
   return (
@@ -94,10 +147,31 @@ export const WeekManagement = ({
               games={games}
               setGames={setGames}
               onToggleWeek={onToggleWeek}
+              onOpenWinnerForm={handleOpenWinnerForm}
             />
           )}
         </div>
       )}
+
+      {/* Winner Form Modal */}
+      <WinnerForm
+        open={winnerFormOpen}
+        onOpenChange={setWinnerFormOpen}
+        gameId={selectedGameId}
+        weekId={selectedWeekId}
+        gameData={getCurrentGameData()}
+        currentJackpotTotal={0}
+        jackpotContributions={calculateCurrentJackpotTotal()}
+        onComplete={handleWinnerFormComplete}
+        onOpenPayoutSlip={handleOpenPayoutSlip}
+      />
+
+      {/* Payout Slip Modal */}
+      <PayoutSlipModal
+        open={payoutSlipOpen}
+        onOpenChange={setPayoutSlipOpen}
+        winnerData={payoutSlipData}
+      />
     </div>
   );
 };

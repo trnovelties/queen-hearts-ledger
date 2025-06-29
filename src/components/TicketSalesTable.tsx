@@ -16,6 +16,7 @@ interface TicketSalesTableProps {
   games: any[];
   setGames: (games: any[]) => void;
   onToggleWeek: (weekId: string | null) => void;
+  onOpenWinnerForm?: (gameId: string, weekId: string) => void;
 }
 
 export const TicketSalesTable = ({
@@ -24,7 +25,8 @@ export const TicketSalesTable = ({
   currentGameId,
   games,
   setGames,
-  onToggleWeek
+  onToggleWeek,
+  onOpenWinnerForm
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
@@ -36,6 +38,22 @@ export const TicketSalesTable = ({
       currency: 'USD',
       minimumFractionDigits: 2
     }).format(amount);
+  };
+
+  // Check if week is complete (has all 7 days with ticket entries)
+  const isWeekComplete = () => {
+    const entriesWithTickets = week.ticket_sales.filter((entry: any) => entry.tickets_sold > 0);
+    return entriesWithTickets.length === 7;
+  };
+
+  // Check if week already has a winner
+  const hasWinner = () => {
+    return week.winner_name && week.winner_name.trim() !== '';
+  };
+
+  // Should show "Add Winner Details" button
+  const shouldShowWinnerButton = () => {
+    return isWeekComplete() && !hasWinner();
   };
 
   // Calculate week totals from daily entries
@@ -176,6 +194,24 @@ export const TicketSalesTable = ({
                   {week.winner_present ? '✓ Yes' : '✗ No'}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Winner Details Button */}
+        {shouldShowWinnerButton() && (
+          <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h5 className="text-lg font-semibold text-green-800 mb-1">Week Complete!</h5>
+                <p className="text-sm text-green-700">All 7 days have ticket sales. Ready to select a winner.</p>
+              </div>
+              <Button
+                onClick={() => onOpenWinnerForm && onOpenWinnerForm(game.id, week.id)}
+                className="bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A] font-semibold px-6 py-2"
+              >
+                Add Winner Details
+              </Button>
             </div>
           </div>
         )}
