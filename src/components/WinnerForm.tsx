@@ -49,7 +49,7 @@ export function WinnerForm({
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
-    slotChosen: '',
+    slotChosen: null as number | null,
     winnerPresent: true,
     authorizedSignatureName: ''
   });
@@ -214,13 +214,12 @@ export function WinnerForm({
         return;
       }
 
-      if (!formData.slotChosen) {
+      if (formData.slotChosen === null || formData.slotChosen === undefined) {
         toast.error("Please enter a slot number");
         return;
       }
 
-      const slotNumber = parseInt(formData.slotChosen);
-      if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 52) {
+      if (formData.slotChosen < 1 || formData.slotChosen > 52) {
         toast.error("Slot number must be between 1 and 52");
         return;
       }
@@ -256,7 +255,7 @@ export function WinnerForm({
         .update({
           winner_name: formData.winnerName,
           card_selected: formData.cardSelected,
-          slot_chosen: slotNumber,
+          slot_chosen: formData.slotChosen,
           winner_present: formData.winnerPresent,
           authorized_signature_name: formData.authorizedSignatureName,
           weekly_payout: finalDistribution,
@@ -334,7 +333,7 @@ export function WinnerForm({
       const winnerData = {
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
-        slotChosen: slotNumber,
+        slotChosen: formData.slotChosen,
         amountWon: finalDistribution,
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
@@ -355,7 +354,7 @@ export function WinnerForm({
       setFormData({
         winnerName: '',
         cardSelected: '',
-        slotChosen: '',
+        slotChosen: null,
         winnerPresent: true,
         authorizedSignatureName: ''
       });
@@ -428,8 +427,14 @@ export function WinnerForm({
                   type="number"
                   min="1"
                   max="52"
-                  value={formData.slotChosen}
-                  onChange={(e) => setFormData({ ...formData, slotChosen: e.target.value })}
+                  value={formData.slotChosen || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      slotChosen: value === '' ? null : parseInt(value) 
+                    });
+                  }}
                   placeholder="Enter slot number (1-52)"
                   required
                 />
