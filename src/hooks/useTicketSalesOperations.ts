@@ -1,11 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from "@/context/AuthContext";
-import { useFinancialCalculations } from './useFinancialCalculations';
 
 export const useTicketSalesOperations = () => {
   const { user } = useAuth();
-  const { calculateEndingJackpotTotal } = useFinancialCalculations();
 
   const updateWeekTotals = async (weekId: string) => {
     const { data: weekSales } = await supabase
@@ -92,7 +90,7 @@ export const useTicketSalesOperations = () => {
         return existingDate.toDateString() === entryDate.toDateString();
       });
 
-      // Calculate the basic values
+      // Calculate the basic values - NO ending jackpot calculation here
       const ticketPrice = game.ticket_price;
       const amountCollected = ticketsSold * ticketPrice;
       const organizationPercentage = game.organization_percentage;
@@ -124,13 +122,13 @@ export const useTicketSalesOperations = () => {
       }
       cumulativeCollected += amountCollected;
 
-      // Calculate ending jackpot total using the corrected calculation
-      const endingJackpotTotal = await calculateEndingJackpotTotal(
-        currentGameId,
-        entryDate.toISOString().split('T')[0],
-        jackpotTotal,
-        game.carryover_jackpot || 0
-      );
+      // Calculate jackpot contributions total for display
+      const jackpotContributions = (game.carryover_jackpot || 0) + 
+        (allGameSales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0) + 
+        jackpotTotal;
+
+      // For individual day entries, we just store 0 for ending jackpot - it will be calculated at week level
+      const tempEndingJackpot = 0;
 
       // Optimistically update local state first
       const updatedGames = games.map(g => {
@@ -153,7 +151,9 @@ export const useTicketSalesOperations = () => {
                       cumulative_collected: cumulativeCollected,
                       organization_total: organizationTotal,
                       jackpot_total: jackpotTotal,
-                      ending_jackpot_total: endingJackpotTotal
+                      jackpot_contributions_total: jackpotContributions,
+                      displayed_jackpot_total: jackpotContributions,
+                      ending_jackpot_total: tempEndingJackpot
                     };
                   }
                   return entry;
@@ -169,7 +169,9 @@ export const useTicketSalesOperations = () => {
                   cumulative_collected: cumulativeCollected,
                   organization_total: organizationTotal,
                   jackpot_total: jackpotTotal,
-                  ending_jackpot_total: endingJackpotTotal
+                  jackpot_contributions_total: jackpotContributions,
+                  displayed_jackpot_total: jackpotContributions,
+                  ending_jackpot_total: tempEndingJackpot
                 }];
 
             // Recalculate week totals
@@ -189,7 +191,7 @@ export const useTicketSalesOperations = () => {
       setGames(updatedGames);
 
       if (existingEntry) {
-        // Update existing entry
+        // Update existing entry - NO ending jackpot calculation
         const { error } = await supabase
           .from('ticket_sales')
           .update({
@@ -200,14 +202,16 @@ export const useTicketSalesOperations = () => {
             cumulative_collected: cumulativeCollected,
             organization_total: organizationTotal,
             jackpot_total: jackpotTotal,
-            ending_jackpot_total: endingJackpotTotal
+            jackpot_contributions_total: jackpotContributions,
+            displayed_jackpot_total: jackpotContributions,
+            ending_jackpot_total: tempEndingJackpot
           })
           .eq('id', existingEntry.id)
           .eq('user_id', user.id);
 
         if (error) throw error;
       } else {
-        // Insert new entry
+        // Insert new entry - NO ending jackpot calculation
         const { error } = await supabase
           .from('ticket_sales')
           .insert([{
@@ -220,7 +224,9 @@ export const useTicketSalesOperations = () => {
             cumulative_collected: cumulativeCollected,
             organization_total: organizationTotal,
             jackpot_total: jackpotTotal,
-            ending_jackpot_total: endingJackpotTotal,
+            jackpot_contributions_total: jackpotContributions,
+            displayed_jackpot_total: jackpotContributions,
+            ending_jackpot_total: tempEndingJackpot,
             user_id: user.id
           }]);
 

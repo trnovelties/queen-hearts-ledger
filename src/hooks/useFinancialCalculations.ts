@@ -1,24 +1,21 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from "@/context/AuthContext";
 
 export const useFinancialCalculations = () => {
   const { user } = useAuth();
 
-  const calculateEndingJackpotTotal = async (
+  const calculateWeekEndingJackpot = async (
     gameId: string,
-    currentDate: string,
-    currentJackpotTotal: number,
-    carryoverJackpot: number = 0
+    weekId: string,
+    weeklyPayout: number = 0
   ) => {
     try {
-      console.log('=== ENDING JACKPOT CALCULATION START ===');
+      console.log('=== WEEK-LEVEL ENDING JACKPOT CALCULATION ===');
       console.log('Game ID:', gameId);
-      console.log('Current Date:', currentDate);
-      console.log('Current Jackpot Total:', currentJackpotTotal);
-      console.log('Carryover Jackpot:', carryoverJackpot);
+      console.log('Week ID:', weekId);
+      console.log('Weekly Payout:', weeklyPayout);
 
-      // Get all ticket sales for this game ordered by date
+      // Get ALL ticket sales for this game ordered by date
       const { data: allGameSales, error: salesError } = await supabase
         .from('ticket_sales')
         .select('*')
@@ -28,24 +25,17 @@ export const useFinancialCalculations = () => {
 
       if (salesError) throw salesError;
 
-      // Start with carryover jackpot
-      let totalJackpotContributions = carryoverJackpot;
+      // Get game info for carryover
+      const { data: gameData, error: gameError } = await supabase
+        .from('games')
+        .select('carryover_jackpot')
+        .eq('id', gameId)
+        .eq('user_id', user?.id)
+        .single();
 
-      // Process all sales up to and including current date
-      const currentDateObj = new Date(currentDate);
-      
-      for (const sale of allGameSales || []) {
-        const saleDate = new Date(sale.date);
-        
-        // Include all sales up to and including current date
-        if (saleDate <= currentDateObj) {
-          totalJackpotContributions += sale.jackpot_total;
-        }
-      }
+      if (gameError) throw gameError;
 
-      console.log('Total Jackpot Contributions (including carryover):', totalJackpotContributions);
-
-      // Get ALL completed weeks (with winners) and subtract their payouts
+      // Get ALL completed weeks BEFORE this week to subtract their payouts
       const { data: completedWeeks, error: weeksError } = await supabase
         .from('weeks')
         .select('*')
@@ -55,33 +45,59 @@ export const useFinancialCalculations = () => {
 
       if (weeksError) throw weeksError;
 
+      console.log('All game sales found:', allGameSales?.length || 0);
       console.log('Completed weeks found:', completedWeeks?.length || 0);
+      console.log('Carryover jackpot:', gameData?.carryover_jackpot || 0);
 
-      // Subtract ALL payouts from completed weeks (no date restriction)
-      let totalPayouts = 0;
+      // Start with carryover jackpot
+      let totalJackpotContributions = gameData?.carryover_jackpot || 0;
+
+      // Add ALL jackpot contributions from ticket sales
+      for (const sale of allGameSales || []) {
+        totalJackpotContributions += sale.jackpot_total;
+        console.log(`Adding jackpot contribution from ${sale.date}: $${sale.jackpot_total}`);
+      }
+
+      console.log('Total jackpot contributions:', totalJackpotContributions);
+
+      // Subtract ALL payouts from completed weeks EXCEPT current week
+      let totalPreviousPayouts = 0;
       for (const week of completedWeeks || []) {
-        if (week.weekly_payout > 0) {
-          console.log(`Week ${week.week_number}: Payout $${week.weekly_payout} for winner ${week.winner_name}`);
-          totalPayouts += week.weekly_payout;
+        if (week.id !== weekId && week.weekly_payout > 0) {
+          totalPreviousPayouts += week.weekly_payout;
+          console.log(`Subtracting payout from week ${week.week_number}: $${week.weekly_payout}`);
         }
       }
 
-      console.log('Total Payouts to subtract:', totalPayouts);
+      console.log('Total previous payouts:', totalPreviousPayouts);
+      console.log('Current week payout:', weeklyPayout);
 
-      // Add current entry's jackpot contribution
-      const finalEndingJackpotTotal = totalJackpotContributions + currentJackpotTotal - totalPayouts;
-      
-      console.log('Final calculation:', totalJackpotContributions, '+', currentJackpotTotal, '-', totalPayouts, '=', finalEndingJackpotTotal);
-      console.log('=== ENDING JACKPOT CALCULATION END ===');
+      // Calculate ending jackpot: Total contributions - Previous payouts - Current payout
+      const endingJackpotTotal = totalJackpotContributions - totalPreviousPayouts - weeklyPayout;
 
-      return Math.max(0, finalEndingJackpotTotal); // Ensure never negative
+      console.log('Final calculation:', totalJackpotContributions, '-', totalPreviousPayouts, '-', weeklyPayout, '=', endingJackpotTotal);
+      console.log('=== WEEK-LEVEL CALCULATION END ===');
+
+      return Math.max(0, endingJackpotTotal); // Ensure never negative
     } catch (error) {
-      console.error('Error calculating ending jackpot total:', error);
-      return carryoverJackpot + currentJackpotTotal; // Fallback to simple calculation
+      console.error('Error calculating week ending jackpot:', error);
+      return 0; // Fallback
     }
   };
 
+  // Keep the old function for compatibility but mark it as deprecated
+  const calculateEndingJackpotTotal = async (
+    gameId: string,
+    currentDate: string,
+    currentJackpotTotal: number,
+    carryoverJackpot: number = 0
+  ) => {
+    console.warn('calculateEndingJackpotTotal is deprecated, use calculateWeekEndingJackpot instead');
+    return calculateWeekEndingJackpot(gameId, '', 0);
+  };
+
   return {
-    calculateEndingJackpotTotal
+    calculateEndingJackpotTotal,
+    calculateWeekEndingJackpot
   };
 };
