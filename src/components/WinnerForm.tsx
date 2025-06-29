@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +48,7 @@ export function WinnerForm({
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
-    slotChosen: null as number | null,
+    slotChosen: '',
     winnerPresent: true,
     authorizedSignatureName: ''
   });
@@ -214,12 +213,13 @@ export function WinnerForm({
         return;
       }
 
-      if (formData.slotChosen === null || formData.slotChosen === undefined) {
+      if (!formData.slotChosen) {
         toast.error("Please enter a slot number");
         return;
       }
 
-      if (formData.slotChosen < 1 || formData.slotChosen > 52) {
+      const slotNumber = parseInt(formData.slotChosen);
+      if (isNaN(slotNumber) || slotNumber < 1 || slotNumber > 52) {
         toast.error("Slot number must be between 1 and 52");
         return;
       }
@@ -255,7 +255,7 @@ export function WinnerForm({
         .update({
           winner_name: formData.winnerName,
           card_selected: formData.cardSelected,
-          slot_chosen: formData.slotChosen,
+          slot_chosen: slotNumber,
           winner_present: formData.winnerPresent,
           authorized_signature_name: formData.authorizedSignatureName,
           weekly_payout: finalDistribution,
@@ -354,7 +354,7 @@ export function WinnerForm({
       setFormData({
         winnerName: '',
         cardSelected: '',
-        slotChosen: null,
+        slotChosen: '',
         winnerPresent: true,
         authorizedSignatureName: ''
       });
@@ -424,17 +424,9 @@ export function WinnerForm({
                 <Label htmlFor="slotChosen">Slot Chosen</Label>
                 <Input
                   id="slotChosen"
-                  type="number"
-                  min="1"
-                  max="52"
-                  value={formData.slotChosen || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData({ 
-                      ...formData, 
-                      slotChosen: value === '' ? null : parseInt(value) 
-                    });
-                  }}
+                  type="text"
+                  value={formData.slotChosen}
+                  onChange={(e) => setFormData({ ...formData, slotChosen: e.target.value })}
                   placeholder="Enter slot number (1-52)"
                   required
                 />
