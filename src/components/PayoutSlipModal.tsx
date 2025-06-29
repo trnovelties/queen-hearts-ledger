@@ -212,7 +212,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
         heightLeft -= 297;
       }
       
-      const fileName = `payout-slip-${slipData?.week?.winner_name || 'winner'}-week-${slipData?.week?.week_number || 'N/A'}.pdf`;
+      const fileName = `distribution-slip-${slipData?.week?.winner_name || 'winner'}-week-${slipData?.week?.week_number || 'N/A'}.pdf`;
       pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -225,10 +225,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" aria-describedby="payout-slip-loading">
+        <DialogContent className="max-w-4xl" aria-describedby="distribution-slip-loading">
           <DialogHeader>
-            <DialogTitle>Payout Distribution Slip</DialogTitle>
-            <DialogDescription id="payout-slip-loading">
+            <DialogTitle>Distribution Slip</DialogTitle>
+            <DialogDescription id="distribution-slip-loading">
               Loading comprehensive slip data, please wait...
             </DialogDescription>
           </DialogHeader>
@@ -245,10 +245,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (error) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" aria-describedby="payout-slip-error">
+        <DialogContent className="max-w-4xl" aria-describedby="distribution-slip-error">
           <DialogHeader>
-            <DialogTitle>Payout Distribution Slip</DialogTitle>
-            <DialogDescription id="payout-slip-error">
+            <DialogTitle>Distribution Slip</DialogTitle>
+            <DialogDescription id="distribution-slip-error">
               There was an error loading the comprehensive slip data
             </DialogDescription>
           </DialogHeader>
@@ -267,10 +267,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   if (!slipData) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" aria-describedby="payout-slip-no-data">
+        <DialogContent className="max-w-4xl" aria-describedby="distribution-slip-no-data">
           <DialogHeader>
-            <DialogTitle>Payout Distribution Slip</DialogTitle>
-            <DialogDescription id="payout-slip-no-data">
+            <DialogTitle>Distribution Slip</DialogTitle>
+            <DialogDescription id="distribution-slip-no-data">
               No comprehensive slip data available
             </DialogDescription>
           </DialogHeader>
@@ -288,13 +288,16 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   const weekOrganizationTotal = slipData.ticketSales?.reduce((sum: number, sale: any) => sum + (sale.organization_total || 0), 0) || 0;
   const weekJackpotTotal = slipData.ticketSales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
   const organizationNetProfit = weekOrganizationTotal - (slipData.expenses?.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0) || 0);
+  
+  // Calculate ending jackpot (previous + contributions - distribution)
+  const endingJackpot = (slipData.week?.ending_jackpot || 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby="payout-slip-content">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby="distribution-slip-content">
         <DialogHeader>
-          <DialogTitle>Comprehensive Payout Distribution Slip</DialogTitle>
-          <DialogDescription id="payout-slip-content">
+          <DialogTitle>Comprehensive Distribution Slip</DialogTitle>
+          <DialogDescription id="distribution-slip-content">
             Complete distribution slip for {slipData.week?.winner_name || winnerData?.winnerName || 'N/A'} - Week {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'}
           </DialogDescription>
         </DialogHeader>
@@ -304,7 +307,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           <div className="flex justify-between items-center border-b-2 pb-4">
             <div>
               <h1 className="text-2xl font-bold text-[#1F4E4A]">Queen of Hearts Game</h1>
-              <p className="text-lg text-gray-600">Official Payout Distribution Slip</p>
+              <p className="text-lg text-gray-600">Official Distribution Slip</p>
             </div>
             <div className="text-right space-y-1">
               <p className="font-semibold text-lg">Prepared By: Finance Department</p>
@@ -315,7 +318,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           
           {/* Game & Week Info */}
           <div className="text-center space-y-3 bg-[#A1E96C]/10 p-6 rounded-lg border-2 border-[#A1E96C]">
-            <h2 className="text-3xl font-bold text-[#1F4E4A]">WEEK {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'} PAYOUT</h2>
+            <h2 className="text-3xl font-bold text-[#1F4E4A]">WEEK {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'} DISTRIBUTION</h2>
             <p className="text-xl font-semibold text-[#1F4E4A]">{slipData.game?.name || winnerData?.gameName || 'N/A'}</p>
             <p className="text-base text-gray-700">
               Week Period: {formatDate(slipData.week?.start_date || winnerData?.weekStartDate)} - {formatDate(slipData.week?.end_date || winnerData?.weekEndDate)}
@@ -376,7 +379,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           {/* Week Financial Summary */}
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-[#1F4E4A] border-b-2 pb-2">Week {slipData.week?.week_number || winnerData?.weekNumber || 'N/A'} Financial Summary</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
                 <div className="text-3xl font-bold text-blue-700">{weekTotalTickets}</div>
                 <div className="text-sm text-blue-600 font-medium">Tickets Sold</div>
@@ -392,6 +395,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
               <div className="text-center p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
                 <div className="text-2xl font-bold text-orange-700">{formatCurrency(weekJackpotTotal)}</div>
                 <div className="text-sm text-orange-600 font-medium">Jackpot Contribution</div>
+              </div>
+              <div className="text-center p-4 bg-indigo-50 rounded-lg border-2 border-indigo-200">
+                <div className="text-2xl font-bold text-indigo-700">{formatCurrency(endingJackpot)}</div>
+                <div className="text-sm text-indigo-600 font-medium">Ending Jackpot</div>
               </div>
             </div>
           </div>
@@ -449,9 +456,9 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
             </div>
           )}
 
-          {/* Payout Information */}
+          {/* Distribution Information */}
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-[#1F4E4A] border-b-2 pb-2">Payout Information</h3>
+            <h3 className="text-xl font-bold text-[#1F4E4A] border-b-2 pb-2">Distribution Information</h3>
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">
@@ -460,7 +467,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
                     <span className="font-bold text-2xl text-green-600">{formatCurrency(slipData.week?.weekly_payout || winnerData?.payoutAmount || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-white rounded border border-green-400">
-                    <span className="font-bold text-xl">NET PAYOUT:</span>
+                    <span className="font-bold text-xl">NET DISTRIBUTION:</span>
                     <span className="font-bold text-3xl text-green-700">{formatCurrency(slipData.week?.weekly_payout || winnerData?.payoutAmount || 0)}</span>
                   </div>
                 </div>
@@ -502,7 +509,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           </div>
           
           <div className="text-center text-sm text-gray-600 pt-6 border-t">
-            <p className="font-semibold">This document serves as official record of payout distribution.</p>
+            <p className="font-semibold">This document serves as official record of distribution.</p>
             <p>Please retain for your records and tax purposes.</p>
             <p className="text-xs mt-2">Generated on {format(new Date(), 'MMM d, yyyy h:mm a')}</p>
           </div>
