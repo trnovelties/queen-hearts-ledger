@@ -19,6 +19,8 @@ interface GameCardProps {
   onOpenDeleteConfirm: (id: string, type: "game" | "week" | "entry" | "expense") => void;
   onGeneratePdfReport: (game: any) => void;
   onOpenExpenseModal: (gameId: string, gameName: string) => void;
+  onOpenDonationModal: (gameId: string, gameName: string, date?: string) => void;
+  onOpenDailyExpenseModal: (date: string, gameId: string) => void;
   currentGameId: string | null;
   setCurrentGameId: (id: string | null) => void;
   games: any[];
@@ -38,6 +40,8 @@ export const GameCard = ({
   onOpenDeleteConfirm,
   onGeneratePdfReport,
   onOpenExpenseModal,
+  onOpenDonationModal,
+  onOpenDailyExpenseModal,
   currentGameId,
   setCurrentGameId,
   games,
@@ -64,6 +68,15 @@ export const GameCard = ({
         new Date(week.end_date) > new Date(latest.end_date) ? week : latest
       ).end_date 
     : game.end_date;
+
+  // Create wrapper handlers for daily modals
+  const handleDailyExpense = (date: string, gameId: string) => {
+    onOpenDailyExpenseModal(date, gameId);
+  };
+
+  const handleDailyDonation = (date: string, gameId: string) => {
+    onOpenDonationModal(gameId, game.name, date);
+  };
 
   return (
     <Card key={game.id} className="overflow-hidden">
@@ -134,6 +147,8 @@ export const GameCard = ({
             games={games}
             setGames={setGames}
             onRefreshData={onRefreshData}
+            onOpenExpenseModal={handleDailyExpense}
+            onOpenDonationModal={handleDailyDonation}
           />
           
           <ExpenseSection

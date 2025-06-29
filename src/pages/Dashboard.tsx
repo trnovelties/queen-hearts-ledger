@@ -316,6 +316,8 @@ export default function Dashboard() {
               onOpenDeleteConfirm={openDeleteConfirm}
               onGeneratePdfReport={generateGamePdfReport}
               onOpenExpenseModal={openExpenseModal}
+              onOpenDonationModal={openDonationModal}
+              onOpenDailyExpenseModal={openDailyExpenseModal}
               currentGameId={currentGameId}
               setCurrentGameId={setCurrentGameId}
               games={games}
