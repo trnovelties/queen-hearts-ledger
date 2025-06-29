@@ -9,6 +9,7 @@ interface WeekManagementProps {
   expandedWeek: string | null;
   onToggleWeek: (weekId: string) => void;
   onOpenWeekForm: (gameId: string) => void;
+  onOpenWinnerForm: (gameId: string, weekId: string) => void;
   onGeneratePdfReport: (game: any) => void;
   currentGameId: string | null;
   setCurrentGameId: (id: string | null) => void;
@@ -21,6 +22,7 @@ export const WeekManagement = ({
   expandedWeek,
   onToggleWeek,
   onOpenWeekForm,
+  onOpenWinnerForm,
   onGeneratePdfReport,
   currentGameId,
   setCurrentGameId,
@@ -94,6 +96,7 @@ export const WeekManagement = ({
               games={games}
               setGames={setGames}
               onToggleWeek={onToggleWeek}
+              onOpenWinnerForm={onOpenWinnerForm}
             />
           )}
         </div>
