@@ -42,10 +42,9 @@ export const TicketSalesTable = ({
     }).format(amount);
   };
 
-  // Check if week is complete (has all 7 days with ticket entries)
+  // Check if week is complete (has entries for all 7 days, regardless of ticket count)
   const isWeekComplete = () => {
-    const entriesWithTickets = week.ticket_sales.filter((entry: any) => entry.tickets_sold > 0);
-    return entriesWithTickets.length === 7;
+    return week.ticket_sales.length === 7;
   };
 
   // Check if week already has a winner
@@ -58,7 +57,7 @@ export const TicketSalesTable = ({
     if (!isWeekComplete()) {
       toast({
         title: "Week Incomplete",
-        description: "Please complete all 7 days with ticket sales before adding winner details.",
+        description: "Please enter ticket sales for all 7 days before adding winner details.",
         variant: "destructive",
       });
       return;
@@ -230,7 +229,12 @@ export const TicketSalesTable = ({
 
             const inputKey = `${week.id}-${dayIndex}`;
             const tempValue = tempTicketInputs[inputKey];
-            const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold || '');
+            
+            // Show actual value if entry exists, temp value if being edited, or empty string for new entries
+            const currentValue = tempValue !== undefined ? tempValue : (existingEntry?.tickets_sold !== undefined ? existingEntry.tickets_sold : '');
+            
+            // Show "N/A" in the display when no entry exists yet
+            const displayValue = existingEntry ? existingEntry.tickets_sold : 'N/A';
 
             return (
               <div key={dayIndex} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
@@ -241,6 +245,11 @@ export const TicketSalesTable = ({
                   <div className="text-sm text-gray-600">
                     {formatDateStringForDisplay(entryDate.toISOString().split('T')[0])}
                   </div>
+                  {!existingEntry && (
+                    <div className="text-xs text-orange-600 font-medium">
+                      Entry Required
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-3">
@@ -260,7 +269,7 @@ export const TicketSalesTable = ({
                         handleTicketInputSubmit(week.id, dayIndex, e.target.value, currentGameId!, games, setGames);
                       }}
                       className="w-28 h-9 text-center font-medium"
-                      placeholder="0"
+                      placeholder="Enter tickets"
                     />
                   </div>
                   
@@ -283,14 +292,16 @@ export const TicketSalesTable = ({
                     </Select>
                   </div>
                   
-                  {existingEntry && (
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-gray-600">Day Total</label>
-                      <div className="text-sm font-bold px-3 py-2 bg-blue-100 text-blue-800 rounded border border-blue-200 min-w-[80px] text-center">
-                        {formatCurrency(existingEntry.amount_collected)}
-                      </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">Day Total</label>
+                    <div className={`text-sm font-bold px-3 py-2 rounded border min-w-[80px] text-center ${
+                      existingEntry 
+                        ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                        : 'bg-gray-100 text-gray-500 border-gray-200'
+                    }`}>
+                      {existingEntry ? formatCurrency(existingEntry.amount_collected) : 'N/A'}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             );
@@ -313,8 +324,8 @@ export const TicketSalesTable = ({
                 isWeekComplete() ? 'text-blue-700' : 'text-gray-500'
               }`}>
                 {hasWinner() ? `Winner: ${week.winner_name} - ${week.card_selected}` :
-                 isWeekComplete() ? 'All 7 days have ticket sales. Ready to select a winner.' :
-                 `${week.ticket_sales.filter((entry: any) => entry.tickets_sold > 0).length}/7 days completed`}
+                 isWeekComplete() ? 'All 7 days have entries. Ready to select a winner.' :
+                 `${week.ticket_sales.length}/7 days entered`}
               </p>
             </div>
             <Button
