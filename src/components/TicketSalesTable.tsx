@@ -172,7 +172,7 @@ export const TicketSalesTable = ({
           weekOrganizationTotal={weekOrganizationTotal}
           weekJackpotTotal={weekJackpotTotal}
           displayedEndingJackpot={displayedEndingJackpot}
-          hasWinner={hasWinter}
+          hasWinner={hasWinner}
           formatCurrency={formatCurrency}
         />
 
