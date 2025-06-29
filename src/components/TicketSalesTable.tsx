@@ -7,6 +7,7 @@ import { formatDateStringForDisplay } from '@/lib/dateUtils';
 import { useTicketSales } from '@/hooks/useTicketSales';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from "@/context/AuthContext";
 
 interface TicketSalesTableProps {
   week: any;
@@ -27,6 +28,7 @@ export const TicketSalesTable = ({
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
+  const { user } = useAuth();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -45,7 +47,7 @@ export const TicketSalesTable = ({
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
-      if (week.winner_name && week.ending_jackpot !== null) {
+      if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
         // Week is completed - use the stored ending jackpot value from database
         console.log('Using stored ending jackpot for completed week:', week.ending_jackpot);
         setDisplayedEndingJackpot(week.ending_jackpot);
@@ -60,36 +62,43 @@ export const TicketSalesTable = ({
               .select('ending_jackpot')
               .eq('game_id', game.id)
               .eq('week_number', week.week_number - 1)
+              .eq('user_id', user?.id)
               .single();
 
-            if (!error && previousWeek) {
-              previousEndingJackpot = previousWeek.ending_jackpot || 0;
+            if (!error && previousWeek && previousWeek.ending_jackpot !== null) {
+              previousEndingJackpot = previousWeek.ending_jackpot;
+              console.log('Found previous week ending jackpot:', previousEndingJackpot);
             } else {
-              // Fallback to game carryover if previous week not found
+              // Fallback to game carryover if previous week not found or has no ending jackpot
+              console.log('No previous week ending jackpot found, using game carryover:', game.carryover_jackpot);
               previousEndingJackpot = game.carryover_jackpot || 0;
             }
           } else {
             // Week 1 starts with game's carryover jackpot
             previousEndingJackpot = game.carryover_jackpot || 0;
+            console.log('Week 1, using game carryover jackpot:', previousEndingJackpot);
           }
 
-          // Add current week's jackpot contributions
+          // Add current week's jackpot contributions to get the current running total
           const currentJackpotTotal = previousEndingJackpot + weekJackpotTotal;
           console.log('Calculating current jackpot for incomplete week:');
           console.log('Previous ending jackpot:', previousEndingJackpot);
           console.log('Current week contributions:', weekJackpotTotal);
-          console.log('Current total:', currentJackpotTotal);
+          console.log('Current total jackpot:', currentJackpotTotal);
           
           setDisplayedEndingJackpot(currentJackpotTotal);
         } catch (error) {
           console.error('Error calculating current jackpot:', error);
-          setDisplayedEndingJackpot(weekJackpotTotal);
+          // Fallback calculation
+          const fallbackJackpot = (game.carryover_jackpot || 0) + weekJackpotTotal;
+          console.log('Using fallback calculation:', fallbackJackpot);
+          setDisplayedEndingJackpot(fallbackJackpot);
         }
       }
     };
 
     calculateDisplayedEndingJackpot();
-  }, [week, game.id, game.carryover_jackpot, weekJackpotTotal]);
+  }, [week, game.id, game.carryover_jackpot, weekJackpotTotal, user?.id]);
 
   return (
     <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">

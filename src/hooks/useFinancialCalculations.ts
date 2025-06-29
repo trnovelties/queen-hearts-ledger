@@ -15,6 +15,7 @@ export const useFinancialCalculations = () => {
       console.log('Game ID:', gameId);
       console.log('Week ID:', weekId);
       console.log('Weekly Payout:', weeklyPayout);
+      console.log('User ID:', user?.id);
 
       // Get current week info
       const { data: currentWeek, error: weekError } = await supabase
@@ -37,9 +38,9 @@ export const useFinancialCalculations = () => {
           .eq('user_id', user?.id)
           .single();
 
-        if (prevWeekError || !previousWeek) {
-          console.warn('Could not find previous week, using game carryover');
-          // Fallback to game carryover if previous week not found
+        if (prevWeekError || !previousWeek || previousWeek.ending_jackpot === null) {
+          console.warn('Could not find previous week ending jackpot, using game carryover');
+          // Fallback to game carryover if previous week not found or has no ending jackpot
           const { data: gameData, error: gameError } = await supabase
             .from('games')
             .select('carryover_jackpot')
@@ -50,7 +51,7 @@ export const useFinancialCalculations = () => {
           if (gameError) throw gameError;
           previousEndingJackpot = gameData?.carryover_jackpot || 0;
         } else {
-          previousEndingJackpot = previousWeek.ending_jackpot || 0;
+          previousEndingJackpot = previousWeek.ending_jackpot;
         }
       } else {
         // Week 1 starts with game's carryover jackpot
