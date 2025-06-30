@@ -44,7 +44,7 @@ export const WeekManagement = ({
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
   
-  // Enhanced state for JackpotContributionModal with better tracking
+  // Simplified state for JackpotContributionModal
   const [jackpotContributionOpen, setJackpotContributionOpen] = useState(false);
   const [jackpotContributionData, setJackpotContributionData] = useState<{
     gameId: string;
@@ -52,18 +52,6 @@ export const WeekManagement = ({
     winnerName: string;
     winnerData?: any;
   } | null>(null);
-
-  // Debug state changes with enhanced logging
-  useEffect(() => {
-    console.log('🔍 DEBUG: jackpotContributionOpen changed to:', jackpotContributionOpen);
-    if (jackpotContributionOpen && jackpotContributionData) {
-      console.log('🔍 DEBUG: Modal should be opening with data:', jackpotContributionData);
-    }
-  }, [jackpotContributionOpen]);
-
-  useEffect(() => {
-    console.log('🔍 DEBUG: jackpotContributionData changed to:', jackpotContributionData);
-  }, [jackpotContributionData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -93,67 +81,45 @@ export const WeekManagement = ({
     }
   };
 
-  // Enhanced handler for Queen of Hearts jackpot contribution with comprehensive validation
+  // Simplified handler for Queen of Hearts jackpot contribution
   const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string, winnerData?: any) => {
-    console.log('🎯 === WEEK MANAGEMENT: OPENING JACKPOT CONTRIBUTION ===');
+    console.log('🎯 === OPENING JACKPOT CONTRIBUTION ===');
     console.log('🎯 Game ID:', gameId);
     console.log('🎯 Total Jackpot:', totalJackpot);
     console.log('🎯 Winner Name:', winnerName);
     console.log('🎯 Winner Data:', winnerData);
-    console.log('🎯 Current jackpotContributionOpen state:', jackpotContributionOpen);
-    console.log('🎯 Current jackpotContributionData state:', jackpotContributionData);
     
-    // Enhanced validation checks with user feedback
+    // Validation checks with user feedback
     if (!gameId) {
-      console.error('❌ No gameId provided to handleOpenJackpotContribution');
+      console.error('❌ No gameId provided');
       toast.error("Missing game ID. Cannot open jackpot contribution modal.");
       return;
     }
     
     if (!totalJackpot || totalJackpot <= 0) {
-      console.error('❌ Invalid totalJackpot provided:', totalJackpot);
+      console.error('❌ Invalid totalJackpot:', totalJackpot);
       toast.error("Invalid jackpot amount. Cannot open contribution modal.");
       return;
     }
     
     if (!winnerName || winnerName.trim() === '') {
-      console.error('❌ No winnerName provided to handleOpenJackpotContribution');
+      console.error('❌ No winnerName provided');
       toast.error("Missing winner name. Cannot open contribution modal.");
       return;
     }
     
-    console.log('✅ All validation passed, setting jackpot contribution data...');
+    console.log('✅ All validation passed, opening jackpot contribution modal...');
     
-    // Set the data first with enhanced structure
-    const newJackpotData = {
+    // Set the data and open the modal
+    setJackpotContributionData({
       gameId,
       totalJackpot,
       winnerName,
       winnerData
-    };
-    
-    console.log('🔧 Setting jackpotContributionData to:', newJackpotData);
-    setJackpotContributionData(newJackpotData);
-    
-    // Use a promise-based approach to ensure state is set before opening modal
-    Promise.resolve().then(() => {
-      console.log('🔧 Opening jackpot contribution modal...');
-      setJackpotContributionOpen(true);
-      console.log('🔧 jackpotContributionOpen set to true');
-      
-      // Provide user feedback
-      toast.success("Opening jackpot contribution modal...");
-      
-      // Additional verification after a short delay
-      setTimeout(() => {
-        if (jackpotContributionOpen && jackpotContributionData) {
-          console.log('🔧 ✅ Modal should now be open with data');
-        } else {
-          console.log('🔧 ❌ Modal state verification failed');
-          toast.error("Failed to open contribution modal. Please try again.");
-        }
-      }, 100);
     });
+    
+    setJackpotContributionOpen(true);
+    toast.success("Opening jackpot contribution modal...");
   };
 
   const handleJackpotContributionComplete = () => {
@@ -295,24 +261,10 @@ export const WeekManagement = ({
         onOpenJackpotContribution={handleOpenJackpotContribution}
       />
 
-      {/* Enhanced Jackpot Contribution Modal with better error handling */}
+      {/* Jackpot Contribution Modal */}
       <JackpotContributionModal
         open={jackpotContributionOpen}
-        onOpenChange={(open) => {
-          console.log('🔄 JackpotContributionModal onOpenChange called with:', open);
-          if (!open && jackpotContributionData) {
-            console.log('🔄 Modal being closed, but data exists. User may have cancelled.');
-          }
-          setJackpotContributionOpen(open);
-          if (!open) {
-            // Only clear data if modal is being closed permanently
-            setTimeout(() => {
-              if (!jackpotContributionOpen) {
-                setJackpotContributionData(null);
-              }
-            }, 100);
-          }
-        }}
+        onOpenChange={setJackpotContributionOpen}
         gameId={jackpotContributionData?.gameId || null}
         totalJackpot={jackpotContributionData?.totalJackpot || 0}
         winnerName={jackpotContributionData?.winnerName || ''}
@@ -325,23 +277,6 @@ export const WeekManagement = ({
         onOpenChange={setPayoutSlipOpen}
         winnerData={payoutSlipData}
       />
-
-      {/* Enhanced Debug Panel - Remove in production */}
-      <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs">
-        <h4 className="font-bold mb-2">Debug Info:</h4>
-        <div>Winner Form Open: {winnerFormOpen.toString()}</div>
-        <div>Jackpot Contribution Open: {jackpotContributionOpen.toString()}</div>
-        <div>Jackpot Contrib Data Present: {!!jackpotContributionData}</div>
-        {jackpotContributionData && (
-          <div className="mt-2">
-            <div>Game ID: {jackpotContributionData.gameId}</div>
-            <div>Total Jackpot: ${jackpotContributionData.totalJackpot}</div>
-            <div>Winner Name: {jackpotContributionData.winnerName}</div>
-            <div>Winner Data Present: {!!jackpotContributionData.winnerData}</div>
-          </div>
-        )}
-        <div>Payout Slip Open: {payoutSlipOpen.toString()}</div>
-      </div>
     </div>
   );
 };

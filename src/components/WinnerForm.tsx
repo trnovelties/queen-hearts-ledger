@@ -58,15 +58,8 @@ export function WinnerForm({
   const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
-  const [isProcessingQueenOfHearts, setIsProcessingQueenOfHearts] = useState(false);
-
-  // Debug logging for winner form state
-  useEffect(() => {
-    console.log('🏆 WinnerForm open changed:', open);
-    console.log('🏆 WinnerForm gameId:', gameId);
-    console.log('🏆 WinnerForm weekId:', weekId);
-    console.log('🏆 WinnerForm onOpenJackpotContribution available:', !!onOpenJackpotContribution);
-  }, [open, gameId, weekId, onOpenJackpotContribution]);
+  const [isQueenOfHearts, setIsQueenOfHearts] = useState(false);
+  const [winnerDataForJackpot, setWinnerDataForJackpot] = useState<any>(null);
 
   // Use the hook to calculate proper displayed jackpot
   const displayedJackpot = useJackpotCalculation({
@@ -75,7 +68,28 @@ export function WinnerForm({
     carryoverJackpot: gameData?.carryover_jackpot || 0
   });
 
-  // Calculate ending jackpot based on proper carryover logic
+  // Handle Queen of Hearts modal opening after winner details are saved
+  useEffect(() => {
+    if (isQueenOfHearts && winnerDataForJackpot && onOpenJackpotContribution) {
+      console.log('🎯 Opening jackpot contribution modal with data:', winnerDataForJackpot);
+      
+      // Open the jackpot contribution modal
+      onOpenJackpotContribution(
+        gameId!,
+        displayedJackpot,
+        formData.winnerName,
+        winnerDataForJackpot
+      );
+      
+      // Close this form after modal is triggered
+      onOpenChange(false);
+      
+      // Reset states
+      setIsQueenOfHearts(false);
+      setWinnerDataForJackpot(null);
+    }
+  }, [isQueenOfHearts, winnerDataForJackpot, onOpenJackpotContribution, gameId, displayedJackpot, formData.winnerName, onOpenChange]);
+
   const calculateEndingJackpotForWeek = async (weeklyPayout: number) => {
     try {
       if (!gameId || !weekId) return 0;
@@ -300,7 +314,6 @@ export function WinnerForm({
       console.log('🏆 Form Data:', formData);
       console.log('🏆 Selected Distribution:', selectedDistribution);
       console.log('🏆 Displayed Jackpot:', displayedJackpot);
-      console.log('🏆 onOpenJackpotContribution function exists:', !!onOpenJackpotContribution);
 
       if (!gameId || !weekId) {
         toast.error("Missing game or week information");
@@ -321,21 +334,18 @@ export function WinnerForm({
 
       console.log('🏆 Card Selected:', formData.cardSelected);
 
-      // Handle Queen of Hearts - Enhanced process
+      // Handle Queen of Hearts - NEW APPROACH
       if (formData.cardSelected === 'Queen of Hearts') {
         console.log('🏆 === QUEEN OF HEARTS FLOW START ===');
         finalDistribution = displayedJackpot;
-        setIsProcessingQueenOfHearts(true);
         
-        // Validation checks with user feedback
+        // Validation checks
         if (!onOpenJackpotContribution) {
-          console.error('🏆 ❌ onOpenJackpotContribution function not available');
-          toast.error("Cannot open jackpot contribution modal. Please try again or contact support.");
+          toast.error("Cannot open jackpot contribution modal. Please try again.");
           return;
         }
 
         if (displayedJackpot <= 0) {
-          console.error('🏆 ❌ Invalid displayed jackpot amount:', displayedJackpot);
           toast.error("Invalid jackpot amount. Please refresh and try again.");
           return;
         }
@@ -356,7 +366,7 @@ export function WinnerForm({
 
         if (weekDataError) throw weekDataError;
 
-        // Prepare winner data for payout slip
+        // Prepare winner data for the jackpot contribution modal
         const todayDateString = getTodayDateString();
         const winnerData = {
           winnerName: formData.winnerName,
@@ -375,36 +385,16 @@ export function WinnerForm({
 
         console.log('🏆 Winner data prepared:', winnerData);
 
-        // PHASE 2: Open jackpot contribution modal with enhanced error handling
-        try {
-          console.log('🏆 PHASE 2: Opening jackpot contribution modal...');
-          console.log('🏆 Calling onOpenJackpotContribution with params:');
-          console.log('🏆   - gameId:', gameId);
-          console.log('🏆   - totalJackpot:', displayedJackpot);
-          console.log('🏆   - winnerName:', formData.winnerName);
-          console.log('🏆   - winnerData:', winnerData);
-          
-          // Call the function to open jackpot contribution modal
-          onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
-          
-          console.log('🏆 ✅ onOpenJackpotContribution called successfully');
-          
-          // Success message but keep form open until modal confirms
-          toast.success("Winner details saved! Setting up jackpot contribution...");
-          
-          // Wait a moment for modal to process, then close this form
-          setTimeout(() => {
-            console.log('🏆 ✅ Closing winner form after modal setup delay');
-            onOpenChange(false);
-            setIsProcessingQueenOfHearts(false);
-          }, 500);
-          
-        } catch (error) {
-          console.error('🏆 ❌ Error calling onOpenJackpotContribution:', error);
-          toast.error("Failed to open jackpot contribution modal. Please try again.");
-          setIsProcessingQueenOfHearts(false);
-          return;
-        }
+        // PHASE 2: Set up for jackpot contribution modal
+        console.log('🏆 PHASE 2: Setting up jackpot contribution modal...');
+        
+        // Set the states that will trigger the modal opening
+        setWinnerDataForJackpot(winnerData);
+        setIsQueenOfHearts(true);
+        
+        toast.success("Winner details saved! Opening jackpot contribution...");
+        
+        console.log('🏆 ✅ Queen of Hearts flow setup complete - modal will open via useEffect');
         
       } else {
         console.log('🏆 === NON-QUEEN OF HEARTS FLOW ===');
@@ -441,10 +431,8 @@ export function WinnerForm({
         onComplete();
         onOpenPayoutSlip(winnerData);
         onOpenChange(false);
-      }
-      
-      // Reset form only for non-Queen of Hearts
-      if (formData.cardSelected !== 'Queen of Hearts') {
+        
+        // Reset form
         setFormData({
           winnerName: '',
           cardSelected: '',
@@ -459,7 +447,6 @@ export function WinnerForm({
     } catch (error) {
       console.error('🏆 ❌ Error in winner form handleSubmit:', error);
       toast.error("Failed to save winner details");
-      setIsProcessingQueenOfHearts(false);
     } finally {
       setIsLoading(false);
     }
@@ -472,10 +459,7 @@ export function WinnerForm({
           <CardHeader>
             <CardTitle>Record Winner Details</CardTitle>
             <CardDescription>
-              {isProcessingQueenOfHearts 
-                ? "Processing Queen of Hearts winner..." 
-                : "Enter the winner's information for this week"
-              }
+              Enter the winner's information for this week
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -489,7 +473,6 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
                   placeholder="John Doe"
                   required
-                  disabled={isProcessingQueenOfHearts}
                 />
               </div>
 
@@ -499,7 +482,7 @@ export function WinnerForm({
                   setFormData({ ...formData, cardSelected: value });
                   const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
                   setSelectedDistribution(distribution);
-                }} disabled={isProcessingQueenOfHearts}>
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a card" />
                   </SelectTrigger>
@@ -534,7 +517,6 @@ export function WinnerForm({
                   value={formData.slotChosen}
                   onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
                   required
-                  disabled={isProcessingQueenOfHearts}
                 />
               </div>
 
@@ -543,7 +525,6 @@ export function WinnerForm({
                   id="winnerPresent"
                   checked={formData.winnerPresent}
                   onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked === true })}
-                  disabled={isProcessingQueenOfHearts}
                 />
                 <Label htmlFor="winnerPresent">Winner Present</Label>
               </div>
@@ -557,25 +538,22 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
                   placeholder="Jane Smith"
                   required
-                  disabled={isProcessingQueenOfHearts}
                 />
               </div>
 
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
-                  disabled={isLoading || isProcessingQueenOfHearts} 
+                  disabled={isLoading} 
                   className="flex-1"
                 >
-                  {isLoading ? "Saving..." : 
-                   isProcessingQueenOfHearts ? "Processing Queen of Hearts..." : 
-                   "Save Winner Details"}
+                  {isLoading ? "Saving..." : "Save Winner Details"}
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => onOpenChange(false)}
-                  disabled={isProcessingQueenOfHearts}
+                  disabled={isLoading}
                 >
                   Cancel
                 </Button>
