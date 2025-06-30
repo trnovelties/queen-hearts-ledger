@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,6 +140,88 @@ export function WinnerForm({
     }
   };
 
+  // Save winner details to database (used for all cards)
+  const saveWinnerDetails = async (finalDistribution: number) => {
+    try {
+      console.log('=== SAVING WINNER DETAILS ===');
+      console.log('Final Distribution (Payout):', finalDistribution);
+
+      // Calculate the ending jackpot for this week
+      const endingJackpot = await calculateEndingJackpotForWeek(finalDistribution);
+      console.log('Calculated Ending Jackpot:', endingJackpot);
+
+      // Update week record with winner details, payout, and ending jackpot
+      const { error: weekError } = await supabase
+        .from('weeks')
+        .update({
+          winner_name: formData.winnerName,
+          card_selected: formData.cardSelected,
+          slot_chosen: formData.slotChosen,
+          winner_present: formData.winnerPresent,
+          authorized_signature_name: formData.authorizedSignatureName,
+          weekly_payout: finalDistribution,
+          ending_jackpot: endingJackpot
+        })
+        .eq('id', weekId);
+
+      if (weekError) throw weekError;
+
+      console.log('Week updated with ending jackpot:', endingJackpot);
+
+      // Update the last ticket sales record with the proper ending jackpot
+      const { data: lastSale, error: lastSaleError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('week_id', weekId)
+        .eq('user_id', user?.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (lastSaleError) throw lastSaleError;
+
+      // Update ticket sales record with calculated ending jackpot
+      const { error: updateSaleError } = await supabase
+        .from('ticket_sales')
+        .update({
+          weekly_payout_amount: finalDistribution,
+          ending_jackpot_total: endingJackpot,
+          displayed_jackpot_total: endingJackpot
+        })
+        .eq('id', lastSale.id);
+
+      if (updateSaleError) throw updateSaleError;
+
+      console.log('=== WINNER DETAILS SAVED ===');
+      return endingJackpot;
+    } catch (error) {
+      console.error('Error saving winner details:', error);
+      throw error;
+    }
+  };
+
+  // Complete the game (used for non-Queen of Hearts cards)
+  const completeGame = async (finalDistribution: number, endingJackpot: number) => {
+    try {
+      console.log('=== COMPLETING GAME ===');
+
+      // Update game totals
+      const { error: gameUpdateError } = await supabase
+        .from('games')
+        .update({
+          total_payouts: (gameData?.total_payouts || 0) + finalDistribution
+        })
+        .eq('id', gameId);
+
+      if (gameUpdateError) throw gameUpdateError;
+
+      console.log('=== GAME COMPLETED ===');
+    } catch (error) {
+      console.error('Error completing game:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const loadGameConfiguration = async () => {
       if (!gameId || !open) return;
@@ -222,7 +305,7 @@ export function WinnerForm({
 
       let finalDistribution = selectedDistribution;
 
-      // Handle Queen of Hearts special case
+      // Calculate payout for Queen of Hearts
       if (formData.cardSelected === 'Queen of Hearts') {
         finalDistribution = displayedJackpot;
         
@@ -231,91 +314,14 @@ export function WinnerForm({
           const penalty = finalDistribution * (penaltyPercentage / 100);
           finalDistribution = finalDistribution - penalty;
         }
-
-        // If Queen of Hearts is drawn and onOpenJackpotContribution exists, open the contribution modal
-        if (onOpenJackpotContribution) {
-          onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName);
-          onOpenChange(false);
-          return;
-        }
       }
 
       console.log('=== WINNER FORM SUBMISSION ===');
+      console.log('Card Selected:', formData.cardSelected);
       console.log('Final Distribution (Payout):', finalDistribution);
 
-      // Calculate the ending jackpot for this week using the correct formula
-      const endingJackpot = await calculateEndingJackpotForWeek(finalDistribution);
-      console.log('Calculated Ending Jackpot:', endingJackpot);
-
-      // Update week record with winner details, payout, and ending jackpot
-      const { error: weekError } = await supabase
-        .from('weeks')
-        .update({
-          winner_name: formData.winnerName,
-          card_selected: formData.cardSelected,
-          slot_chosen: formData.slotChosen,
-          winner_present: formData.winnerPresent,
-          authorized_signature_name: formData.authorizedSignatureName,
-          weekly_payout: finalDistribution,
-          ending_jackpot: endingJackpot
-        })
-        .eq('id', weekId);
-
-      if (weekError) throw weekError;
-
-      console.log('Week updated with ending jackpot:', endingJackpot);
-
-      // Update the last ticket sales record with the proper ending jackpot
-      const { data: lastSale, error: lastSaleError } = await supabase
-        .from('ticket_sales')
-        .select('*')
-        .eq('week_id', weekId)
-        .eq('user_id', user?.id)
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (lastSaleError) throw lastSaleError;
-
-      // Update ticket sales record with calculated ending jackpot
-      const { error: updateSaleError } = await supabase
-        .from('ticket_sales')
-        .update({
-          weekly_payout_amount: finalDistribution,
-          ending_jackpot_total: endingJackpot,
-          displayed_jackpot_total: endingJackpot
-        })
-        .eq('id', lastSale.id);
-
-      if (updateSaleError) throw updateSaleError;
-
-      // Handle carryover for next game if Queen of Hearts was drawn
-      if (formData.cardSelected === 'Queen of Hearts') {
-        const todayDateString = getTodayDateString();
-        console.log('Queen of Hearts drawn - updating game end date and carryover');
-        
-        // Update game end date and carryover
-        const { error: gameUpdateError } = await supabase
-          .from('games')
-          .update({
-            end_date: todayDateString,
-            carryover_jackpot: endingJackpot,
-            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
-          })
-          .eq('id', gameId);
-
-        if (gameUpdateError) throw gameUpdateError;
-      } else {
-        // Update game totals
-        const { error: gameUpdateError } = await supabase
-          .from('games')
-          .update({
-            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
-          })
-          .eq('id', gameId);
-
-        if (gameUpdateError) throw gameUpdateError;
-      }
+      // PHASE 2: Save winner details first for ALL cards
+      const endingJackpot = await saveWinnerDetails(finalDistribution);
 
       // Fetch the week data to get proper dates for the payout slip
       const { data: weekData, error: weekDataError } = await supabase
@@ -326,7 +332,7 @@ export function WinnerForm({
 
       if (weekDataError) throw weekDataError;
 
-      // Prepare winner data for distribution slip
+      // Prepare winner data for payout slip
       const todayDateString = getTodayDateString();
       const winnerData = {
         winnerName: formData.winnerName,
@@ -343,10 +349,41 @@ export function WinnerForm({
         winnerPresent: formData.winnerPresent
       };
 
-      toast.success("Winner details saved successfully!");
-      onComplete();
-      onOpenPayoutSlip(winnerData);
-      onOpenChange(false);
+      // PHASE 2: Handle Queen of Hearts differently - open contribution modal instead of completing game
+      if (formData.cardSelected === 'Queen of Hearts') {
+        if (onOpenJackpotContribution) {
+          console.log('Queen of Hearts drawn - opening contribution modal');
+          onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName);
+          onOpenPayoutSlip(winnerData);
+          onOpenChange(false);
+          toast.success("Winner details saved! Please set the jackpot contribution.");
+        } else {
+          // Fallback if contribution modal not available - complete game normally
+          await completeGame(finalDistribution, endingJackpot);
+          const todayDateString = getTodayDateString();
+          const { error: gameUpdateError } = await supabase
+            .from('games')
+            .update({
+              end_date: todayDateString,
+              carryover_jackpot: endingJackpot
+            })
+            .eq('id', gameId);
+
+          if (gameUpdateError) throw gameUpdateError;
+          
+          toast.success("Winner details saved successfully!");
+          onComplete();
+          onOpenPayoutSlip(winnerData);
+          onOpenChange(false);
+        }
+      } else {
+        // For all other cards: complete the game normally
+        await completeGame(finalDistribution, endingJackpot);
+        toast.success("Winner details saved successfully!");
+        onComplete();
+        onOpenPayoutSlip(winnerData);
+        onOpenChange(false);
+      }
       
       // Reset form
       setFormData({
