@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +55,7 @@ export function WinnerForm({
     authorizedSignatureName: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
+  const [cardDistributions, setCardDistributions = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
 
@@ -347,21 +346,29 @@ export function WinnerForm({
 
       // PHASE 2: Handle Queen of Hearts differently - open contribution modal
       if (formData.cardSelected === 'Queen of Hearts') {
+        console.log('🎯 === QUEEN OF HEARTS DETECTED ===');
+        console.log('🎯 Checking if onOpenJackpotContribution exists:', !!onOpenJackpotContribution);
+        
         if (onOpenJackpotContribution) {
-          console.log('=== OPENING JACKPOT CONTRIBUTION MODAL ===');
-          console.log('Full Jackpot Amount being passed:', displayedJackpot);
-          console.log('Winner Name:', formData.winnerName);
-          console.log('Game ID:', gameId);
-          console.log('Winner Data:', winnerData);
+          console.log('🎯 === CALLING JACKPOT CONTRIBUTION FUNCTION ===');
+          console.log('🎯 Full Jackpot Amount being passed:', displayedJackpot);
+          console.log('🎯 Winner Name:', formData.winnerName);
+          console.log('🎯 Game ID:', gameId);
+          console.log('🎯 Winner Data:', winnerData);
           
-          // Close this modal first
-          onOpenChange(false);
-          
-          // Pass the winner data to the contribution modal handler
+          // Don't close the modal immediately - let the contribution modal handle the flow
+          console.log('🎯 Calling onOpenJackpotContribution...');
           onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
+          
+          // Use setTimeout to ensure the contribution modal opens before closing this one
+          setTimeout(() => {
+            console.log('🎯 Closing winner form after delay...');
+            onOpenChange(false);
+          }, 200);
           
           toast.success("Winner details saved! Please set the jackpot contribution.");
         } else {
+          console.log('🎯 onOpenJackpotContribution not available, using fallback');
           // Fallback if contribution modal not available - complete game normally
           await completeGame(finalDistribution, endingJackpot);
           const todayDateString = getTodayDateString();

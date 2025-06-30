@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
@@ -43,7 +43,7 @@ export const WeekManagement = ({
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
   
-  // New state for JackpotContributionModal
+  // State for JackpotContributionModal with detailed debugging
   const [jackpotContributionOpen, setJackpotContributionOpen] = useState(false);
   const [jackpotContributionData, setJackpotContributionData] = useState<{
     gameId: string;
@@ -51,6 +51,19 @@ export const WeekManagement = ({
     winnerName: string;
     winnerData?: any;
   } | null>(null);
+
+  // Debug state changes with useEffect
+  useEffect(() => {
+    console.log('🔍 DEBUG: jackpotContributionOpen changed to:', jackpotContributionOpen);
+  }, [jackpotContributionOpen]);
+
+  useEffect(() => {
+    console.log('🔍 DEBUG: jackpotContributionData changed to:', jackpotContributionData);
+  }, [jackpotContributionData]);
+
+  useEffect(() => {
+    console.log('🔍 DEBUG: winnerFormOpen changed to:', winnerFormOpen);
+  }, [winnerFormOpen]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -80,21 +93,51 @@ export const WeekManagement = ({
     }
   };
 
-  // Updated handler for Queen of Hearts jackpot contribution
+  // Enhanced handler for Queen of Hearts jackpot contribution with detailed debugging
   const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string, winnerData?: any) => {
-    console.log('=== WEEK MANAGEMENT: OPENING JACKPOT CONTRIBUTION ===');
-    console.log('Game ID:', gameId);
-    console.log('Total Jackpot:', totalJackpot);
-    console.log('Winner Name:', winnerName);
-    console.log('Winner Data:', winnerData);
+    console.log('🎯 === WEEK MANAGEMENT: OPENING JACKPOT CONTRIBUTION ===');
+    console.log('🎯 Game ID:', gameId);
+    console.log('🎯 Total Jackpot:', totalJackpot);
+    console.log('🎯 Winner Name:', winnerName);
+    console.log('🎯 Winner Data:', winnerData);
+    console.log('🎯 Current jackpotContributionOpen state:', jackpotContributionOpen);
+    console.log('🎯 Current jackpotContributionData state:', jackpotContributionData);
     
-    setJackpotContributionData({
+    // Validation checks
+    if (!gameId) {
+      console.error('❌ No gameId provided to handleOpenJackpotContribution');
+      return;
+    }
+    
+    if (!totalJackpot || totalJackpot <= 0) {
+      console.error('❌ Invalid totalJackpot provided:', totalJackpot);
+      return;
+    }
+    
+    if (!winnerName) {
+      console.error('❌ No winnerName provided to handleOpenJackpotContribution');
+      return;
+    }
+    
+    console.log('✅ All validation passed, setting jackpot contribution data...');
+    
+    // Set the data first
+    const newJackpotData = {
       gameId,
       totalJackpot,
       winnerName,
       winnerData
-    });
-    setJackpotContributionOpen(true);
+    };
+    
+    console.log('🔧 Setting jackpotContributionData to:', newJackpotData);
+    setJackpotContributionData(newJackpotData);
+    
+    // Use setTimeout to ensure state is set before opening modal
+    setTimeout(() => {
+      console.log('🔧 Opening jackpot contribution modal...');
+      setJackpotContributionOpen(true);
+      console.log('🔧 jackpotContributionOpen set to true');
+    }, 100);
   };
 
   const handleJackpotContributionComplete = () => {
@@ -233,10 +276,13 @@ export const WeekManagement = ({
         onOpenJackpotContribution={handleOpenJackpotContribution}
       />
 
-      {/* Jackpot Contribution Modal */}
+      {/* Jackpot Contribution Modal with enhanced debugging */}
       <JackpotContributionModal
         open={jackpotContributionOpen}
-        onOpenChange={setJackpotContributionOpen}
+        onOpenChange={(open) => {
+          console.log('🔄 JackpotContributionModal onOpenChange called with:', open);
+          setJackpotContributionOpen(open);
+        }}
         gameId={jackpotContributionData?.gameId || null}
         totalJackpot={jackpotContributionData?.totalJackpot || 0}
         winnerName={jackpotContributionData?.winnerName || ''}
@@ -249,6 +295,15 @@ export const WeekManagement = ({
         onOpenChange={setPayoutSlipOpen}
         winnerData={payoutSlipData}
       />
+
+      {/* Debug Panel - Remove in production */}
+      <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs">
+        <h4 className="font-bold mb-2">Debug Info:</h4>
+        <div>Winner Form Open: {winnerFormOpen.toString()}</div>
+        <div>Jackpot Contribution Open: {jackpotContributionOpen.toString()}</div>
+        <div>Jackpot Contribution Data: {JSON.stringify(jackpotContributionData, null, 2)}</div>
+        <div>Payout Slip Open: {payoutSlipOpen.toString()}</div>
+      </div>
     </div>
   );
 };
