@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { getTodayDateString } from "@/lib/dateUtils";
 
 interface JackpotContributionModalProps {
   open: boolean;
@@ -66,49 +67,73 @@ export const JackpotContributionModal = ({
     setIsSubmitting(true);
 
     try {
-      // Update the current game with the contribution amount
+      console.log('=== PHASE 3: JACKPOT CONTRIBUTION MODAL ===');
+      console.log('Game ID:', gameId);
+      console.log('Total Jackpot:', totalJackpot);
+      console.log('Contribution to Next Game:', contribution);
+      console.log('Winner Receives:', winnerReceives);
+
+      // PHASE 3: Complete the current game
+      const todayDateString = getTodayDateString();
+      
+      // Update current game: end it and set jackpot contribution
       const { error: gameError } = await supabase
         .from('games')
         .update({
+          end_date: todayDateString,
           jackpot_contribution_to_next_game: contribution,
-          end_date: new Date().toISOString().split('T')[0] // End the current game
+          total_payouts: totalJackpot - contribution // Update total payouts with what winner actually receives
         })
         .eq('id', gameId)
         .eq('user_id', user.id);
 
       if (gameError) throw gameError;
 
-      // Calculate the actual carryover (remaining jackpot after contribution)
-      const actualCarryover = totalJackpot - contribution;
+      console.log('Current game ended with contribution:', contribution);
 
-      // Find the next game (if any) and update its carryover_jackpot
+      // Check if there's already a next game created
       const { data: nextGame, error: nextGameError } = await supabase
         .from('games')
-        .select('id, carryover_jackpot')
+        .select('id, carryover_jackpot, name')
         .eq('user_id', user.id)
         .is('end_date', null)
         .neq('id', gameId)
         .order('created_at', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid errors if no next game exists
 
-      if (nextGame && !nextGameError) {
-        // Update existing next game
+      if (nextGameError) {
+        console.error('Error checking for next game:', nextGameError);
+        // Continue anyway - this is not critical
+      }
+
+      if (nextGame) {
+        // Update existing next game with additional carryover
+        console.log('Updating existing next game:', nextGame.name, 'with additional carryover:', contribution);
+        
         const { error: updateError } = await supabase
           .from('games')
           .update({
-            carryover_jackpot: nextGame.carryover_jackpot + actualCarryover
+            carryover_jackpot: (nextGame.carryover_jackpot || 0) + contribution
           })
           .eq('id', nextGame.id)
           .eq('user_id', user.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Error updating next game carryover:', updateError);
+          // This is not critical, continue
+        } else {
+          console.log('Next game carryover updated successfully');
+        }
+      } else {
+        console.log('No existing next game found - carryover will be handled when new game is created');
       }
-      // If no next game exists, that's fine - the carryover will be handled when a new game is created
+
+      console.log('=== PHASE 3: COMPLETION SUCCESSFUL ===');
 
       toast({
-        title: "Contribution Recorded",
-        description: `${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game.`,
+        title: "Game Completed",
+        description: `${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game. Game has been ended.`,
       });
 
       onComplete();
@@ -118,10 +143,10 @@ export const JackpotContributionModal = ({
       setContribution(0);
 
     } catch (error: any) {
-      console.error('Error recording jackpot contribution:', error);
+      console.error('Error completing Queen of Hearts game:', error);
       toast({
         title: "Error",
-        description: `Failed to record contribution: ${error.message}`,
+        description: `Failed to complete game: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -138,15 +163,15 @@ export const JackpotContributionModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Jackpot Contribution</DialogTitle>
+          <DialogTitle>Queen of Hearts Won!</DialogTitle>
           <DialogDescription>
-            {winnerName} has won the Queen of Hearts! Choose how much of the {formatCurrency(totalJackpot)} jackpot to contribute to the next game.
+            {winnerName} has won the Queen of Hearts! Choose how much of the {formatCurrency(totalJackpot)} jackpot to contribute to the next game. This will end the current game.
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="contribution">Contribution Amount</Label>
+            <Label htmlFor="contribution">Contribution to Next Game</Label>
             <Input
               id="contribution"
               type="number"
@@ -180,6 +205,10 @@ export const JackpotContributionModal = ({
               </div>
             </div>
           </div>
+          
+          <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+            <strong>Note:</strong> Completing this action will end the current game immediately.
+          </div>
         </div>
         
         <DialogFooter>
@@ -187,7 +216,7 @@ export const JackpotContributionModal = ({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Recording...' : 'Complete Game'}
+            {isSubmitting ? 'Completing Game...' : 'Complete Game'}
           </Button>
         </DialogFooter>
       </DialogContent>
