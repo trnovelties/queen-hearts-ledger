@@ -2,7 +2,7 @@
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, TrendingUp, TrendingDown, DollarSign, Users, Target } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, DollarSign, Users, Target, AlertTriangle, Info } from "lucide-react";
 
 interface GameSummaryDisplayProps {
   game: any;
@@ -19,13 +19,26 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
     return total + (week.weekly_tickets_sold || 0);
   }, 0);
 
-  // Calculate total jackpot pool from all weeks' contributions
-  const totalJackpotPool = game.weeks.reduce((total: number, week: any) => {
+  // Calculate total jackpot contributions from all weeks (excluding carryover)
+  const totalJackpotContributions = game.weeks.reduce((total: number, week: any) => {
     const weekJackpotContributions = week.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
     return total + weekJackpotContributions;
-  }, 0) + (game.carryover_jackpot || 0);
+  }, 0);
 
-  const isProfitable = game.game_profit_loss >= 0;
+  // Get minimum starting jackpot requirement
+  const minimumJackpotRequired = game.minimum_starting_jackpot || 500;
+  
+  // Calculate jackpot shortfall if contributions don't meet minimum
+  const jackpotShortfall = Math.max(0, minimumJackpotRequired - totalJackpotContributions);
+  
+  // Calculate actual lodge net profit after covering shortfall
+  const actualLodgeNetProfit = game.organization_net_profit - jackpotShortfall;
+  
+  // Total jackpot pool including carryover and shortfall coverage
+  const totalJackpotPool = totalJackpotContributions + (game.carryover_jackpot || 0) + jackpotShortfall;
+
+  const isProfitable = actualLodgeNetProfit >= 0;
+  const hasShortfall = jackpotShortfall > 0;
 
   return (
     <Card className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
@@ -60,15 +73,18 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             </div>
           </div>
 
-          {/* Organization Net Profit */}
+          {/* Actual Lodge Net Profit */}
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <h4 className="font-semibold text-gray-700">Organization Net</h4>
+              <DollarSign className={`h-5 w-5 ${isProfitable ? 'text-green-600' : 'text-red-600'}`} />
+              <h4 className="font-semibold text-gray-700">Actual Lodge Net Profit</h4>
+              {hasShortfall && <AlertTriangle className="h-4 w-4 text-orange-500" />}
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</p>
-              <p className="text-sm text-gray-600">After expenses & donations</p>
+              <p className={`text-2xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(actualLodgeNetProfit)}
+              </p>
+              <p className="text-sm text-gray-600">After jackpot shortfall coverage</p>
             </div>
           </div>
 
@@ -80,10 +96,34 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             </div>
             <div className="space-y-1">
               <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalJackpotPool)}</p>
-              <p className="text-sm text-gray-600">Including carryover</p>
+              <p className="text-sm text-gray-600">Including minimum guarantee</p>
             </div>
           </div>
         </div>
+
+        {/* Jackpot Analysis Section - Only show if there's a shortfall */}
+        {hasShortfall && (
+          <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Info className="h-5 w-5 text-orange-600" />
+              <h4 className="font-semibold text-orange-800">Minimum Jackpot Requirement Analysis</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Jackpot Contributions:</p>
+                <p className="font-medium text-gray-800">{formatCurrency(totalJackpotContributions)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Minimum Required:</p>
+                <p className="font-medium text-gray-800">{formatCurrency(minimumJackpotRequired)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Shortfall Covered by Organization:</p>
+                <p className="font-medium text-orange-600">{formatCurrency(jackpotShortfall)}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Detailed Financial Breakdown */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,6 +131,16 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <h4 className="font-semibold text-gray-700 mb-3">Financial Breakdown</h4>
             <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Organization Net (Before Shortfall):</span>
+                <span className="font-medium">{formatCurrency(game.organization_net_profit)}</span>
+              </div>
+              {hasShortfall && (
+                <div className="flex justify-between text-orange-600">
+                  <span>Jackpot Shortfall Coverage:</span>
+                  <span className="font-medium">-{formatCurrency(jackpotShortfall)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Payouts:</span>
                 <span className="font-medium">{formatCurrency(game.total_payouts)}</span>
@@ -105,7 +155,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
               </div>
               <hr className="my-2" />
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-medium">Game Profit/Loss:</span>
+                <span className="text-gray-700 font-medium">Actual Lodge Net Profit:</span>
                 <div className="flex items-center gap-1">
                   {isProfitable ? (
                     <TrendingUp className="h-4 w-4 text-green-600" />
@@ -113,22 +163,28 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                     <TrendingDown className="h-4 w-4 text-red-600" />
                   )}
                   <span className={`font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(Math.abs(game.game_profit_loss))}
+                    {formatCurrency(Math.abs(actualLodgeNetProfit))}
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Next Game Contribution */}
+          {/* Right Column - Game Details */}
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <h4 className="font-semibold text-gray-700 mb-3">Game Completion Details</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Jackpot Contribution to Next Game:</span>
-                <span className="font-medium text-blue-600">
-                  {formatCurrency(game.jackpot_contribution_to_next_game)}
-                </span>
+                <span className="text-gray-600">Minimum Starting Jackpot:</span>
+                <span className="font-medium">{formatCurrency(minimumJackpotRequired)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Jackpot Contributions:</span>
+                <span className="font-medium">{formatCurrency(totalJackpotContributions)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Carryover from Previous:</span>
+                <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>
@@ -150,8 +206,12 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-700">
             <strong>Game Summary:</strong> This {game.weeks.length}-week game generated {formatCurrency(game.total_sales)} in total sales 
-            with {totalTicketsSold.toLocaleString()} tickets sold. The organization earned a net profit of {formatCurrency(game.organization_net_profit)} 
-            after all expenses and donations. {isProfitable ? 'The game was profitable overall.' : 'The game resulted in a net loss due to jackpot payouts.'}
+            with {totalTicketsSold.toLocaleString()} tickets sold. 
+            {hasShortfall && (
+              <>The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the minimum jackpot requirement. </>
+            )}
+            The actual lodge net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualLodgeNetProfit)}. 
+            {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations.'}
           </p>
         </div>
       </CardContent>
