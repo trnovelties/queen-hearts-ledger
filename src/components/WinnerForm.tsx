@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +31,7 @@ interface WinnerFormProps {
   jackpotContributions?: number;
   onComplete: () => void;
   onOpenPayoutSlip: (winnerData: any) => void;
+  onOpenJackpotContribution?: (gameId: string, totalJackpot: number, winnerName: string) => void;
 }
 
 export function WinnerForm({ 
@@ -43,7 +43,8 @@ export function WinnerForm({
   currentJackpotTotal = 0, 
   jackpotContributions = 0,
   onComplete, 
-  onOpenPayoutSlip 
+  onOpenPayoutSlip,
+  onOpenJackpotContribution
 }: WinnerFormProps) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
@@ -229,6 +230,13 @@ export function WinnerForm({
         if (!formData.winnerPresent) {
           const penalty = finalDistribution * (penaltyPercentage / 100);
           finalDistribution = finalDistribution - penalty;
+        }
+
+        // If Queen of Hearts is drawn and onOpenJackpotContribution exists, open the contribution modal
+        if (onOpenJackpotContribution) {
+          onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName);
+          onOpenChange(false);
+          return;
         }
       }
 
