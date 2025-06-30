@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { CalendarDays, CheckCheck, DollarSign, RotateCw, UserCheck, UserCircleIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { WeekSummaryStats } from "./WeekSummaryStats";
-import { DailyEntryForm } from "./DailyEntryForm";
 import { WinnerForm } from "./WinnerForm";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
-import { formatDateString } from "@/lib/dateUtils";
+import { formatDateStringForDisplay } from "@/lib/dateUtils";
 import { JackpotContributionModal } from './JackpotContributionModal';
 import { useGameCompletion } from '@/hooks/useGameCompletion';
+import { useAuth } from "@/context/AuthContext";
 
 interface WeekManagementProps {
   week: any;
@@ -28,6 +29,7 @@ export const WeekManagement = ({
   onGameComplete 
 }: WeekManagementProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showDailyEntryForm, setShowDailyEntryForm] = useState(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [showWinnerForm, setShowWinnerForm] = useState(false);
@@ -226,7 +228,7 @@ export const WeekManagement = ({
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground">
-            {formatDateString(weekStartDate)} - {formatDateString(weekEndDate)}
+            {formatDateStringForDisplay(weekStartDate.toISOString().split('T')[0])} - {formatDateStringForDisplay(weekEndDate.toISOString().split('T')[0])}
           </div>
 
           <WeekSummaryStats
@@ -282,21 +284,6 @@ export const WeekManagement = ({
         >
           Enter Winner
         </Button>
-      )}
-
-      {showDailyEntryForm && (
-        <DailyEntryForm
-          open={showDailyEntryForm}
-          onOpenChange={setShowDailyEntryForm}
-          weekId={week.id}
-          dayIndex={selectedDayIndex!}
-          currentGameId={game.id}
-          games={game}
-          onComplete={() => {
-            handleCloseDailyEntry();
-            onUpdate();
-          }}
-        />
       )}
 
       {showWinnerForm && (

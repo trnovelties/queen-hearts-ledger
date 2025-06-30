@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -6,9 +7,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker"
-import { CalendarIcon } from "@radix-ui/react-icons"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { DatePickerWithInput } from "@/components/ui/datepicker"
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,35 +229,11 @@ export const GameForm = ({ open, onOpenChange, games, onComplete }: GameFormProp
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Start Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-[240px] pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  form.format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <DatePicker
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={false}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <DatePickerWithInput
+                          date={field.value}
+                          setDate={field.onChange}
+                          placeholder="Pick a date"
+                        />
                         <FormDescription>
                           The date that the game will start on.
                         </FormDescription>
