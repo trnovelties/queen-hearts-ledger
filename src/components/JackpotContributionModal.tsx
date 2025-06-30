@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { getTodayDateString } from "@/lib/dateUtils";
+import { toast } from "sonner";
 
 interface JackpotContributionModalProps {
   open: boolean;
@@ -28,8 +29,43 @@ export const JackpotContributionModal = ({
 }: JackpotContributionModalProps) => {
   const [contribution, setContribution] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  const { toast: shadcnToast } = useToast();
   const { user } = useAuth();
+
+  // Enhanced logging when modal opens
+  useEffect(() => {
+    if (open) {
+      console.log('🎰 === JACKPOT CONTRIBUTION MODAL OPENED ===');
+      console.log('🎰 Game ID:', gameId);
+      console.log('🎰 Total Jackpot:', totalJackpot);
+      console.log('🎰 Winner Name:', winnerName);
+      console.log('🎰 User ID:', user?.id);
+      
+      if (!gameId) {
+        console.error('🎰 ❌ No gameId provided to modal');
+        toast.error("Missing game information. Cannot process jackpot contribution.");
+        onOpenChange(false);
+        return;
+      }
+      
+      if (totalJackpot <= 0) {
+        console.error('🎰 ❌ Invalid totalJackpot:', totalJackpot);
+        toast.error("Invalid jackpot amount. Cannot process contribution.");
+        onOpenChange(false);
+        return;
+      }
+      
+      if (!winnerName) {
+        console.error('🎰 ❌ No winnerName provided to modal');
+        toast.error("Missing winner information. Cannot process contribution.");
+        onOpenChange(false);
+        return;
+      }
+      
+      console.log('🎰 ✅ All validation passed, modal ready for user input');
+      toast.success("Jackpot contribution modal opened successfully!");
+    }
+  }, [open, gameId, totalJackpot, winnerName, user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -43,11 +79,15 @@ export const JackpotContributionModal = ({
   const nextGameGets = contribution;
 
   const handleSubmit = async () => {
-    if (!gameId || !user?.id) return;
+    if (!gameId || !user?.id) {
+      console.error('🎰 ❌ Missing required data for submission');
+      toast.error("Missing required information. Cannot complete game.");
+      return;
+    }
 
-    // Validation
+    // Enhanced validation
     if (contribution < 0) {
-      toast({
+      shadcnToast({
         title: "Invalid Amount",
         description: "Contribution cannot be negative.",
         variant: "destructive",
@@ -56,7 +96,7 @@ export const JackpotContributionModal = ({
     }
 
     if (contribution > totalJackpot) {
-      toast({
+      shadcnToast({
         title: "Invalid Amount",
         description: "Contribution cannot exceed the total jackpot.",
         variant: "destructive",
@@ -67,14 +107,17 @@ export const JackpotContributionModal = ({
     setIsSubmitting(true);
 
     try {
-      console.log('=== PHASE 3: JACKPOT CONTRIBUTION MODAL ===');
-      console.log('Game ID:', gameId);
-      console.log('Total Jackpot:', totalJackpot);
-      console.log('Contribution to Next Game:', contribution);
-      console.log('Winner Receives:', winnerReceives);
+      console.log('🎰 === PHASE 3: JACKPOT CONTRIBUTION PROCESSING ===');
+      console.log('🎰 Game ID:', gameId);
+      console.log('🎰 Total Jackpot:', totalJackpot);
+      console.log('🎰 Contribution to Next Game:', contribution);
+      console.log('🎰 Winner Receives:', winnerReceives);
 
-      // PHASE 3: Complete the current game
+      // PHASE 3: Complete the current game with proper end date
       const todayDateString = getTodayDateString();
+      
+      console.log('🎰 Setting game end date to:', todayDateString);
+      console.log('🎰 Updating game with contribution:', contribution);
       
       // Update current game: end it and set jackpot contribution
       const { error: gameError } = await supabase
@@ -82,14 +125,18 @@ export const JackpotContributionModal = ({
         .update({
           end_date: todayDateString,
           jackpot_contribution_to_next_game: contribution,
-          total_payouts: totalJackpot - contribution // Update total payouts with what winner actually receives
+          total_payouts: (totalJackpot - contribution) // Update total payouts with what winner actually receives
         })
         .eq('id', gameId)
         .eq('user_id', user.id);
 
-      if (gameError) throw gameError;
+      if (gameError) {
+        console.error('🎰 ❌ Error updating game:', gameError);
+        throw gameError;
+      }
 
-      console.log('Current game ended with contribution:', contribution);
+      console.log('🎰 ✅ Current game ended successfully with end_date:', todayDateString);
+      console.log('🎰 ✅ Game marked as completed with contribution:', contribution);
 
       // Check if there's already a next game created
       const { data: nextGame, error: nextGameError } = await supabase
@@ -100,16 +147,16 @@ export const JackpotContributionModal = ({
         .neq('id', gameId)
         .order('created_at', { ascending: true })
         .limit(1)
-        .maybeSingle(); // Use maybeSingle to avoid errors if no next game exists
+        .maybeSingle();
 
       if (nextGameError) {
-        console.error('Error checking for next game:', nextGameError);
+        console.error('🎰 ⚠️ Error checking for next game:', nextGameError);
         // Continue anyway - this is not critical
       }
 
       if (nextGame) {
         // Update existing next game with additional carryover
-        console.log('Updating existing next game:', nextGame.name, 'with additional carryover:', contribution);
+        console.log('🎰 Updating existing next game:', nextGame.name, 'with additional carryover:', contribution);
         
         const { error: updateError } = await supabase
           .from('games')
@@ -120,22 +167,26 @@ export const JackpotContributionModal = ({
           .eq('user_id', user.id);
 
         if (updateError) {
-          console.error('Error updating next game carryover:', updateError);
+          console.error('🎰 ⚠️ Error updating next game carryover:', updateError);
           // This is not critical, continue
         } else {
-          console.log('Next game carryover updated successfully');
+          console.log('🎰 ✅ Next game carryover updated successfully');
         }
       } else {
-        console.log('No existing next game found - carryover will be handled when new game is created');
+        console.log('🎰 ℹ️ No existing next game found - carryover will be handled when new game is created');
       }
 
-      console.log('=== PHASE 3: COMPLETION SUCCESSFUL ===');
+      console.log('🎰 === PHASE 3: COMPLETION SUCCESSFUL ===');
 
-      toast({
-        title: "Game Completed",
-        description: `${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game. Game has been ended.`,
+      // Provide detailed success feedback
+      toast.success(`Game completed! ${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game.`);
+      
+      shadcnToast({
+        title: "Game Completed Successfully",
+        description: `${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game. Game has been ended and moved to archives.`,
       });
 
+      // Complete the process
       onComplete();
       onOpenChange(false);
       
@@ -143,8 +194,9 @@ export const JackpotContributionModal = ({
       setContribution(0);
 
     } catch (error: any) {
-      console.error('Error completing Queen of Hearts game:', error);
-      toast({
+      console.error('🎰 ❌ Error completing Queen of Hearts game:', error);
+      toast.error(`Failed to complete game: ${error.message}`);
+      shadcnToast({
         title: "Error",
         description: `Failed to complete game: ${error.message}`,
         variant: "destructive",
@@ -163,9 +215,9 @@ export const JackpotContributionModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Queen of Hearts Won!</DialogTitle>
+          <DialogTitle>🎉 Queen of Hearts Won!</DialogTitle>
           <DialogDescription>
-            {winnerName} has won the Queen of Hearts! Choose how much of the {formatCurrency(totalJackpot)} jackpot to contribute to the next game. This will end the current game.
+            {winnerName} has won the Queen of Hearts! Choose how much of the {formatCurrency(totalJackpot)} jackpot to contribute to the next game. This will end the current game and move it to archives.
           </DialogDescription>
         </DialogHeader>
         
@@ -187,36 +239,44 @@ export const JackpotContributionModal = ({
             </p>
           </div>
           
-          {/* Summary Display */}
+          {/* Enhanced Summary Display */}
           <div className="rounded-lg border p-4 bg-muted/50">
-            <h4 className="font-medium mb-2">Summary</h4>
+            <h4 className="font-medium mb-2">💰 Distribution Summary</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span>Winner receives:</span>
+                <span>🏆 Winner receives:</span>
                 <span className="font-medium text-green-600">{formatCurrency(winnerReceives)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Next game gets:</span>
+                <span>🎯 Next game gets:</span>
                 <span className="font-medium text-blue-600">{formatCurrency(nextGameGets)}</span>
               </div>
               <div className="flex justify-between border-t pt-1 mt-2">
-                <span className="font-medium">Total jackpot:</span>
+                <span className="font-medium">💎 Total jackpot:</span>
                 <span className="font-medium">{formatCurrency(totalJackpot)}</span>
               </div>
             </div>
           </div>
           
           <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-            <strong>Note:</strong> Completing this action will end the current game immediately.
+            <strong>⚠️ Important:</strong> Completing this action will end the current game immediately and move it to your archived games.
           </div>
         </div>
         
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} variant="secondary" disabled={isSubmitting}>
+          <Button 
+            onClick={() => onOpenChange(false)} 
+            variant="secondary" 
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Completing Game...' : 'Complete Game'}
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSubmitting ? 'Completing Game...' : '🎉 Complete Game'}
           </Button>
         </DialogFooter>
       </DialogContent>

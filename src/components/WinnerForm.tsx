@@ -58,6 +58,7 @@ export function WinnerForm({
   const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
+  const [isProcessingQueenOfHearts, setIsProcessingQueenOfHearts] = useState(false);
 
   // Debug logging for winner form state
   useEffect(() => {
@@ -320,61 +321,64 @@ export function WinnerForm({
 
       console.log('🏆 Card Selected:', formData.cardSelected);
 
-      // Handle Queen of Hearts - NO penalty calculation here
-      if (formData.cardSelected === 'Queen of Hearts') {
-        finalDistribution = displayedJackpot; // Always use full jackpot amount
-        console.log('🏆 Queen of Hearts selected - Full Jackpot Amount:', finalDistribution);
-        
-        // ENHANCED DEBUG: Check if function exists before calling
-        if (onOpenJackpotContribution) {
-          console.log('🏆 ✅ onOpenJackpotContribution function is available - proceeding with Queen of Hearts flow');
-        } else {
-          console.log('🏆 ❌ onOpenJackpotContribution function is NOT available - will use fallback');
-        }
-      } else {
-        console.log('🏆 Other card selected - Payout Amount:', finalDistribution);
-      }
-
-      // PHASE 1: Save winner details first for ALL cards
-      console.log('🏆 PHASE 1: Saving winner details...');
-      const endingJackpot = await saveWinnerDetails(finalDistribution);
-      console.log('🏆 PHASE 1: Winner details saved, ending jackpot:', endingJackpot);
-
-      // Fetch the week data to get proper dates for the payout slip
-      const { data: weekData, error: weekDataError } = await supabase
-        .from('weeks')
-        .select('*')
-        .eq('id', weekId)
-        .single();
-
-      if (weekDataError) throw weekDataError;
-
-      // Prepare winner data for payout slip
-      const todayDateString = getTodayDateString();
-      const winnerData = {
-        winnerName: formData.winnerName,
-        cardSelected: formData.cardSelected,
-        slotChosen: formData.slotChosen,
-        amountWon: finalDistribution, // This will be the full jackpot for Queen of Hearts
-        authorizedSignatureName: formData.authorizedSignatureName,
-        gameId,
-        weekId,
-        date: todayDateString,
-        weekNumber: weekData.week_number,
-        weekStartDate: weekData.start_date,
-        weekEndDate: weekData.end_date,
-        winnerPresent: formData.winnerPresent
-      };
-
-      console.log('🏆 Winner data prepared:', winnerData);
-
-      // PHASE 2: Handle Queen of Hearts differently - open contribution modal
+      // Handle Queen of Hearts - Enhanced process
       if (formData.cardSelected === 'Queen of Hearts') {
         console.log('🏆 === QUEEN OF HEARTS FLOW START ===');
+        finalDistribution = displayedJackpot;
+        setIsProcessingQueenOfHearts(true);
         
-        if (onOpenJackpotContribution) {
-          console.log('🏆 ✅ Calling onOpenJackpotContribution function...');
-          console.log('🏆 Parameters being passed:');
+        // Validation checks with user feedback
+        if (!onOpenJackpotContribution) {
+          console.error('🏆 ❌ onOpenJackpotContribution function not available');
+          toast.error("Cannot open jackpot contribution modal. Please try again or contact support.");
+          return;
+        }
+
+        if (displayedJackpot <= 0) {
+          console.error('🏆 ❌ Invalid displayed jackpot amount:', displayedJackpot);
+          toast.error("Invalid jackpot amount. Please refresh and try again.");
+          return;
+        }
+
+        console.log('🏆 ✅ All validations passed, proceeding with Queen of Hearts flow');
+        
+        // PHASE 1: Save winner details first
+        console.log('🏆 PHASE 1: Saving winner details...');
+        const endingJackpot = await saveWinnerDetails(finalDistribution);
+        console.log('🏆 PHASE 1: Winner details saved successfully');
+
+        // Fetch the week data to get proper dates for the payout slip
+        const { data: weekData, error: weekDataError } = await supabase
+          .from('weeks')
+          .select('*')
+          .eq('id', weekId)
+          .single();
+
+        if (weekDataError) throw weekDataError;
+
+        // Prepare winner data for payout slip
+        const todayDateString = getTodayDateString();
+        const winnerData = {
+          winnerName: formData.winnerName,
+          cardSelected: formData.cardSelected,
+          slotChosen: formData.slotChosen,
+          amountWon: finalDistribution,
+          authorizedSignatureName: formData.authorizedSignatureName,
+          gameId,
+          weekId,
+          date: todayDateString,
+          weekNumber: weekData.week_number,
+          weekStartDate: weekData.start_date,
+          weekEndDate: weekData.end_date,
+          winnerPresent: formData.winnerPresent
+        };
+
+        console.log('🏆 Winner data prepared:', winnerData);
+
+        // PHASE 2: Open jackpot contribution modal with enhanced error handling
+        try {
+          console.log('🏆 PHASE 2: Opening jackpot contribution modal...');
+          console.log('🏆 Calling onOpenJackpotContribution with params:');
           console.log('🏆   - gameId:', gameId);
           console.log('🏆   - totalJackpot:', displayedJackpot);
           console.log('🏆   - winnerName:', formData.winnerName);
@@ -384,58 +388,78 @@ export function WinnerForm({
           onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
           
           console.log('🏆 ✅ onOpenJackpotContribution called successfully');
-          console.log('🏆 ✅ Closing winner form and letting contribution modal handle the rest...');
           
-          // Success message
-          toast.success("Winner details saved! Please set the jackpot contribution.");
+          // Success message but keep form open until modal confirms
+          toast.success("Winner details saved! Setting up jackpot contribution...");
           
-          // Close this modal - contribution modal should now be opening
-          onOpenChange(false);
+          // Wait a moment for modal to process, then close this form
+          setTimeout(() => {
+            console.log('🏆 ✅ Closing winner form after modal setup delay');
+            onOpenChange(false);
+            setIsProcessingQueenOfHearts(false);
+          }, 500);
           
-        } else {
-          console.log('🏆 ❌ onOpenJackpotContribution not available, using fallback');
-          // Fallback if contribution modal not available - complete game normally
-          await completeGame(finalDistribution, endingJackpot);
-          const todayDateString = getTodayDateString();
-          const { error: gameUpdateError } = await supabase
-            .from('games')
-            .update({
-              end_date: todayDateString,
-              carryover_jackpot: endingJackpot
-            })
-            .eq('id', gameId);
-
-          if (gameUpdateError) throw gameUpdateError;
-          
-          toast.success("Winner details saved successfully!");
-          onComplete();
-          onOpenPayoutSlip(winnerData);
-          onOpenChange(false);
+        } catch (error) {
+          console.error('🏆 ❌ Error calling onOpenJackpotContribution:', error);
+          toast.error("Failed to open jackpot contribution modal. Please try again.");
+          setIsProcessingQueenOfHearts(false);
+          return;
         }
+        
       } else {
         console.log('🏆 === NON-QUEEN OF HEARTS FLOW ===');
         // For all other cards: complete the game normally
+        const endingJackpot = await saveWinnerDetails(finalDistribution);
         await completeGame(finalDistribution, endingJackpot);
+        
+        // Fetch week data for payout slip
+        const { data: weekData, error: weekDataError } = await supabase
+          .from('weeks')
+          .select('*')
+          .eq('id', weekId)
+          .single();
+
+        if (weekDataError) throw weekDataError;
+
+        const todayDateString = getTodayDateString();
+        const winnerData = {
+          winnerName: formData.winnerName,
+          cardSelected: formData.cardSelected,
+          slotChosen: formData.slotChosen,
+          amountWon: finalDistribution,
+          authorizedSignatureName: formData.authorizedSignatureName,
+          gameId,
+          weekId,
+          date: todayDateString,
+          weekNumber: weekData.week_number,
+          weekStartDate: weekData.start_date,
+          weekEndDate: weekData.end_date,
+          winnerPresent: formData.winnerPresent
+        };
+
         toast.success("Winner details saved successfully!");
         onComplete();
         onOpenPayoutSlip(winnerData);
         onOpenChange(false);
       }
       
-      // Reset form
-      setFormData({
-        winnerName: '',
-        cardSelected: '',
-        slotChosen: 1,
-        winnerPresent: true,
-        authorizedSignatureName: ''
-      });
-      setSelectedDistribution(0);
+      // Reset form only for non-Queen of Hearts
+      if (formData.cardSelected !== 'Queen of Hearts') {
+        setFormData({
+          winnerName: '',
+          cardSelected: '',
+          slotChosen: 1,
+          winnerPresent: true,
+          authorizedSignatureName: ''
+        });
+        setSelectedDistribution(0);
+      }
       
       console.log('🏆 === WINNER FORM HANDLESUBMIT END ===');
     } catch (error) {
       console.error('🏆 ❌ Error in winner form handleSubmit:', error);
       toast.error("Failed to save winner details");
+      setIsProcessingQueenOfHearts(false);
     } finally {
       setIsLoading(false);
     }
@@ -447,7 +471,12 @@ export function WinnerForm({
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>Record Winner Details</CardTitle>
-            <CardDescription>Enter the winner's information for this week</CardDescription>
+            <CardDescription>
+              {isProcessingQueenOfHearts 
+                ? "Processing Queen of Hearts winner..." 
+                : "Enter the winner's information for this week"
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -460,6 +489,7 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
                   placeholder="John Doe"
                   required
+                  disabled={isProcessingQueenOfHearts}
                 />
               </div>
 
@@ -469,7 +499,7 @@ export function WinnerForm({
                   setFormData({ ...formData, cardSelected: value });
                   const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
                   setSelectedDistribution(distribution);
-                }}>
+                }} disabled={isProcessingQueenOfHearts}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a card" />
                   </SelectTrigger>
@@ -504,6 +534,7 @@ export function WinnerForm({
                   value={formData.slotChosen}
                   onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
                   required
+                  disabled={isProcessingQueenOfHearts}
                 />
               </div>
 
@@ -512,6 +543,7 @@ export function WinnerForm({
                   id="winnerPresent"
                   checked={formData.winnerPresent}
                   onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked === true })}
+                  disabled={isProcessingQueenOfHearts}
                 />
                 <Label htmlFor="winnerPresent">Winner Present</Label>
               </div>
@@ -525,14 +557,26 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
                   placeholder="Jane Smith"
                   required
+                  disabled={isProcessingQueenOfHearts}
                 />
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                  {isLoading ? "Saving..." : "Save Winner Details"}
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || isProcessingQueenOfHearts} 
+                  className="flex-1"
+                >
+                  {isLoading ? "Saving..." : 
+                   isProcessingQueenOfHearts ? "Processing Queen of Hearts..." : 
+                   "Save Winner Details"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => onOpenChange(false)}
+                  disabled={isProcessingQueenOfHearts}
+                >
                   Cancel
                 </Button>
               </div>
