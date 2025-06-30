@@ -1,4 +1,3 @@
-
 import { useTicketSales } from '@/hooks/useTicketSales';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +8,7 @@ import { WeekSummaryStats } from './WeekSummaryStats';
 import { WinnerInfoDisplay } from './WinnerInfoDisplay';
 import { DailyEntriesList } from './DailyEntriesList';
 import { WinnerSelectionSection } from './WinnerSelectionSection';
+import { GameSummaryDisplay } from './GameSummaryDisplay';
 
 interface TicketSalesTableProps {
   week: any;
@@ -144,6 +144,9 @@ export const TicketSalesTable = ({
 
   return (
     <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
+      {/* Game Summary Display - Only for completed games */}
+      <GameSummaryDisplay game={game} formatCurrency={formatCurrency} />
+      
       {/* Week Details Header */}
       <div className="pb-6 border-b border-gray-200">
         <WeekHeader week={week} onToggleWeek={onToggleWeek} />
