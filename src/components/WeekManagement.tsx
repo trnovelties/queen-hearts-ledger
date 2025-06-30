@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2, Crown } from "lucide-react";
@@ -5,6 +6,7 @@ import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
 import { JackpotContributionModal } from './JackpotContributionModal';
+import { GameSummaryDisplay } from './GameSummaryDisplay';
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 import { toast } from "sonner";
 
@@ -221,6 +223,9 @@ export const WeekManagement = ({
           </Button>
         </div>
       </div>
+      
+      {/* Game Summary Display - Only for completed games */}
+      <GameSummaryDisplay game={game} formatCurrency={formatCurrency} />
       
       {game.weeks.length === 0 ? (
         <p className="text-muted-foreground text-sm">No weeks added yet.</p>
