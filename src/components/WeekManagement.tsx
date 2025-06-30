@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Download, Plus, Trash2, Crown } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
 import { JackpotContributionModal } from './JackpotContributionModal';
 import { GameSummaryDisplay } from './GameSummaryDisplay';
-import { formatDateStringForDisplay } from '@/lib/dateUtils';
-import { toast } from "sonner";
+import { WeekCalendarGrid } from './WeekCalendarGrid';
+import { useWinnerFormManager } from '@/hooks/useWinnerFormManager';
+import { usePayoutSlipManager } from '@/hooks/usePayoutSlipManager';
+import { useJackpotContributionManager } from '@/hooks/useJackpotContributionManager';
 
 interface WeekManagementProps {
   game: any;
@@ -38,18 +40,29 @@ export const WeekManagement = ({
   onOpenExpenseModal,
   onOpenDonationModal
 }: WeekManagementProps) => {
-  const [winnerFormOpen, setWinnerFormOpen] = useState(false);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
-  const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
-  const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
-  const [jackpotContributionOpen, setJackpotContributionOpen] = useState(false);
-  const [jackpotContributionData, setJackpotContributionData] = useState<{
-    gameId: string;
-    totalJackpot: number;
-    winnerName: string;
-    winnerData?: any;
-  } | null>(null);
+  const {
+    winnerFormOpen,
+    setWinnerFormOpen,
+    selectedGameId,
+    selectedWeekId,
+    handleOpenWinnerForm,
+    handleWinnerFormComplete
+  } = useWinnerFormManager();
+
+  const {
+    payoutSlipOpen,
+    setPayoutSlipOpen,
+    payoutSlipData,
+    handleOpenPayoutSlip
+  } = usePayoutSlipManager();
+
+  const {
+    jackpotContributionOpen,
+    setJackpotContributionOpen,
+    jackpotContributionData,
+    handleCompleteGame,
+    handleJackpotContributionComplete
+  } = useJackpotContributionManager();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -57,119 +70,6 @@ export const WeekManagement = ({
       currency: 'USD',
       minimumFractionDigits: 2
     }).format(amount);
-  };
-
-  const handleOpenWinnerForm = (gameId: string, weekId: string) => {
-    console.log('=== OPENING WINNER FORM ===');
-    console.log('Game ID:', gameId);
-    console.log('Week ID:', weekId);
-    setSelectedGameId(gameId);
-    setSelectedWeekId(weekId);
-    setWinnerFormOpen(true);
-  };
-
-  const handleWinnerFormComplete = () => {
-    console.log('=== WINNER FORM COMPLETED ===');
-    setWinnerFormOpen(false);
-    setSelectedGameId(null);
-    setSelectedWeekId(null);
-    // Refresh the data to show updated winner information
-    if (onRefreshData) {
-      onRefreshData();
-    }
-  };
-
-  // Calculate the actual total jackpot for Queen of Hearts winners
-  const calculateTotalJackpot = (week: any) => {
-    // Calculate total jackpot contributions from all weeks in the game
-    const totalContributions = game.weeks.reduce((total: number, w: any) => {
-      const weekContributions = w.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
-      return total + weekContributions;
-    }, 0);
-    
-    // Add carryover jackpot from previous game
-    const totalJackpot = (game.carryover_jackpot || 0) + totalContributions;
-    
-    console.log('🎰 Calculated total jackpot:', totalJackpot);
-    console.log('🎰 Carryover jackpot:', game.carryover_jackpot);
-    console.log('🎰 Total contributions:', totalContributions);
-    
-    return Math.max(totalJackpot, 100); // Ensure minimum jackpot for modal validation
-  };
-
-  // Handle "Complete Your Game" button for Queen of Hearts winners
-  const handleCompleteGame = (week: any) => {
-    console.log('🎯 === OPENING JACKPOT CONTRIBUTION FROM COMPLETE BUTTON ===');
-    console.log('🎯 Week:', week);
-    console.log('🎯 Game ID:', game.id);
-    console.log('🎯 Winner Name:', week.winner_name);
-    
-    const totalJackpot = calculateTotalJackpot(week);
-    
-    console.log('🎯 Calculated Total Jackpot:', totalJackpot);
-    
-    if (!totalJackpot || totalJackpot <= 0) {
-      toast.error("Unable to calculate jackpot amount. Please refresh and try again.");
-      return;
-    }
-    
-    // Set jackpot contribution data and open modal
-    setJackpotContributionData({
-      gameId: game.id,
-      totalJackpot: totalJackpot,
-      winnerName: week.winner_name,
-      winnerData: {
-        winnerName: week.winner_name,
-        cardSelected: week.card_selected,
-        slotChosen: week.slot_chosen,
-        amountWon: totalJackpot,
-        authorizedSignatureName: week.authorized_signature_name,
-        gameId: game.id,
-        weekId: week.id,
-        weekNumber: week.week_number,
-        weekStartDate: week.start_date,
-        weekEndDate: week.end_date,
-        winnerPresent: week.winner_present
-      }
-    });
-    setJackpotContributionOpen(true);
-    
-    console.log('✅ Jackpot contribution modal opened from complete button');
-  };
-
-  const handleJackpotContributionComplete = () => {
-    console.log('=== JACKPOT CONTRIBUTION COMPLETED ===');
-    
-    // Open payout slip if we have winner data
-    if (jackpotContributionData?.winnerData) {
-      console.log('Opening payout slip with winner data:', jackpotContributionData.winnerData);
-      handleOpenPayoutSlip(jackpotContributionData.winnerData);
-    }
-    
-    // Clean up state
-    setJackpotContributionOpen(false);
-    setJackpotContributionData(null);
-    
-    // Refresh the data to show updated game status
-    if (onRefreshData) {
-      onRefreshData();
-    }
-    
-    toast.success("Game completed successfully!");
-  };
-
-  const handleOpenPayoutSlip = (winnerData: any) => {
-    console.log('=== OPENING PAYOUT SLIP ===');
-    console.log('Winner Data:', winnerData);
-    
-    // Enhance winnerData with game information
-    const enhancedWinnerData = {
-      ...winnerData,
-      gameName: game.name,
-      gameNumber: game.game_number
-    };
-    setPayoutSlipData(enhancedWinnerData);
-    setPayoutSlipOpen(true);
   };
 
   const getCurrentGameData = () => {
@@ -236,39 +136,15 @@ export const WeekManagement = ({
       ) : (
         <div className="space-y-4">
           {/* Week Calendar-style Layout */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-[5px]">
-            {game.weeks.map((week: any) => (
-              <div key={week.id} className="space-y-2">
-                {/* Week Button */}
-                <Button
-                  onClick={() => {
-                    onToggleWeek(week.id);
-                    setCurrentGameId(game.id);
-                  }}
-                  variant="outline"
-                  className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${
-                    expandedWeek === week.id
-                      ? 'bg-[#4A7C59] border-[#4A7C59] text-white shadow-md'
-                      : 'bg-[#A1E96C] border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/90'
-                  }`}
-                >
-                  Week {week.week_number}
-                </Button>
-                
-                {/* Complete Your Game Button for Queen of Hearts winners */}
-                {needsGameCompletion(week) && (
-                  <Button
-                    onClick={() => handleCompleteGame(week)}
-                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-yellow-900 font-bold text-xs py-1 px-2 rounded shadow-lg border border-yellow-300"
-                    size="sm"
-                  >
-                    <Crown className="h-3 w-3 mr-1" />
-                    Complete Your Game
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
+          <WeekCalendarGrid
+            weeks={game.weeks}
+            expandedWeek={expandedWeek}
+            onToggleWeek={onToggleWeek}
+            onSetCurrentGameId={setCurrentGameId}
+            gameId={game.id}
+            needsGameCompletion={needsGameCompletion}
+            onCompleteGame={(week) => handleCompleteGame(week, game)}
+          />
           
           {/* Expanded Week Details */}
           {expandedWeek && game.weeks.find((w: any) => w.id === expandedWeek) && (
@@ -280,12 +156,12 @@ export const WeekManagement = ({
               setGames={setGames}
               onToggleWeek={onToggleWeek}
               onOpenWinnerForm={handleOpenWinnerForm}
-              onOpenPayoutSlip={handleOpenPayoutSlip}
+              onOpenPayoutSlip={(winnerData) => handleOpenPayoutSlip(winnerData, game)}
               onOpenExpenseModal={onOpenExpenseModal}
               onOpenDonationModal={onOpenDonationModal}
               onRefreshData={onRefreshData}
               needsGameCompletion={needsGameCompletion}
-              onCompleteGameClick={handleCompleteGame}
+              onCompleteGameClick={(week) => handleCompleteGame(week, game)}
             />
           )}
         </div>
@@ -300,8 +176,8 @@ export const WeekManagement = ({
         gameData={getCurrentGameData()}
         currentJackpotTotal={0}
         jackpotContributions={calculateCurrentJackpotTotal()}
-        onComplete={handleWinnerFormComplete}
-        onOpenPayoutSlip={handleOpenPayoutSlip}
+        onComplete={() => handleWinnerFormComplete(onRefreshData)}
+        onOpenPayoutSlip={(winnerData) => handleOpenPayoutSlip(winnerData, game)}
       />
 
       {/* Jackpot Contribution Modal */}
@@ -311,7 +187,10 @@ export const WeekManagement = ({
         gameId={jackpotContributionData?.gameId || null}
         totalJackpot={jackpotContributionData?.totalJackpot || 0}
         winnerName={jackpotContributionData?.winnerName || ''}
-        onComplete={handleJackpotContributionComplete}
+        onComplete={() => handleJackpotContributionComplete(
+          onRefreshData, 
+          (winnerData) => handleOpenPayoutSlip(winnerData, game)
+        )}
       />
 
       {/* Payout Slip Modal */}
