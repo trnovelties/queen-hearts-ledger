@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2, Crown } from "lucide-react";
@@ -256,6 +255,8 @@ export const WeekManagement = ({
               onOpenExpenseModal={onOpenExpenseModal}
               onOpenDonationModal={onOpenDonationModal}
               onRefreshData={onRefreshData}
+              needsGameCompletion={needsGameCompletion}
+              onCompleteGameClick={handleCompleteGame}
             />
           )}
         </div>

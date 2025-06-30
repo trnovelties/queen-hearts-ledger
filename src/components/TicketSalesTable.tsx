@@ -22,6 +22,8 @@ interface TicketSalesTableProps {
   onOpenExpenseModal?: (date: string, gameId: string) => void;
   onOpenDonationModal?: (date: string, gameId: string) => void;
   onRefreshData?: () => void;
+  needsGameCompletion?: (week: any) => boolean;
+  onCompleteGameClick?: (week: any) => void;
 }
 
 export const TicketSalesTable = ({
@@ -35,7 +37,9 @@ export const TicketSalesTable = ({
   onOpenPayoutSlip,
   onOpenExpenseModal,
   onOpenDonationModal,
-  onRefreshData
+  onRefreshData,
+  needsGameCompletion,
+  onCompleteGameClick
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
@@ -185,6 +189,8 @@ export const TicketSalesTable = ({
         isWeekComplete={isWeekComplete()}
         hasWinner={hasWinner()}
         onWinnerButtonClick={handleWinnerButtonClick}
+        needsGameCompletion={needsGameCompletion ? needsGameCompletion(week) : false}
+        onCompleteGameClick={onCompleteGameClick ? () => onCompleteGameClick(week) : undefined}
       />
     </div>
   );
