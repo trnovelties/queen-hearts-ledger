@@ -25,28 +25,30 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
     return total + weekJackpotContributions;
   }, 0);
 
-  // Calculate weekly payouts already distributed
+  // Calculate weekly payouts already distributed (excluding final Queen of Hearts payout)
   const weeklyPayoutsDistributed = game.weeks.reduce((total: number, week: any) => {
-    return total + (week.weekly_payout || 0);
+    // Only count non-Queen of Hearts payouts as "weekly" payouts
+    if (week.card_selected !== 'Queen of Hearts') {
+      return total + (week.weekly_payout || 0);
+    }
+    return total;
   }, 0);
 
-  // Calculate net jackpot contributions (after weekly payouts)
+  // Get the Queen of Hearts winner payout (final jackpot payout)
+  const queenOfHeartsWinner = game.weeks.find((week: any) => week.card_selected === 'Queen of Hearts');
+  const finalJackpotPayout = queenOfHeartsWinner ? (queenOfHeartsWinner.weekly_payout || 0) : 0;
+
+  // Calculate net jackpot contributions after weekly payouts
   const netJackpotContributions = totalJackpotContributions - weeklyPayoutsDistributed;
 
-  // Get minimum starting jackpot requirement
+  // Get minimum starting jackpot requirement (what the final winner should receive)
   const minimumJackpotRequired = game.minimum_starting_jackpot || 500;
   
-  // Calculate jackpot shortfall if net contributions don't meet minimum
-  const jackpotShortfall = Math.max(0, minimumJackpotRequired - netJackpotContributions);
+  // Calculate shortfall: difference between what winner got and net contributions available
+  const jackpotShortfall = Math.max(0, finalJackpotPayout - netJackpotContributions);
   
-  // Final jackpot winner gets the minimum required amount
-  const finalJackpotPayout = minimumJackpotRequired;
-  
-  // Total payouts = weekly payouts already distributed + final jackpot winner payout
+  // Total payouts = weekly payouts + final jackpot winner payout
   const totalPayouts = weeklyPayoutsDistributed + finalJackpotPayout;
-  
-  // Calculate total expenses including shortfall coverage
-  const totalExpensesWithShortfall = game.total_expenses + jackpotShortfall;
   
   // Calculate actual organization net profit after covering shortfall
   const actualOrganizationNetProfit = game.organization_net_profit - jackpotShortfall;
@@ -120,17 +122,20 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
           <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
             <div className="flex items-center gap-2 mb-3">
               <Info className="h-5 w-5 text-orange-600" />
-              <h4 className="font-semibold text-orange-800">Minimum Jackpot Requirement Analysis</h4>
+              <h4 className="font-semibold text-orange-800">Jackpot Shortfall Analysis</h4>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-gray-600">Net Jackpot Contributions:</p>
-                <p className="font-medium text-gray-800">{formatCurrency(netJackpotContributions)}</p>
-                <p className="text-xs text-gray-500">(After weekly payouts)</p>
+                <p className="text-gray-600">Total Jackpot Contributions:</p>
+                <p className="font-medium text-gray-800">{formatCurrency(totalJackpotContributions)}</p>
               </div>
               <div>
-                <p className="text-gray-600">Minimum Required:</p>
-                <p className="font-medium text-gray-800">{formatCurrency(minimumJackpotRequired)}</p>
+                <p className="text-gray-600">Weekly Payouts Distributed:</p>
+                <p className="font-medium text-gray-800">{formatCurrency(weeklyPayoutsDistributed)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Net Available for Final Winner:</p>
+                <p className="font-medium text-gray-800">{formatCurrency(netJackpotContributions)}</p>
               </div>
               <div>
                 <p className="text-gray-600">Shortfall Covered by Organization:</p>
@@ -168,14 +173,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
               </div>
               {hasShortfall && (
                 <div className="flex justify-between text-orange-600">
-                  <span>Shortfall Coverage (Expense):</span>
+                  <span>Shortfall Coverage (Additional Expense):</span>
                   <span className="font-medium">{formatCurrency(jackpotShortfall)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Expenses (Including Shortfall):</span>
-                <span className="font-medium">{formatCurrency(totalExpensesWithShortfall)}</span>
-              </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Donations:</span>
                 <span className="font-medium">{formatCurrency(game.total_donations)}</span>
@@ -214,8 +215,12 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="font-medium">{formatCurrency(weeklyPayoutsDistributed)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Net Jackpot Contributions:</span>
+                <span className="text-gray-600">Net Available for Final Winner:</span>
                 <span className="font-medium">{formatCurrency(netJackpotContributions)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Final Winner Actually Received:</span>
+                <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
@@ -242,9 +247,9 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
           <p className="text-sm text-gray-700">
             <strong>Game Summary:</strong> This {game.weeks.length}-week game generated {formatCurrency(game.total_sales)} in total sales 
             with {totalTicketsSold.toLocaleString()} tickets sold. Total payouts were {formatCurrency(totalPayouts)} 
-            (${formatCurrency(weeklyPayoutsDistributed)} in weekly payouts + {formatCurrency(finalJackpotPayout)} final jackpot).
+            ({formatCurrency(weeklyPayoutsDistributed)} in weekly payouts + {formatCurrency(finalJackpotPayout)} final jackpot).
             {hasShortfall && (
-              <> The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the minimum jackpot requirement, which was treated as an additional expense.</>
+              <> The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the jackpot obligation.</>
             )}
             The actual organization net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualOrganizationNetProfit)}. 
             {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations exceeding available funds.'}

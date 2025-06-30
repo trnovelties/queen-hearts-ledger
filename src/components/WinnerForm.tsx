@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { toast } from "sonner";
 import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
 import { getTodayDateString } from "@/lib/dateUtils";
 import { useAuth } from "@/context/AuthContext";
+import { useGameTotalsUpdater } from "@/hooks/useGameTotalsUpdater";
 
 interface WinnerFormProps {
   open: boolean;
@@ -46,6 +46,7 @@ export function WinnerForm({
   onOpenPayoutSlip
 }: WinnerFormProps) {
   const { user } = useAuth();
+  const { updateGameTotals } = useGameTotalsUpdater();
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
@@ -299,21 +300,16 @@ export function WinnerForm({
         console.log('🏆 ✅ Queen of Hearts selected, using displayed jackpot as payout:', finalDistribution);
       }
 
-      // PHASE 1: Save winner details only (no game completion for Queen of Hearts)
-      console.log('🏆 PHASE 1: Saving winner details...');
+      // Save winner details
+      console.log('🏆 Saving winner details...');
       const endingJackpot = await saveWinnerDetails(finalDistribution);
-      console.log('🏆 PHASE 1: Winner details saved successfully');
+      console.log('🏆 Winner details saved successfully');
 
-      // For non-Queen of Hearts, update game totals immediately
-      if (formData.cardSelected !== 'Queen of Hearts') {
-        const { error: gameUpdateError } = await supabase
-          .from('games')
-          .update({
-            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
-          })
-          .eq('id', gameId);
-
-        if (gameUpdateError) throw gameUpdateError;
+      // Update game totals to reflect the new payout
+      if (gameId) {
+        console.log('🏆 Updating game totals...');
+        await updateGameTotals(gameId);
+        console.log('🏆 Game totals updated successfully');
       }
 
       // Fetch the week data to get proper dates for the payout slip
