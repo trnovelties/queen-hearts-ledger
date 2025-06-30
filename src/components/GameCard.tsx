@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -137,11 +138,17 @@ export const GameCard = ({
         <CardContent className="p-0 border-t">
           <WeekManagement
             game={game}
-            week={game.weeks?.[0]}
-            onUpdate={onRefreshData || (() => {})}
-            onGameComplete={async () => {
-              if (onRefreshData) await onRefreshData();
-            }}
+            expandedWeek={expandedWeek}
+            onToggleWeek={onToggleWeek}
+            onOpenWeekForm={onOpenWeekForm}
+            onGeneratePdfReport={onGeneratePdfReport}
+            currentGameId={currentGameId}
+            setCurrentGameId={setCurrentGameId}
+            games={games}
+            setGames={setGames}
+            onRefreshData={onRefreshData}
+            onOpenExpenseModal={handleDailyExpense}
+            onOpenDonationModal={handleDailyDonation}
           />
           
           <ExpenseSection

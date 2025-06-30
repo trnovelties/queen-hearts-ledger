@@ -462,6 +462,15 @@ export default function Dashboard() {
         winnerData={payoutSlipData} 
       />
       
+      <WinnerForm 
+        open={winnerFormOpen} 
+        onOpenChange={setWinnerFormOpen} 
+        gameId={currentGameId} 
+        weekId={currentWeekId} 
+        onComplete={handleWinnerComplete} 
+        onOpenPayoutSlip={handleOpenPayoutSlip} 
+      />
+      
       <GameForm 
         open={gameFormOpen} 
         onOpenChange={setGameFormOpen} 
