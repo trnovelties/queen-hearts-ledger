@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
+import { JackpotContributionModal } from './JackpotContributionModal';
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 
 interface WeekManagementProps {
@@ -41,6 +42,14 @@ export const WeekManagement = ({
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
+  
+  // New state for JackpotContributionModal
+  const [jackpotContributionOpen, setJackpotContributionOpen] = useState(false);
+  const [jackpotContributionData, setJackpotContributionData] = useState<{
+    gameId: string;
+    totalJackpot: number;
+    winnerName: string;
+  } | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -61,6 +70,25 @@ export const WeekManagement = ({
     setSelectedGameId(null);
     setSelectedWeekId(null);
     // Refresh the data to show updated winner information
+    if (onRefreshData) {
+      onRefreshData();
+    }
+  };
+
+  // New handler for Queen of Hearts jackpot contribution
+  const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string) => {
+    setJackpotContributionData({
+      gameId,
+      totalJackpot,
+      winnerName
+    });
+    setJackpotContributionOpen(true);
+  };
+
+  const handleJackpotContributionComplete = () => {
+    setJackpotContributionOpen(false);
+    setJackpotContributionData(null);
+    // Refresh the data to show updated game status
     if (onRefreshData) {
       onRefreshData();
     }
@@ -178,6 +206,17 @@ export const WeekManagement = ({
         jackpotContributions={calculateCurrentJackpotTotal()}
         onComplete={handleWinnerFormComplete}
         onOpenPayoutSlip={handleOpenPayoutSlip}
+        onOpenJackpotContribution={handleOpenJackpotContribution}
+      />
+
+      {/* Jackpot Contribution Modal */}
+      <JackpotContributionModal
+        open={jackpotContributionOpen}
+        onOpenChange={setJackpotContributionOpen}
+        gameId={jackpotContributionData?.gameId || null}
+        totalJackpot={jackpotContributionData?.totalJackpot || 0}
+        winnerName={jackpotContributionData?.winnerName || ''}
+        onComplete={handleJackpotContributionComplete}
       />
 
       {/* Payout Slip Modal */}

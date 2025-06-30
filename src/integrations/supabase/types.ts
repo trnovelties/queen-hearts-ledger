@@ -102,6 +102,7 @@ export type Database = {
           game_number: number
           game_profit_loss: number
           id: string
+          jackpot_contribution_to_next_game: number
           jackpot_percentage: number
           minimum_starting_jackpot: number | null
           name: string
@@ -124,6 +125,7 @@ export type Database = {
           game_number: number
           game_profit_loss?: number
           id?: string
+          jackpot_contribution_to_next_game?: number
           jackpot_percentage?: number
           minimum_starting_jackpot?: number | null
           name: string
@@ -146,6 +148,7 @@ export type Database = {
           game_number?: number
           game_profit_loss?: number
           id?: string
+          jackpot_contribution_to_next_game?: number
           jackpot_percentage?: number
           minimum_starting_jackpot?: number | null
           name?: string
