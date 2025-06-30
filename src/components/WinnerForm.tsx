@@ -58,7 +58,7 @@ export function WinnerForm({
   const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
-  const [isWaitingForJackpotModal, setIsWaitingForJackpotModal] = useState(false);
+  const [waitingForJackpotModal, setWaitingForJackpotModal] = useState(false);
 
   // Use the hook to calculate proper displayed jackpot
   const displayedJackpot = useJackpotCalculation({
@@ -309,7 +309,7 @@ export function WinnerForm({
 
       console.log('🏆 Card Selected:', formData.cardSelected);
 
-      // Handle Queen of Hearts - FIXED APPROACH
+      // Handle Queen of Hearts - Keep form open until jackpot modal is confirmed
       if (formData.cardSelected === 'Queen of Hearts') {
         console.log('🏆 === QUEEN OF HEARTS FLOW START ===');
         finalDistribution = displayedJackpot;
@@ -362,15 +362,15 @@ export function WinnerForm({
 
         // STEP 4: Set waiting state and call the jackpot contribution modal
         console.log('🏆 STEP 4: Opening jackpot contribution modal...');
-        setIsWaitingForJackpotModal(true);
+        setWaitingForJackpotModal(true);
         
-        // DON'T close the form yet - wait for confirmation from parent
+        // Call the parent to open the jackpot modal
         console.log('🏆 STEP 4: Calling onOpenJackpotContribution...');
         onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
         
         toast.success("Winner details saved! Opening jackpot contribution modal...");
         
-        console.log('🏆 ✅ Queen of Hearts flow initiated - waiting for jackpot modal to open');
+        console.log('🏆 ✅ Queen of Hearts flow initiated - staying open until modal confirms');
         
       } else {
         console.log('🏆 === NON-QUEEN OF HEARTS FLOW ===');
@@ -428,27 +428,23 @@ export function WinnerForm({
     }
   };
 
-  // Function to handle successful jackpot modal opening (called from parent)
-  const handleJackpotModalOpened = () => {
-    console.log('🏆 ✅ Jackpot modal opened successfully, closing winner form');
-    setIsWaitingForJackpotModal(false);
-    onOpenChange(false);
-    
-    // Reset form
-    setFormData({
-      winnerName: '',
-      cardSelected: '',
-      slotChosen: 1,
-      winnerPresent: true,
-      authorizedSignatureName: ''
-    });
-    setSelectedDistribution(0);
-  };
-
-  // Add this to the component's interface (this would be called by parent)
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({
-    handleJackpotModalOpened
-  }));
+  // Effect to handle when the jackpot modal is confirmed to be open
+  useEffect(() => {
+    if (waitingForJackpotModal && !open) {
+      console.log('🏆 ✅ Jackpot modal confirmed open, resetting form state');
+      setWaitingForJackpotModal(false);
+      
+      // Reset form
+      setFormData({
+        winnerName: '',
+        cardSelected: '',
+        slotChosen: 1,
+        winnerPresent: true,
+        authorizedSignatureName: ''
+      });
+      setSelectedDistribution(0);
+    }
+  }, [waitingForJackpotModal, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -458,7 +454,7 @@ export function WinnerForm({
             <CardTitle>Record Winner Details</CardTitle>
             <CardDescription>
               Enter the winner's information for this week
-              {isWaitingForJackpotModal && (
+              {waitingForJackpotModal && (
                 <div className="mt-2 text-amber-600 font-medium">
                   Opening jackpot contribution modal...
                 </div>
@@ -476,7 +472,7 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
                   placeholder="John Doe"
                   required
-                  disabled={isWaitingForJackpotModal}
+                  disabled={waitingForJackpotModal}
                 />
               </div>
 
@@ -488,7 +484,7 @@ export function WinnerForm({
                     const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
                     setSelectedDistribution(distribution);
                   }}
-                  disabled={isWaitingForJackpotModal}
+                  disabled={waitingForJackpotModal}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a card" />
@@ -510,7 +506,7 @@ export function WinnerForm({
                     type="number"
                     value={selectedDistribution}
                     readOnly
-                    disabled={isWaitingForJackpotModal}
+                    disabled={waitingForJackpotModal}
                   />
                 </div>
               )}
@@ -525,7 +521,7 @@ export function WinnerForm({
                   value={formData.slotChosen}
                   onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
                   required
-                  disabled={isWaitingForJackpotModal}
+                  disabled={waitingForJackpotModal}
                 />
               </div>
 
@@ -534,7 +530,7 @@ export function WinnerForm({
                   id="winnerPresent"
                   checked={formData.winnerPresent}
                   onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked === true })}
-                  disabled={isWaitingForJackpotModal}
+                  disabled={waitingForJackpotModal}
                 />
                 <Label htmlFor="winnerPresent">Winner Present</Label>
               </div>
@@ -548,23 +544,23 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
                   placeholder="Jane Smith"
                   required
-                  disabled={isWaitingForJackpotModal}
+                  disabled={waitingForJackpotModal}
                 />
               </div>
 
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
-                  disabled={isLoading || isWaitingForJackpotModal} 
+                  disabled={isLoading || waitingForJackpotModal} 
                   className="flex-1"
                 >
-                  {isLoading ? "Saving..." : isWaitingForJackpotModal ? "Opening Modal..." : "Save Winner Details"}
+                  {isLoading ? "Saving..." : waitingForJackpotModal ? "Opening Modal..." : "Save Winner Details"}
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => onOpenChange(false)}
-                  disabled={isLoading || isWaitingForJackpotModal}
+                  disabled={isLoading || waitingForJackpotModal}
                 >
                   Cancel
                 </Button>
