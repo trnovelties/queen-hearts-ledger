@@ -1,0 +1,2925 @@
+#dashboard.tsx code file:
+
+import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus } from "lucide-react";
+import { DatePickerWithInput } from "@/components/ui/datepicker";
+import { ExpenseModal } from "@/components/ExpenseModal";
+import { DonationModal } from "@/components/DonationModal";
+import { PayoutSlipModal } from "@/components/PayoutSlipModal";
+import { WinnerForm } from "@/components/WinnerForm";
+import { GameForm } from "@/components/GameForm";
+import { useAuth } from "@/context/AuthContext";
+import { useGameData } from "@/hooks/useGameData";
+import { usePdfReports } from "@/hooks/usePdfReports";
+import { GameCard } from "@/components/GameCard";
+import { formatDateStringForDisplay, getTodayDateString } from '@/lib/dateUtils';
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  const { games, setGames, loading, fetchGames } = useGameData();
+  const { generateGamePdfReport } = usePdfReports();
+  const { toast } = useToast();
+
+  // UI State
+  const [expandedGame, setExpandedGame] = useState<string | null>(null);
+  const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
+  const [expandedExpenses, setExpandedExpenses] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'current' | 'archived'>('current');
+
+  // Modal States
+  const [gameFormOpen, setGameFormOpen] = useState(false);
+  const [weekFormOpen, setWeekFormOpen] = useState(false);
+  const [winnerFormOpen, setWinnerFormOpen] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [donationModalOpen, setDonationModalOpen] = useState(false);
+  const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dailyExpenseModalOpen, setDailyExpenseModalOpen] = useState(false);
+
+  // Form States
+  const [currentGameId, setCurrentGameId] = useState<string | null>(null);
+  const [currentWeekId, setCurrentWeekId] = useState<string | null>(null);
+  const [currentGameName, setCurrentGameName] = useState<string>("");
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<"game" | "week" | "entry" | "expense">('game');
+  const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
+  const [dailyDonationDate, setDailyDonationDate] = useState<string>('');
+
+  const [weekForm, setWeekForm] = useState({
+    weekNumber: 1,
+    startDate: new Date()
+  });
+
+  const [dailyExpenseForm, setDailyExpenseForm] = useState({
+    date: '',
+    amount: 0,
+    memo: '',
+    gameId: ''
+  });
+
+  // Filter games based on active tab
+  const currentGames = games.filter(game => !game.end_date);
+  const archivedGames = games.filter(game => game.end_date);
+  const displayGames = activeTab === 'current' ? currentGames : archivedGames;
+
+  // Event Handlers
+  const toggleGame = (gameId: string) => {
+    setExpandedGame(expandedGame === gameId ? null : gameId);
+    setExpandedWeek(null);
+    setExpandedExpenses(null);
+  };
+
+  const toggleWeek = (weekId: string) => {
+    setExpandedWeek(expandedWeek === weekId ? null : weekId);
+  };
+
+  const toggleExpenses = (gameId: string) => {
+    setExpandedExpenses(expandedExpenses === gameId ? null : gameId);
+  };
+
+  const openWeekForm = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    const lastWeekNumber = game.weeks.length > 0 
+      ? Math.max(...game.weeks.map((w: any) => w.week_number)) 
+      : 0;
+    
+    setWeekForm({
+      weekNumber: lastWeekNumber + 1,
+      startDate: new Date()
+    });
+    setCurrentGameId(gameId);
+    setWeekFormOpen(true);
+  };
+
+  const createWeek = async () => {
+    if (!currentGameId || !user?.id) return;
+    
+    try {
+      const endDate = new Date(weekForm.startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      
+      const { data, error } = await supabase
+        .from('weeks')
+        .insert([{
+          game_id: currentGameId,
+          week_number: weekForm.weekNumber,
+          start_date: weekForm.startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          user_id: user.id
+        }])
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Week Created",
+        description: `Week ${weekForm.weekNumber} has been created successfully.`,
+      });
+
+      setWeekFormOpen(false);
+      setWeekForm({ weekNumber: 1, startDate: new Date() });
+    } catch (error: any) {
+      console.error('Error creating week:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create week: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openDeleteConfirm = (id: string, type: "game" | "week" | "entry" | "expense") => {
+    setDeleteItemId(id);
+    setDeleteType(type);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteItemId || !user?.id) return;
+
+    try {
+      if (deleteType === 'game') {
+        // Delete all related data first, then the game
+        await supabase.from('ticket_sales').delete().eq('game_id', deleteItemId).eq('user_id', user.id);
+        await supabase.from('weeks').delete().eq('game_id', deleteItemId).eq('user_id', user.id);
+        await supabase.from('expenses').delete().eq('game_id', deleteItemId).eq('user_id', user.id);
+        await supabase.from('games').delete().eq('id', deleteItemId).eq('user_id', user.id);
+        
+        setGames(prevGames => prevGames.filter(game => game.id !== deleteItemId));
+        toast({ title: "Game Deleted", description: "Game and all associated data have been deleted successfully." });
+      } else if (deleteType === 'week') {
+        // Delete all ticket sales for this week first
+        await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId).eq('user_id', user.id);
+        await supabase.from('weeks').delete().eq('id', deleteItemId).eq('user_id', user.id);
+        
+        toast({ title: "Week Deleted", description: "Week and all associated data have been deleted successfully." });
+      } else if (deleteType === 'entry') {
+        await supabase.from('ticket_sales').delete().eq('id', deleteItemId).eq('user_id', user.id);
+        toast({ title: "Entry Deleted", description: "Daily entry has been deleted successfully." });
+      } else if (deleteType === 'expense') {
+        await supabase.from('expenses').delete().eq('id', deleteItemId).eq('user_id', user.id);
+        toast({ title: "Expense Deleted", description: "Expense/donation has been deleted successfully." });
+      }
+      
+      setTimeout(() => fetchGames(), 500);
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message || `Failed to delete ${deleteType}`,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeleteItemId(null);
+    }
+  };
+
+  const openExpenseModal = (gameId: string, gameName: string) => {
+    setCurrentGameId(gameId);
+    setCurrentGameName(gameName);
+    setExpenseModalOpen(true);
+  };
+
+  const openDonationModal = (gameId: string, gameName: string, date?: string) => {
+    setCurrentGameId(gameId);
+    setCurrentGameName(gameName);
+    if (date) setDailyDonationDate(date);
+    setDonationModalOpen(true);
+  };
+
+  const handleOpenPayoutSlip = (winnerData: any) => {
+    setPayoutSlipData(winnerData);
+    setPayoutSlipOpen(true);
+  };
+
+  const handleWinnerComplete = () => fetchGames();
+  const handleGameComplete = () => fetchGames();
+
+  const handleDailyExpense = async () => {
+    if (!dailyExpenseForm.gameId || dailyExpenseForm.amount <= 0 || !user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .insert([{
+          game_id: dailyExpenseForm.gameId,
+          date: dailyExpenseForm.date,
+          amount: dailyExpenseForm.amount,
+          memo: dailyExpenseForm.memo,
+          is_donation: false,
+          user_id: user.id
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Expense Added",
+        description: `Daily expense has been recorded.`,
+      });
+
+      setDailyExpenseModalOpen(false);
+      setDailyExpenseForm({ date: '', amount: 0, memo: '', gameId: '' });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to add expense: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openDailyExpenseModal = (date: string, gameId: string) => {
+    setDailyExpenseForm({ date, amount: 0, memo: '', gameId });
+    setDailyExpenseModalOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user?.id) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-muted-foreground">Please log in to view your games.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Queen of Hearts Games</h1>
+        <Button onClick={() => setGameFormOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Plus className="h-4 w-4 mr-2" /> Create Game
+        </Button>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('current')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'current'
+              ? 'bg-white text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Current Game
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'archived'
+              ? 'bg-white text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Archived Games
+        </button>
+      </div>
+      
+      <div className="space-y-4">
+        {displayGames.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 flex justify-center items-center">
+              <p className="text-muted-foreground">
+                {activeTab === 'current' 
+                  ? 'No current games. Click "Create Game" to get started.' 
+                  : 'No archived games yet.'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          displayGames.map(game => (
+            <GameCard
+              key={game.id}
+              game={game}
+              expandedGame={expandedGame}
+              expandedWeek={expandedWeek}
+              expandedExpenses={expandedExpenses}
+              onToggleGame={toggleGame}
+              onToggleWeek={toggleWeek}
+              onToggleExpenses={toggleExpenses}
+              onOpenWeekForm={openWeekForm}
+              onOpenDeleteConfirm={openDeleteConfirm}
+              onGeneratePdfReport={generateGamePdfReport}
+              onOpenExpenseModal={openExpenseModal}
+              onOpenDonationModal={openDonationModal}
+              onOpenDailyExpenseModal={openDailyExpenseModal}
+              currentGameId={currentGameId}
+              setCurrentGameId={setCurrentGameId}
+              games={games}
+              setGames={setGames}
+            />
+          ))
+        )}
+      </div>
+      
+      {/* All Modals */}
+      {/* Week Form Dialog */}
+      <Dialog open={weekFormOpen} onOpenChange={setWeekFormOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Week</DialogTitle>
+            <DialogDescription>
+              Enter the details for the new week. The end date will be automatically calculated as 7 days from the start date.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="weekNumber" className="text-sm font-medium">Week Number</label>
+              <Input
+                id="weekNumber"
+                type="number"
+                value={weekForm.weekNumber}
+                onChange={(e) => setWeekForm({ ...weekForm, weekNumber: parseInt(e.target.value) })}
+                min="1"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <DatePickerWithInput
+                label="Start Date"
+                date={weekForm.startDate}
+                setDate={(date) => date ? setWeekForm({ ...weekForm, startDate: date }) : null}
+                placeholder="Select start date"
+              />
+              <p className="text-xs text-muted-foreground">
+                End date will be automatically set to {weekForm.startDate 
+                  ? formatDateStringForDisplay(new Date(weekForm.startDate.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]) 
+                  : 'N/A'}
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setWeekFormOpen(false)} variant="secondary">Cancel</Button>
+            <Button onClick={createWeek} type="submit" variant="default">Create Week</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this {deleteType}? 
+              {deleteType === 'game' && ' This will permanently delete the game and ALL associated weeks, ticket sales, and expenses.'}
+              {deleteType === 'week' && ' This will permanently delete the week and ALL associated daily entries.'}
+              {deleteType === 'entry' && ' This will permanently delete this daily entry.'}
+              {deleteType === 'expense' && ' This will permanently delete this expense/donation.'}
+              <br /><br />
+              <strong>This action cannot be undone.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter>
+            <Button onClick={() => setDeleteDialogOpen(false)} variant="secondary">Cancel</Button>
+            <Button onClick={confirmDelete} type="submit" variant="destructive">Delete {deleteType}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Daily Expense Modal */}
+      <Dialog open={dailyExpenseModalOpen} onOpenChange={setDailyExpenseModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Daily Expense</DialogTitle>
+            <DialogDescription>
+              Enter the expense details for {dailyExpenseForm.date && formatDateStringForDisplay(dailyExpenseForm.date)}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={dailyExpenseForm.amount || ''}
+                onChange={(e) => setDailyExpenseForm({ ...dailyExpenseForm, amount: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="memo">Memo</Label>
+              <Textarea
+                id="memo"
+                value={dailyExpenseForm.memo}
+                onChange={(e) => setDailyExpenseForm({ ...dailyExpenseForm, memo: e.target.value })}
+                placeholder="Enter expense description..."
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setDailyExpenseModalOpen(false)} variant="secondary">Cancel</Button>
+            <Button onClick={handleDailyExpense} type="submit" variant="default" disabled={dailyExpenseForm.amount <= 0}>
+              Add Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Other Modals */}
+      <ExpenseModal 
+        open={expenseModalOpen} 
+        onOpenChange={setExpenseModalOpen} 
+        gameId={currentGameId || ''} 
+        gameName={currentGameName} 
+      />
+      
+      <DonationModal 
+        open={donationModalOpen} 
+        onOpenChange={setDonationModalOpen} 
+        gameId={currentGameId || ''} 
+        gameName={currentGameName} 
+        defaultDate={dailyDonationDate}
+      />
+      
+      <PayoutSlipModal 
+        open={payoutSlipOpen} 
+        onOpenChange={setPayoutSlipOpen} 
+        winnerData={payoutSlipData} 
+      />
+      
+      <WinnerForm 
+        open={winnerFormOpen} 
+        onOpenChange={setWinnerFormOpen} 
+        gameId={currentGameId} 
+        weekId={currentWeekId} 
+        onComplete={handleWinnerComplete} 
+        onOpenPayoutSlip={handleOpenPayoutSlip} 
+      />
+      
+      <GameForm 
+        open={gameFormOpen} 
+        onOpenChange={setGameFormOpen} 
+        games={games} 
+        onComplete={handleGameComplete} 
+      />
+    </div>
+  );
+}
+
+
+              
+
+#card.tsx code file:
+
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
+
+const CardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
+
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
+
+const CardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center p-6 pt-0", className)}
+    {...props}
+  />
+))
+CardFooter.displayName = "CardFooter"
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+
+
+
+
+#dialog.tsx code file:
+
+
+import * as React from "react"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { X } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+const Dialog = DialogPrimitive.Root
+
+const DialogTrigger = DialogPrimitive.Trigger
+
+const DialogPortal = DialogPrimitive.Portal
+
+const DialogClose = DialogPrimitive.Close
+
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      className
+    )}
+    {...props}
+  />
+))
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+))
+DialogContent.displayName = DialogPrimitive.Content.displayName
+
+const DialogHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col space-y-1.5 text-center sm:text-left",
+      className
+    )}
+    {...props}
+  />
+)
+DialogHeader.displayName = "DialogHeader"
+
+const DialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      className
+    )}
+    {...props}
+  />
+)
+DialogFooter.displayName = "DialogFooter"
+
+const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(
+      "text-lg font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+DialogTitle.displayName = DialogPrimitive.Title.displayName
+
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+}
+
+
+#expenseModal.tsx code file:
+
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { getTodayDateString } from "@/lib/dateUtils";
+
+interface ExpenseModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  gameId: string;
+  gameName: string;
+  onSuccess?: () => void;
+}
+
+export function ExpenseModal({ open, onOpenChange, gameId, gameName, onSuccess }: ExpenseModalProps) {
+  const { toast } = useToast();
+  const [expenseData, setExpenseData] = useState({
+    amount: "",
+    memo: "",
+    type: "expense", // "expense" or "donation"
+  });
+  
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAddExpense = async () => {
+    if (!expenseData.amount || parseFloat(expenseData.amount) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add expenses.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('=== EXPENSE DATE DEBUG ===');
+      console.log('1. selectedDate variable:', selectedDate);
+      console.log('2. typeof selectedDate:', typeof selectedDate);
+      console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      // Ensure we send the date exactly as a string, no conversions
+      const dateToSave = String(selectedDate).trim();
+      console.log('4. dateToSave (final):', dateToSave);
+
+      const insertData = {
+        game_id: gameId,
+        date: dateToSave, // Pure string, no Date conversion
+        amount: parseFloat(expenseData.amount),
+        memo: expenseData.memo || null,
+        is_donation: expenseData.type === "donation",
+        user_id: user.id,
+      };
+
+      console.log('5. Final insertData:', JSON.stringify(insertData, null, 2));
+
+      const { data: insertResult, error } = await supabase
+        .from('expenses')
+        .insert(insertData)
+        .select('*');
+      
+      if (error) {
+        console.error('6. Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('7. Insert successful, DB returned:', JSON.stringify(insertResult, null, 2));
+      console.log('8. DB returned date:', insertResult?.[0]?.date);
+      console.log('9. Date match:', dateToSave === insertResult?.[0]?.date);
+      
+      // Update game totals
+      const { data: game } = await supabase
+        .from('games')
+        .select('total_expenses, total_donations, organization_net_profit')
+        .eq('id', gameId)
+        .single();
+      
+      if (game) {
+        const amount = parseFloat(expenseData.amount);
+        const isDonation = expenseData.type === "donation";
+        
+        const updatedTotals = {
+          total_expenses: isDonation ? game.total_expenses : game.total_expenses + amount,
+          total_donations: isDonation ? game.total_donations + amount : game.total_donations,
+          organization_net_profit: game.organization_net_profit - amount,
+        };
+        
+        await supabase
+          .from('games')
+          .update(updatedTotals)
+          .eq('id', gameId);
+      }
+      
+      toast({
+        title: "Success",
+        description: `${expenseData.type === "donation" ? "Donation" : "Expense"} has been added successfully.`,
+      });
+      
+      setExpenseData({
+        amount: "",
+        memo: "",
+        type: "expense",
+      });
+      setSelectedDate(getTodayDateString());
+      
+      onOpenChange(false);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error: any) {
+      console.error('Error adding expense:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    console.log('=== EXPENSE DATE INPUT CHANGE ===');
+    console.log('Raw e.target.value:', rawValue);
+    console.log('Setting selectedDate to:', rawValue);
+    
+    // Set exactly as received from input (YYYY-MM-DD string)
+    setSelectedDate(rawValue);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Expense or Donation for {gameName}</DialogTitle>
+          <DialogDescription>
+            Record expenses or charitable donations associated with this game.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="expenseDate" className="col-span-1">Date</Label>
+            <Input
+              id="expenseDate"
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="expenseType" className="col-span-1">Type</Label>
+            <Select
+              value={expenseData.type}
+              onValueChange={(value) => setExpenseData({
+                ...expenseData,
+                type: value,
+              })}
+            >
+              <SelectTrigger id="expenseType" className="col-span-3">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="donation">Donation</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="expenseAmount" className="col-span-1">Amount ($)</Label>
+            <Input
+              id="expenseAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              value={expenseData.amount}
+              onChange={(e) => setExpenseData({
+                ...expenseData,
+                amount: e.target.value,
+              })}
+              className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="expenseMemo" className="col-span-1">Memo</Label>
+            <Input
+              id="expenseMemo"
+              placeholder="e.g., Ticket rolls, Toys for Tots"
+              value={expenseData.memo}
+              onChange={(e) => setExpenseData({
+                ...expenseData,
+                memo: e.target.value,
+              })}
+              className="col-span-3"
+            />
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            onClick={handleAddExpense} 
+            className="bg-[#1F4E4A]"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Add"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+# DonationModal.Tsx
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Textarea } from "@/components/ui/textarea";
+import { getTodayDateString } from "@/lib/dateUtils";
+
+interface DonationModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  gameId: string;
+  gameName: string;
+  defaultDate?: string;
+  onSuccess?: () => void;
+}
+
+export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDate, onSuccess }: DonationModalProps) {
+  const { toast } = useToast();
+  const [donationData, setDonationData] = useState({
+    amount: "",
+    memo: "",
+  });
+  
+  const [selectedDate, setSelectedDate] = useState<string>(defaultDate || getTodayDateString());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAddDonation = async () => {
+    if (!donationData.amount || parseFloat(donationData.amount) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add donations.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('=== DONATION DATE DEBUG ===');
+      console.log('1. selectedDate variable:', selectedDate);
+      console.log('2. typeof selectedDate:', typeof selectedDate);
+      console.log('3. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      // Ensure we send the date exactly as a string, no conversions
+      const dateToSave = String(selectedDate).trim();
+      console.log('4. dateToSave (final):', dateToSave);
+
+      const insertData = {
+        game_id: gameId,
+        date: dateToSave, // Pure string, no Date conversion
+        amount: parseFloat(donationData.amount),
+        memo: donationData.memo || null,
+        is_donation: true,
+        user_id: user.id,
+      };
+
+      console.log('5. Final insertData:', JSON.stringify(insertData, null, 2));
+
+      const { data: insertResult, error } = await supabase
+        .from('expenses')
+        .insert(insertData)
+        .select('*');
+      
+      if (error) {
+        console.error('6. Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('7. Insert successful, DB returned:', JSON.stringify(insertResult, null, 2));
+      console.log('8. DB returned date:', insertResult?.[0]?.date);
+      console.log('9. Date match:', dateToSave === insertResult?.[0]?.date);
+      
+      // Update game totals
+      const { data: game } = await supabase
+        .from('games')
+        .select('total_donations, organization_net_profit')
+        .eq('id', gameId)
+        .single();
+      
+      if (game) {
+        const amount = parseFloat(donationData.amount);
+        
+        const updatedTotals = {
+          total_donations: game.total_donations + amount,
+          organization_net_profit: game.organization_net_profit - amount,
+        };
+        
+        await supabase
+          .from('games')
+          .update(updatedTotals)
+          .eq('id', gameId);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Donation has been added successfully.",
+      });
+      
+      setDonationData({
+        amount: "",
+        memo: "",
+      });
+      
+      setSelectedDate(defaultDate || getTodayDateString());
+      
+      onOpenChange(false);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error: any) {
+      console.error('Error adding donation:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    console.log('=== DONATION DATE INPUT CHANGE ===');
+    console.log('Raw e.target.value:', rawValue);
+    console.log('Setting selectedDate to:', rawValue);
+    
+    // Set exactly as received from input (YYYY-MM-DD string)
+    setSelectedDate(rawValue);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Donation for {gameName}</DialogTitle>
+          <DialogDescription>
+            Record a charitable donation associated with this game.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="donationDate" className="col-span-1">Date</Label>
+            <Input
+              id="donationDate"
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="donationAmount" className="col-span-1">Amount ($)</Label>
+            <Input
+              id="donationAmount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              value={donationData.amount}
+              onChange={(e) => setDonationData({
+                ...donationData,
+                amount: e.target.value,
+              })}
+              className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="donationMemo" className="col-span-1">Purpose</Label>
+            <Textarea
+              id="donationMemo"
+              placeholder="e.g., Toys for Tots, Food Bank, Community Center"
+              value={donationData.memo}
+              onChange={(e) => setDonationData({
+                ...donationData,
+                memo: e.target.value,
+              })}
+              className="col-span-3"
+              rows={3}
+            />
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            onClick={handleAddDonation} 
+            className="bg-[#1F4E4A]"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Add Donation"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+
+#winnerForm.tsx File
+
+
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useJackpotCalculation } from "@/hooks/useJackpotCalculation";
+import { getTodayDateString } from "@/lib/dateUtils";
+import { useAuth } from "@/context/AuthContext";
+
+interface WinnerFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  gameId: string | null;
+  weekId: string | null;
+  gameData?: {
+    ticket_price: number;
+    organization_percentage: number;
+    jackpot_percentage: number;
+    minimum_starting_jackpot: number;
+    carryover_jackpot: number;
+    total_payouts: number;
+    card_payouts?: any;
+    user_id?: string;
+  };
+  currentJackpotTotal?: number;
+  jackpotContributions?: number;
+  onComplete: () => void;
+  onOpenPayoutSlip: (winnerData: any) => void;
+}
+
+export function WinnerForm({ 
+  open,
+  onOpenChange,
+  gameId, 
+  weekId, 
+  gameData, 
+  currentJackpotTotal = 0, 
+  jackpotContributions = 0,
+  onComplete, 
+  onOpenPayoutSlip 
+}: WinnerFormProps) {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState({
+    winnerName: '',
+    cardSelected: '',
+    slotChosen: 1,
+    winnerPresent: true,
+    authorizedSignatureName: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
+  const [selectedDistribution, setSelectedDistribution] = useState(0);
+  const [penaltyPercentage, setPenaltyPercentage] = useState(0);
+
+  // Use the hook to calculate proper displayed jackpot
+  const displayedJackpot = useJackpotCalculation({
+    jackpotContributions: jackpotContributions,
+    minimumJackpot: gameData?.minimum_starting_jackpot || 500,
+    carryoverJackpot: gameData?.carryover_jackpot || 0
+  });
+
+  // Calculate ending jackpot based on proper carryover logic
+  const calculateEndingJackpotForWeek = async (weeklyPayout: number) => {
+    try {
+      if (!gameId || !weekId) return 0;
+
+      console.log('=== CALCULATING ENDING JACKPOT ===');
+      console.log('Game ID:', gameId);
+      console.log('Week ID:', weekId);
+      console.log('Weekly Payout:', weeklyPayout);
+
+      // Get current week data
+      const { data: currentWeek, error: weekError } = await supabase
+        .from('weeks')
+        .select('week_number')
+        .eq('id', weekId)
+        .eq('user_id', user?.id)
+        .single();
+
+      if (weekError) throw weekError;
+
+      console.log('Current Week Number:', currentWeek.week_number);
+
+      // Get previous week's stored ending jackpot
+      let previousEndingJackpot = 0;
+      if (currentWeek.week_number > 1) {
+        const { data: previousWeek, error: prevWeekError } = await supabase
+          .from('weeks')
+          .select('ending_jackpot')
+          .eq('game_id', gameId)
+          .eq('week_number', currentWeek.week_number - 1)
+          .eq('user_id', user?.id)
+          .single();
+
+        if (prevWeekError || !previousWeek || previousWeek.ending_jackpot === null) {
+          console.warn('Could not find previous week, using game carryover');
+          previousEndingJackpot = gameData?.carryover_jackpot || 0;
+        } else {
+          previousEndingJackpot = previousWeek.ending_jackpot;
+        }
+      } else {
+        // Week 1 starts with game's carryover jackpot
+        previousEndingJackpot = gameData?.carryover_jackpot || 0;
+      }
+
+      console.log('Previous Ending Jackpot:', previousEndingJackpot);
+
+      // Get current week's jackpot contributions
+      const { data: weekSales, error: salesError } = await supabase
+        .from('ticket_sales')
+        .select('jackpot_total')
+        .eq('week_id', weekId)
+        .eq('user_id', user?.id);
+
+      if (salesError) throw salesError;
+
+      const currentWeekJackpotContributions = weekSales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0;
+      console.log('Current Week Jackpot Contributions:', currentWeekJackpotContributions);
+
+      // Calculate ending jackpot: Previous ending jackpot + current week's contributions - payout
+      const endingJackpot = previousEndingJackpot + currentWeekJackpotContributions - weeklyPayout;
+
+      console.log('Ending Jackpot Calculation:');
+      console.log('Formula: Previous Ending Jackpot + Current Week Contributions - Weekly Payout');
+      console.log(`${previousEndingJackpot} + ${currentWeekJackpotContributions} - ${weeklyPayout} = ${endingJackpot}`);
+      console.log('=== END CALCULATION ===');
+
+      return Math.max(0, endingJackpot);
+    } catch (error) {
+      console.error('Error calculating ending jackpot:', error);
+      return 0;
+    }
+  };
+
+  useEffect(() => {
+    const loadGameConfiguration = async () => {
+      if (!gameId || !open) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Determine which user's config to load - prioritize game's user_id if available
+        const targetUserId = gameData?.user_id || user.id;
+        console.log('Loading card distributions for user:', targetUserId);
+
+        // Try to get card distributions from user-specific configuration
+        const { data: config, error } = await supabase
+          .from('configurations')
+          .select('*')
+          .eq('user_id', targetUserId)
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching configuration:", error);
+          toast.error("Failed to load configuration");
+          return;
+        }
+
+        if (config?.card_payouts) {
+          const distributionsData = typeof config.card_payouts === 'string' 
+            ? JSON.parse(config.card_payouts) 
+            : config.card_payouts;
+          
+          if (Array.isArray(distributionsData)) {
+            setCardDistributions(distributionsData.map(distribution => ({
+              card: distribution.card || '',
+              distribution: distribution.payout || 0
+            })));
+          } else {
+            const distributionsArray = Object.entries(distributionsData)
+              .filter(([card, distribution]) => card !== 'Queen of Hearts')
+              .map(([card, distribution]) => ({
+                card,
+                distribution: typeof distribution === 'number' ? distribution : 0
+              }));
+            setCardDistributions(distributionsArray);
+          }
+
+          setPenaltyPercentage(config.penalty_percentage || 0);
+        } else {
+          console.log('No card distributions found in user configuration');
+          toast.error("No card distribution configuration found. Please set up your card distributions first.");
+        }
+
+      } catch (error) {
+        console.error("Error loading game configuration:", error);
+        toast.error("Failed to load game configuration");
+      }
+    };
+
+    loadGameConfiguration();
+  }, [open, gameData, gameId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (!gameId || !weekId) {
+        toast.error("Missing game or week information");
+        return;
+      }
+
+      if (!formData.winnerName || !formData.cardSelected || !formData.authorizedSignatureName) {
+        toast.error("Please fill out all fields");
+        return;
+      }
+
+      if (!selectedDistribution && formData.cardSelected !== 'Queen of Hearts') {
+        toast.error("Please select a valid distribution");
+        return;
+      }
+
+      let finalDistribution = selectedDistribution;
+
+      // Handle Queen of Hearts special case
+      if (formData.cardSelected === 'Queen of Hearts') {
+        finalDistribution = displayedJackpot;
+        
+        // Apply penalty if winner not present
+        if (!formData.winnerPresent) {
+          const penalty = finalDistribution * (penaltyPercentage / 100);
+          finalDistribution = finalDistribution - penalty;
+        }
+      }
+
+      console.log('=== WINNER FORM SUBMISSION ===');
+      console.log('Final Distribution (Payout):', finalDistribution);
+
+      // Calculate the ending jackpot for this week using the correct formula
+      const endingJackpot = await calculateEndingJackpotForWeek(finalDistribution);
+      console.log('Calculated Ending Jackpot:', endingJackpot);
+
+      // Update week record with winner details, payout, and ending jackpot
+      const { error: weekError } = await supabase
+        .from('weeks')
+        .update({
+          winner_name: formData.winnerName,
+          card_selected: formData.cardSelected,
+          slot_chosen: formData.slotChosen,
+          winner_present: formData.winnerPresent,
+          authorized_signature_name: formData.authorizedSignatureName,
+          weekly_payout: finalDistribution,
+          ending_jackpot: endingJackpot
+        })
+        .eq('id', weekId);
+
+      if (weekError) throw weekError;
+
+      console.log('Week updated with ending jackpot:', endingJackpot);
+
+      // Update the last ticket sales record with the proper ending jackpot
+      const { data: lastSale, error: lastSaleError } = await supabase
+        .from('ticket_sales')
+        .select('*')
+        .eq('week_id', weekId)
+        .eq('user_id', user?.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (lastSaleError) throw lastSaleError;
+
+      // Update ticket sales record with calculated ending jackpot
+      const { error: updateSaleError } = await supabase
+        .from('ticket_sales')
+        .update({
+          weekly_payout_amount: finalDistribution,
+          ending_jackpot_total: endingJackpot,
+          displayed_jackpot_total: endingJackpot
+        })
+        .eq('id', lastSale.id);
+
+      if (updateSaleError) throw updateSaleError;
+
+      // Handle carryover for next game if Queen of Hearts was drawn
+      if (formData.cardSelected === 'Queen of Hearts') {
+        const todayDateString = getTodayDateString();
+        console.log('Queen of Hearts drawn - updating game end date and carryover');
+        
+        // Update game end date and carryover
+        const { error: gameUpdateError } = await supabase
+          .from('games')
+          .update({
+            end_date: todayDateString,
+            carryover_jackpot: endingJackpot,
+            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
+          })
+          .eq('id', gameId);
+
+        if (gameUpdateError) throw gameUpdateError;
+      } else {
+        // Update game totals
+        const { error: gameUpdateError } = await supabase
+          .from('games')
+          .update({
+            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
+          })
+          .eq('id', gameId);
+
+        if (gameUpdateError) throw gameUpdateError;
+      }
+
+      // Fetch the week data to get proper dates for the payout slip
+      const { data: weekData, error: weekDataError } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('id', weekId)
+        .single();
+
+      if (weekDataError) throw weekDataError;
+
+      // Prepare winner data for distribution slip
+      const todayDateString = getTodayDateString();
+      const winnerData = {
+        winnerName: formData.winnerName,
+        cardSelected: formData.cardSelected,
+        slotChosen: formData.slotChosen,
+        amountWon: finalDistribution,
+        authorizedSignatureName: formData.authorizedSignatureName,
+        gameId,
+        weekId,
+        date: todayDateString,
+        weekNumber: weekData.week_number,
+        weekStartDate: weekData.start_date,
+        weekEndDate: weekData.end_date,
+        winnerPresent: formData.winnerPresent
+      };
+
+      toast.success("Winner details saved successfully!");
+      onComplete();
+      onOpenPayoutSlip(winnerData);
+      onOpenChange(false);
+      
+      // Reset form
+      setFormData({
+        winnerName: '',
+        cardSelected: '',
+        slotChosen: 1,
+        winnerPresent: true,
+        authorizedSignatureName: ''
+      });
+      setSelectedDistribution(0);
+    } catch (error) {
+      console.error('Error saving winner details:', error);
+      toast.error("Failed to save winner details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <Card className="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle>Record Winner Details</CardTitle>
+            <CardDescription>Enter the winner's information for this week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="winnerName">Winner's Name</Label>
+                <Input
+                  id="winnerName"
+                  type="text"
+                  value={formData.winnerName}
+                  onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cardSelected">Card Selected</Label>
+                <Select onValueChange={(value) => {
+                  setFormData({ ...formData, cardSelected: value });
+                  const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
+                  setSelectedDistribution(distribution);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a card" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
+                    {cardDistributions.map((card, index) => (
+                      <SelectItem key={index} value={card.card}>{card.card} - ${card.distribution}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.cardSelected !== 'Queen of Hearts' && (
+                <div className="space-y-2">
+                  <Label htmlFor="selectedDistribution">Selected Distribution</Label>
+                  <Input
+                    id="selectedDistribution"
+                    type="number"
+                    value={selectedDistribution}
+                    readOnly
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="slotChosen">Slot Chosen</Label>
+                <Input
+                  id="slotChosen"
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={formData.slotChosen}
+                  onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
+                  required
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="winnerPresent"
+                  checked={formData.winnerPresent}
+                  onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked === true })}
+                />
+                <Label htmlFor="winnerPresent">Winner Present</Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="authorizedSignatureName">Authorized Signature Name</Label>
+                <Input
+                  id="authorizedSignatureName"
+                  type="text"
+                  value={formData.authorizedSignatureName}
+                  onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
+                  placeholder="Jane Smith"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? "Saving..." : "Save Winner Details"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+# GameForm.tsx
+
+
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { getTodayDateString } from "@/lib/dateUtils";
+
+interface GameFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  games: any[];
+  onComplete: () => void;
+}
+
+export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState({
+    name: '',
+    startDate: getTodayDateString(),
+    ticketPrice: 2,
+    organizationPercentage: 40,
+    jackpotPercentage: 60,
+    minimumStartingJackpot: 500
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      const nextGameNumber = games.length + 1;
+      const todayString = getTodayDateString();
+      
+      console.log('=== FORM INITIALIZATION (CLEAN) ===');
+      console.log('Modal opened, setting default date to:', todayString);
+      console.log('User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      setFormData({
+        name: `Game ${nextGameNumber}`,
+        startDate: todayString,
+        ticketPrice: 2,
+        organizationPercentage: 40,
+        jackpotPercentage: 60,
+        minimumStartingJackpot: 500
+      });
+    }
+  }, [open, games.length]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Validation
+      if (formData.organizationPercentage + formData.jackpotPercentage !== 100) {
+        toast.error("Organization and Jackpot percentages must total 100%");
+        return;
+      }
+
+      if (!user) {
+        toast.error("You must be logged in to create games.");
+        return;
+      }
+
+      console.log('=== PURE STRING DATE HANDLING ===');
+      console.log('1. formData.startDate (pure string):', formData.startDate);
+      console.log('2. typeof formData.startDate:', typeof formData.startDate);
+      console.log('3. String length:', formData.startDate.length);
+      console.log('4. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      
+      // CRITICAL: We will NOT create any Date objects - work with pure strings only
+      const dateStringForDB = formData.startDate.trim();
+      console.log('5. Final date string for DB (no Date object created):', dateStringForDB);
+      console.log('6. This exact string will be sent to Supabase:', `"${dateStringForDB}"`);
+
+      // Get current configuration including card payouts and version - now user-specific
+      const { data: config, error: configError } = await supabase
+        .from('configurations')
+        .select('card_payouts, version')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (configError) {
+        console.error('Error fetching configuration:', configError);
+        toast.error("Failed to fetch current configuration");
+        return;
+      }
+
+      // Get carryover from last game
+      let carryoverJackpot = 0;
+      if (games.length > 0) {
+        const lastGame = games[games.length - 1];
+        carryoverJackpot = lastGame.carryover_jackpot || 0;
+      }
+
+      const gameNumber = games.length + 1;
+
+      const gameData = {
+        game_number: gameNumber,
+        name: formData.name,
+        start_date: dateStringForDB, // Pure YYYY-MM-DD string, no Date object conversion
+        ticket_price: formData.ticketPrice,
+        organization_percentage: formData.organizationPercentage,
+        jackpot_percentage: formData.jackpotPercentage,
+        minimum_starting_jackpot: formData.minimumStartingJackpot,
+        carryover_jackpot: carryoverJackpot,
+        card_payouts: config.card_payouts,
+        configuration_version: config.version,
+        user_id: user.id
+      };
+
+      console.log('7. Complete gameData being inserted:', JSON.stringify(gameData, null, 2));
+      console.log('8. gameData.start_date specifically:', gameData.start_date);
+
+      const { data: insertResult, error } = await supabase
+        .from('games')
+        .insert(gameData)
+        .select('*');
+
+      if (error) {
+        console.error('9. Supabase insert error:', error);
+        throw error;
+      }
+
+      console.log('10. SUCCESS - Insert completed, returned data:', JSON.stringify(insertResult, null, 2));
+      console.log('11. Returned start_date from DB:', insertResult?.[0]?.start_date);
+      console.log('12. String comparison - sent vs returned:', {
+        sent: dateStringForDB,
+        returned: insertResult?.[0]?.start_date,
+        match: dateStringForDB === insertResult?.[0]?.start_date
+      });
+
+      toast.success("Game created successfully!");
+      onComplete();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating game:', error);
+      toast.error("Failed to create game");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedDate = e.target.value;
+    console.log('=== DATE INPUT CHANGE (PURE STRING) ===');
+    console.log('1. Raw input value:', selectedDate);
+    console.log('2. typeof selectedDate:', typeof selectedDate);
+    console.log('3. String length:', selectedDate.length);
+    console.log('4. User timezone when changed:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.log('5. NO Date object will be created - working with pure strings only');
+    
+    // Set exactly what HTML date input gives us (YYYY-MM-DD string)
+    setFormData({ ...formData, startDate: selectedDate });
+    console.log('6. Updated formData.startDate to pure string:', selectedDate);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <Card className="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle>Create New Game</CardTitle>
+            <CardDescription>Set up a new Queen of Hearts game</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Game Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Game 1"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={handleStartDateChange}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ticketPrice">Ticket Price ($)</Label>
+                <Input
+                  id="ticketPrice"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.ticketPrice}
+                  onChange={(e) => setFormData({ ...formData, ticketPrice: parseFloat(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organizationPercentage">Organization Percentage (%)</Label>
+                <Input
+                  id="organizationPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.organizationPercentage}
+                  onChange={(e) => setFormData({ ...formData, organizationPercentage: parseInt(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="jackpotPercentage">Jackpot Percentage (%)</Label>
+                <Input
+                  id="jackpotPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.jackpotPercentage}
+                  onChange={(e) => setFormData({ ...formData, jackpotPercentage: parseInt(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="minimumStartingJackpot">Minimum Starting Jackpot ($)</Label>
+                <Input
+                  id="minimumStartingJackpot"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.minimumStartingJackpot}
+                  onChange={(e) => setFormData({ ...formData, minimumStartingJackpot: parseFloat(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? "Creating..." : "Create Game"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+
+#AuthContext.tsx
+
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+
+type OrganizationProfile = {
+  id: string;
+  email: string;
+  role: string;
+  organization_name: string | null;
+  logo_url: string | null;
+  about: string | null;
+};
+
+type AuthContextType = {
+  user: User | null;
+  profile: OrganizationProfile | null;
+  isAdmin: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (email: string, password: string) => Promise<any>;
+  logout: () => Promise<void>;
+  updateProfile: (data: Partial<OrganizationProfile>) => Promise<void>;
+  uploadLogo: (file: File) => Promise<string | null>;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<OrganizationProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // First set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // Use setTimeout to avoid potential deadlocks with Supabase auth
+        setTimeout(() => {
+          fetchProfile(currentUser.id);
+        }, 0);
+      } else {
+        setProfile(null);
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        navigate('/login');
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        const currentPath = window.location.pathname;
+        if (currentPath === '/login') {
+          navigate('/dashboard');
+        }
+      }
+    });
+
+    // Then check for existing session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user || null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      // Use RPC function to bypass RLS completely
+      const { data, error } = await supabase.rpc('get_user_profile', { 
+        user_id: userId 
+      });
+        
+      if (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: "Error fetching profile",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        // Extract the first item from the array returned by the RPC function
+        const profileData = data[0];
+        setProfile({
+          id: profileData.id,
+          email: profileData.email,
+          role: profileData.role,
+          organization_name: profileData.organization_name,
+          logo_url: profileData.logo_url,
+          about: profileData.about
+        });
+      } else {
+        console.log('No profile found for user, it may be created by the database trigger');
+      }
+    } catch (error: any) {
+      console.error('Error in fetchProfile:', error);
+      toast({
+        title: "Profile fetch error",
+        description: "Unable to load your profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await supabase.auth.signInWithPassword({ email, password });
+      if (response.error) {
+        toast({
+          title: "Login failed",
+          description: response.error.message,
+          variant: "destructive",
+        });
+      }
+      return response;
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login error",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const signup = async (email: string, password: string) => {
+    try {
+      const response = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: { email }
+        }
+      });
+      
+      if (response.error) {
+        toast({
+          title: "Signup failed",
+          description: response.error.message,
+          variant: "destructive",
+        });
+      }
+      return response;
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      toast({
+        title: "Signup error",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout error",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const updateProfile = async (data: Partial<OrganizationProfile>) => {
+    if (!user?.id || !profile) {
+      toast({
+        title: "Update failed",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Use RPC function to bypass RLS issues
+      const { error } = await supabase.rpc('update_user_profile', {
+        p_user_id: user.id,
+        p_organization_name: data.organization_name !== undefined ? data.organization_name : profile.organization_name,
+        p_about: data.about !== undefined ? data.about : profile.about,
+        p_logo_url: data.logo_url !== undefined ? data.logo_url : profile.logo_url
+      });
+        
+      if (error) {
+        console.error('Profile update error:', error);
+        toast({
+          title: "Update failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      // Update local profile state
+      setProfile(prev => prev ? { ...prev, ...data } : null);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your organization profile has been updated successfully",
+      });
+      
+      // Re-fetch the profile to ensure it's up to date
+      await fetchProfile(user.id);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Update failed",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    if (!user?.id) {
+      toast({
+        title: "Upload failed",
+        description: "You must be logged in to upload a logo",
+        variant: "destructive",
+      });
+      return null;
+    }
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('brand_images')
+        .upload(filePath, file);
+        
+      if (uploadError) {
+        console.error('Logo upload error:', uploadError);
+        toast({
+          title: "Upload failed",
+          description: uploadError.message,
+          variant: "destructive",
+        });
+        throw uploadError;
+      }
+      
+      const { data } = supabase.storage
+        .from('brand_images')
+        .getPublicUrl(filePath);
+        
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "Upload failed",
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const isAdmin = profile?.role === 'admin';
+
+  const value = {
+    user,
+    profile,
+    isAdmin,
+    loading,
+    login,
+    signup,
+    logout,
+    updateProfile,
+    uploadLogo
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+#Hooks> useGameData.ts
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+
+export const useGameData = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [games, setGames] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchGames = async () => {
+    if (!user?.id) {
+      console.log('No user ID available');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Fetching games for user:', user.id);
+      
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('game_number', { ascending: true });
+      
+      if (gamesError) throw gamesError;
+
+      const gamesWithDetails = await Promise.all(
+        gamesData.map(async (game) => {
+          // Get weeks for this game
+          const { data: weeksData, error: weeksError } = await supabase
+            .from('weeks')
+            .select('*')
+            .eq('game_id', game.id)
+            .eq('user_id', user.id)
+            .order('week_number', { ascending: true });
+          
+          if (weeksError) throw weeksError;
+
+          // Get expenses for this game
+          const { data: expensesData, error: expensesError } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('game_id', game.id)
+            .eq('user_id', user.id)
+            .order('date', { ascending: false });
+          
+          if (expensesError) throw expensesError;
+
+          // Get detailed week data with ticket sales
+          const weeksWithDetails = await Promise.all(
+            weeksData.map(async (week) => {
+              const { data: salesData, error: salesError } = await supabase
+                .from('ticket_sales')
+                .select('*')
+                .eq('week_id', week.id)
+                .eq('user_id', user.id)
+                .order('date', { ascending: true });
+              
+              if (salesError) throw salesError;
+              
+              return {
+                ...week,
+                ticket_sales: salesData || []
+              };
+            })
+          );
+
+          return {
+            ...game,
+            weeks: weeksWithDetails || [],
+            expenses: expensesData || []
+          };
+        })
+      );
+
+      setGames(gamesWithDetails);
+    } catch (error: any) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch data: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchGames();
+
+      // Set up real-time subscriptions
+      const gamesSubscription = supabase
+        .channel('public:games')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'games',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          console.log('Games changed, refreshing data');
+          fetchGames();
+        })
+        .subscribe();
+
+      const weeksSubscription = supabase
+        .channel('public:weeks')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'weeks',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          console.log('Weeks changed, refreshing data');
+          fetchGames();
+        })
+        .subscribe();
+
+      const ticketSalesSubscription = supabase
+        .channel('public:ticket_sales')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'ticket_sales',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          console.log('Ticket sales changed, refreshing data');
+          fetchGames();
+        })
+        .subscribe();
+
+      const expensesSubscription = supabase
+        .channel('public:expenses')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'expenses',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          console.log('Expenses changed, refreshing data');
+          fetchGames();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(gamesSubscription);
+        supabase.removeChannel(weeksSubscription);
+        supabase.removeChannel(ticketSalesSubscription);
+        supabase.removeChannel(expensesSubscription);
+      };
+    }
+  }, [user?.id]);
+
+  return {
+    games,
+    setGames,
+    loading,
+    fetchGames
+  };
+};
+
+
+#Hooks>usePDRecords.ts
+import jsPDF from "jspdf";
+import { useToast } from "@/hooks/use-toast";
+import { getTodayDateString, formatDateStringForDisplay, formatDateStringShort } from '@/lib/dateUtils';
+
+export const usePdfReports = () => {
+  const { toast } = useToast();
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  const generateGamePdfReport = async (game: any) => {
+    try {
+      toast({
+        title: "Generating PDF",
+        description: `Creating report for ${game.name}...`,
+      });
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Add title and report information
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text(`${game.name} - Detailed Report`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(`Report Date: ${formatDateStringForDisplay(getTodayDateString())}`, 20, yPosition);
+      yPosition += 10;
+
+      // Game details section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Game Information', 20, yPosition);
+      yPosition += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Start Date: ${formatDateStringForDisplay(game.start_date)}`, 20, yPosition);
+      yPosition += 7;
+
+      if (game.end_date) {
+        doc.text(`End Date: ${formatDateStringForDisplay(game.end_date)}`, 20, yPosition);
+        yPosition += 7;
+      }
+
+      doc.text(`Ticket Price: ${formatCurrency(game.ticket_price)}`, 20, yPosition);
+      yPosition += 7;
+      doc.text(`Organization Percentage: ${game.organization_percentage}%`, 20, yPosition);
+      yPosition += 7;
+      doc.text(`Jackpot Percentage: ${game.jackpot_percentage}%`, 20, yPosition);
+      yPosition += 7;
+      doc.text(`Carryover Jackpot: ${formatCurrency(game.carryover_jackpot)}`, 20, yPosition);
+      yPosition += 15;
+
+      // Weeks information section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Weeks Information', 20, yPosition);
+      yPosition += 8;
+
+      if (game.weeks && game.weeks.length > 0) {
+        game.weeks.forEach((week: any) => {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text(`Week ${week.week_number} (${formatDateStringShort(week.start_date)} - ${formatDateStringShort(week.end_date)})`, 20, yPosition);
+          yPosition += 7;
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.text(`  Total Sales: ${formatCurrency(week.weekly_sales)}`, 20, yPosition);
+          yPosition += 5;
+          doc.text(`  Tickets Sold: ${week.weekly_tickets_sold}`, 20, yPosition);
+          yPosition += 10;
+        });
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.text('No weeks recorded for this game.', 20, yPosition);
+        yPosition += 10;
+      }
+
+      // Expenses and donations section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Expenses and Donations', 20, yPosition);
+      yPosition += 8;
+
+      if (game.expenses && game.expenses.length > 0) {
+        game.expenses.forEach((expense: any) => {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.text(`  ${formatDateStringShort(expense.date)} - ${expense.memo} - ${formatCurrency(expense.amount)} (${expense.is_donation ? 'Donation' : 'Expense'})`, 20, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 5;
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.text('No expenses or donations recorded for this game.', 20, yPosition);
+        yPosition += 10;
+      }
+
+      // Summary section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text('Summary', 20, yPosition);
+      yPosition += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Total Sales: ${formatCurrency(game.total_sales)}`, 20, yPosition);
+      yPosition += 7;
+      doc.text(`Total Expenses: ${formatCurrency(game.total_expenses)}`, 20, yPosition);
+      yPosition += 7;
+      doc.text(`Total Donations: ${formatCurrency(game.total_donations)}`, 20, yPosition);
+      yPosition += 7;
+      doc.text(`Organization Net Profit: ${formatCurrency(game.organization_net_profit)}`, 20, yPosition);
+      yPosition += 10;
+
+      // Check if we need to add a new page
+      if (yPosition > pageHeight - 20) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Add logo or any other footer information
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text('Queen of Hearts Game Report', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+      // Save the PDF
+      const fileName = `${game.name.replace(/\s+/g, '-')}-report-${getTodayDateString()}.pdf`;
+      doc.save(fileName);
+
+      toast({
+        title: "Report Generated",
+        description: `${game.name} report has been downloaded successfully.`,
+      });
+    } catch (error: any) {
+      console.error('Error generating game PDF:', error);
+      toast({
+        title: "Error",
+        description: `Failed to generate report: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return {
+    generateGamePdfReport
+  };
+};
+
+
+#GameCard.tsx
+
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
+import { formatDateStringForDisplay } from '@/lib/dateUtils';
+import { WeekManagement } from './WeekManagement';
+import { ExpenseSection } from './ExpenseSection';
+
+interface GameCardProps {
+  game: any;
+  expandedGame: string | null;
+  expandedWeek: string | null;
+  expandedExpenses: string | null;
+  onToggleGame: (gameId: string) => void;
+  onToggleWeek: (weekId: string) => void;
+  onToggleExpenses: (gameId: string) => void;
+  onOpenWeekForm: (gameId: string) => void;
+  onOpenDeleteConfirm: (id: string, type: "game" | "week" | "entry" | "expense") => void;
+  onGeneratePdfReport: (game: any) => void;
+  onOpenExpenseModal: (gameId: string, gameName: string) => void;
+  onOpenDonationModal: (gameId: string, gameName: string, date?: string) => void;
+  onOpenDailyExpenseModal: (date: string, gameId: string) => void;
+  currentGameId: string | null;
+  setCurrentGameId: (id: string | null) => void;
+  games: any[];
+  setGames: (games: any[]) => void;
+  onRefreshData?: () => void;
+}
+
+export const GameCard = ({
+  game,
+  expandedGame,
+  expandedWeek,
+  expandedExpenses,
+  onToggleGame,
+  onToggleWeek,
+  onToggleExpenses,
+  onOpenWeekForm,
+  onOpenDeleteConfirm,
+  onGeneratePdfReport,
+  onOpenExpenseModal,
+  onOpenDonationModal,
+  onOpenDailyExpenseModal,
+  currentGameId,
+  setCurrentGameId,
+  games,
+  setGames,
+  onRefreshData
+}: GameCardProps) => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Calculate actual start and end dates from weeks data
+  const gameStartDate = game.weeks.length > 0 
+    ? game.weeks.reduce((earliest: any, week: any) => 
+        new Date(week.start_date) < new Date(earliest.start_date) ? week : earliest
+      ).start_date 
+    : game.start_date;
+
+  const gameEndDate = game.weeks.length > 0 
+    ? game.weeks.reduce((latest: any, week: any) => 
+        new Date(week.end_date) > new Date(latest.end_date) ? week : latest
+      ).end_date 
+    : game.end_date;
+
+  // Create wrapper handlers for daily modals
+  const handleDailyExpense = (date: string, gameId: string) => {
+    onOpenDailyExpenseModal(date, gameId);
+  };
+
+  const handleDailyDonation = (date: string, gameId: string) => {
+    onOpenDonationModal(gameId, game.name, date);
+  };
+
+  return (
+    <Card key={game.id} className="overflow-hidden">
+      <CardHeader 
+        className={`flex flex-col items-start justify-between cursor-pointer ${
+          expandedGame === game.id ? 'bg-accent/50' : ''
+        }`}
+        onClick={() => onToggleGame(game.id)}
+      >
+        <div className="w-full flex flex-row items-center justify-between">
+          <CardTitle className="text-xl">
+            {game.name}
+            {game.end_date && (
+              <span className="ml-2 text-sm text-green-600 font-normal">(Completed)</span>
+            )}
+          </CardTitle>
+          <div className="flex items-center space-x-4">
+            <div className="text-sm hidden md:flex space-x-4">
+              <div>
+                <span className="text-muted-foreground">Start:</span> {formatDateStringForDisplay(gameStartDate)}
+                {gameEndDate && (
+                  <>
+                    <span className="ml-4 text-muted-foreground">End:</span> {formatDateStringForDisplay(gameEndDate)}
+                  </>
+                )}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}
+              </div>
+            </div>
+            
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenDeleteConfirm(game.id, 'game');
+              }}
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+            >
+              <Trash2 className="h-5 w-5" />
+            </Button>
+            
+            <div className="flex items-center">
+              {expandedGame === game.id ? (
+                <ChevronUp className="h-6 w-6 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      
+      {expandedGame === game.id && (
+        <CardContent className="p-0 border-t">
+          <WeekManagement
+            game={game}
+            expandedWeek={expandedWeek}
+            onToggleWeek={onToggleWeek}
+            onOpenWeekForm={onOpenWeekForm}
+            onGeneratePdfReport={onGeneratePdfReport}
+            currentGameId={currentGameId}
+            setCurrentGameId={setCurrentGameId}
+            games={games}
+            setGames={setGames}
+            onRefreshData={onRefreshData}
+            onOpenExpenseModal={handleDailyExpense}
+            onOpenDonationModal={handleDailyDonation}
+          />
+          
+          <ExpenseSection
+            game={game}
+            expandedExpenses={expandedExpenses}
+            onToggleExpenses={onToggleExpenses}
+            onOpenExpenseModal={onOpenExpenseModal}
+            onOpenDeleteConfirm={onOpenDeleteConfirm}
+          />
+        </CardContent>
+      )}
+    </Card>
+  );
+};
+
+
+#defaultUtils.tsx
+
+/**
+ * Utility functions for timezone-neutral date handling
+ * These functions ensure dates are handled consistently regardless of user timezone
+ */
+
+/**
+ * Gets today's date in YYYY-MM-DD format in user's local timezone
+ * This ensures the "today" date matches what the user expects to see
+ */
+export function getTodayDateString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Validates that a date string is in the correct YYYY-MM-DD format
+ */
+export function isValidDateString(dateString: string): boolean {
+  if (!dateString || typeof dateString !== 'string') return false;
+  
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateString)) return false;
+  
+  const [year, month, day] = dateString.split('-').map(Number);
+  
+  // Basic validation without creating Date objects
+  if (year < 1900 || year > 2100) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  
+  return true;
+}
+
+/**
+ * Formats a date string for display - RAW DATABASE DATE DISPLAY
+ * Input: YYYY-MM-DD string from database
+ * Output: Human readable format (e.g., "June 24, 2025")
+ * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
+ */
+export function formatDateStringForDisplay(dateString: string): string {
+  console.log('=== formatDateStringForDisplay DEBUG START ===');
+  console.log('Input dateString:', dateString);
+  console.log('Input type:', typeof dateString);
+  
+  // If empty or invalid, return as-is
+  if (!dateString || !isValidDateString(dateString)) {
+    console.log('Invalid or empty dateString, returning as-is');
+    console.log('=== formatDateStringForDisplay DEBUG END ===');
+    return dateString;
+  }
+  
+  // Parse the date string components directly - NO Date() constructor
+  const [year, month, day] = dateString.split('-');
+  console.log('Split parts:', [year, month, day]);
+  
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = monthNames[monthIndex];
+  const dayNumber = parseInt(day, 10);
+  
+  console.log('Month index:', monthIndex, 'Month name:', monthName);
+  console.log('Day number:', dayNumber);
+  
+  // Format using pure string manipulation - no Date objects involved
+  const result = `${monthName} ${dayNumber}, ${year}`;
+  console.log('Formatted result:', result);
+  console.log('=== formatDateStringForDisplay DEBUG END ===');
+  
+  return result;
+}
+
+/**
+ * Formats a date string for short display (MMM d format)
+ * Input: YYYY-MM-DD string from database
+ * Output: Short format (e.g., "Jun 24")
+ * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
+ */
+export function formatDateStringForShortDisplay(dateString: string): string {
+  if (!dateString || !isValidDateString(dateString)) {
+    return dateString;
+  }
+  
+  const [year, month, day] = dateString.split('-');
+  
+  const shortMonthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = shortMonthNames[monthIndex];
+  const dayNumber = parseInt(day, 10);
+  
+  return `${monthName} ${dayNumber}`;
+}
+
+/**
+ * Formats a date string with year for short display (MMM d, yyyy format)  
+ * Input: YYYY-MM-DD string from database
+ * Output: Short format with year (e.g., "Jun 24, 2025")
+ * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
+ */
+export function formatDateStringForMediumDisplay(dateString: string): string {
+  if (!dateString || !isValidDateString(dateString)) {
+    return dateString;
+  }
+  
+  const [year, month, day] = dateString.split('-');
+  
+  const shortMonthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = shortMonthNames[monthIndex];
+  const dayNumber = parseInt(day, 10);
+  
+  return `${monthName} ${dayNumber}, ${year}`;
+}
+
+/**
+ * NEW: Formats a date string for compact display (MMM d, yyyy format)
+ * Input: YYYY-MM-DD string from database  
+ * Output: Compact format (e.g., "Jun 24, 2025")
+ * NO TIMEZONE CONVERSION - DISPLAYS EXACT DATABASE VALUE
+ * This replaces date-fns format calls to prevent timezone issues
+ */
+export function formatDateStringShort(dateString: string): string {
+  console.log('=== formatDateStringShort DEBUG START ===');
+  console.log('Input dateString:', dateString);
+  console.log('Input type:', typeof dateString);
+  
+  if (!dateString || !isValidDateString(dateString)) {
+    console.log('Invalid dateString, returning as-is:', dateString);
+    console.log('=== formatDateStringShort DEBUG END ===');
+    return dateString;
+  }
+  
+  const [year, month, day] = dateString.split('-');
+  console.log('Split parts:', [year, month, day]);
+  
+  const shortMonthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = shortMonthNames[monthIndex];
+  const dayNumber = parseInt(day, 10);
+  
+  console.log('Month index:', monthIndex, 'Month name:', monthName);
+  console.log('Day number:', dayNumber);
+  
+  const result = `${monthName} ${dayNumber}, ${year}`;
+  console.log('Final formatted result:', result);
+  console.log('=== formatDateStringShort DEBUG END ===');
+  
+  return result;
+}
+
+/**
+ * Legacy function for backward compatibility
+ * Formats a Date object to YYYY-MM-DD string for database storage
+ * Note: This may cause timezone issues, prefer using date strings directly
+ */
+export function formatDateForDatabase(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Legacy function for backward compatibility
+ * Parses a YYYY-MM-DD string from database to Date object
+ * Note: This may cause timezone issues, prefer working with date strings directly
+ */
+export function parseDateFromDatabase(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
