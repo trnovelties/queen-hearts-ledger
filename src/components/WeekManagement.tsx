@@ -175,8 +175,7 @@ export const WeekManagement = ({
   const needsGameCompletion = (week: any) => {
     return week.winner_name && 
            week.card_selected === 'Queen of Hearts' && 
-           !game.end_date && 
-           week.ending_jackpot > 0;
+           !game.end_date;
   };
 
   return (
@@ -226,7 +225,7 @@ export const WeekManagement = ({
                   Week {week.week_number}
                 </Button>
                 
-                {/* NEW: Complete Your Game Button for Queen of Hearts winners */}
+                {/* Complete Your Game Button for Queen of Hearts winners */}
                 {needsGameCompletion(week) && (
                   <Button
                     onClick={() => handleCompleteGame(week)}
