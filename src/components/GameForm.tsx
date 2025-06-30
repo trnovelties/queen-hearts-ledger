@@ -1,14 +1,45 @@
-
 import React, { useState, useEffect } from 'react';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker"
+import { CalendarIcon } from "@radix-ui/react-icons"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { getTodayDateString } from "@/lib/dateUtils";
+import { useAdmin } from "@/context/AdminContext";
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "Game name must be at least 2 characters.",
+  }),
+  game_number: z.number().min(1, {
+    message: "Game number must be at least 1.",
+  }),
+  start_date: z.date(),
+  ticket_price: z.number().min(0.01, {
+    message: "Ticket price must be greater than 0.",
+  }),
+  organization_percentage: z.number().min(0, {
+    message: "Organization percentage must be between 0 and 100.",
+  }).max(100, {
+    message: "Organization percentage must be between 0 and 100.",
+  }),
+  jackpot_percentage: z.number().min(0, {
+    message: "Jackpot percentage must be between 0 and 100.",
+  }).max(100, {
+    message: "Jackpot percentage must be between 0 and 100.",
+  }),
+  minimum_starting_jackpot: z.number().min(1, {
+    message: "Minimum starting jackpot must be at least 1.",
+  }),
+});
 
 interface GameFormProps {
   open: boolean;
@@ -17,246 +48,328 @@ interface GameFormProps {
   onComplete: () => void;
 }
 
-export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProps) {
+export const GameForm = ({ open, onOpenChange, games, onComplete }: GameFormProps) => {
   const { user } = useAuth();
-  const [formData, setFormData] = useState({
-    name: '',
-    startDate: getTodayDateString(),
-    ticketPrice: 2,
-    organizationPercentage: 40,
-    jackpotPercentage: 60,
-    minimumStartingJackpot: 500
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { getCurrentUserId } = useAdmin();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form when modal opens
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      game_number: 1,
+      start_date: new Date(),
+      ticket_price: 1,
+      organization_percentage: 50,
+      jackpot_percentage: 50,
+      minimum_starting_jackpot: 500,
+    },
+  });
+
   useEffect(() => {
-    if (open) {
-      const nextGameNumber = games.length + 1;
-      const todayString = getTodayDateString();
-      
-      console.log('=== FORM INITIALIZATION (CLEAN) ===');
-      console.log('Modal opened, setting default date to:', todayString);
-      console.log('User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      
-      setFormData({
-        name: `Game ${nextGameNumber}`,
-        startDate: todayString,
-        ticketPrice: 2,
-        organizationPercentage: 40,
-        jackpotPercentage: 60,
-        minimumStartingJackpot: 500
-      });
+    if (games.length > 0) {
+      const lastGame = games[0];
+      form.setValue("game_number", lastGame.game_number + 1);
     }
-  }, [open, games.length]);
+  }, [games, form]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
+      const values = form.getValues();
+      const currentUserId = getCurrentUserId();
+
+      if (!currentUserId) {
+        toast({
+          title: "Error",
+          description: "No user ID found. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Validation
-      if (formData.organizationPercentage + formData.jackpotPercentage !== 100) {
-        toast.error("Organization and Jackpot percentages must total 100%");
+      if (values.organization_percentage + values.jackpot_percentage !== 100) {
+        toast({
+          title: "Error",
+          description: "Organization and Jackpot percentages must add up to 100%.",
+          variant: "destructive",
+        });
         return;
       }
 
-      if (!user) {
-        toast.error("You must be logged in to create games.");
+      // Ensure game_number is unique
+      const existingGame = games.find(game => game.game_number === values.game_number);
+      if (existingGame) {
+        toast({
+          title: "Error",
+          description: "Game number already exists. Please choose a different number.",
+          variant: "destructive",
+        });
         return;
       }
 
-      console.log('=== PURE STRING DATE HANDLING ===');
-      console.log('1. formData.startDate (pure string):', formData.startDate);
-      console.log('2. typeof formData.startDate:', typeof formData.startDate);
-      console.log('3. String length:', formData.startDate.length);
-      console.log('4. User timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      
-      // CRITICAL: We will NOT create any Date objects - work with pure strings only
-      const dateStringForDB = formData.startDate.trim();
-      console.log('5. Final date string for DB (no Date object created):', dateStringForDB);
-      console.log('6. This exact string will be sent to Supabase:', `"${dateStringForDB}"`);
-
-      // Get current configuration including card payouts and version - now user-specific
-      const { data: config, error: configError } = await supabase
-        .from('configurations')
-        .select('card_payouts, version')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single();
-
-      if (configError) {
-        console.error('Error fetching configuration:', configError);
-        toast.error("Failed to fetch current configuration");
-        return;
-      }
-
-      // Get carryover from last game
+      // Calculate carryover jackpot from previous completed games
       let carryoverJackpot = 0;
       if (games.length > 0) {
-        const lastGame = games[games.length - 1];
-        carryoverJackpot = lastGame.carryover_jackpot || 0;
+        const lastCompletedGame = games
+          .filter(g => g.end_date)
+          .sort((a, b) => b.game_number - a.game_number)[0];
+        
+        if (lastCompletedGame) {
+          // Add any contribution from the previous game to the carryover
+          carryoverJackpot = (lastCompletedGame.carryover_jackpot || 0) + 
+                           (lastCompletedGame.jackpot_contribution_to_next_game || 0);
+        }
       }
 
-      const gameNumber = games.length + 1;
-
-      const gameData = {
-        game_number: gameNumber,
-        name: formData.name,
-        start_date: dateStringForDB, // Pure YYYY-MM-DD string, no Date object conversion
-        ticket_price: formData.ticketPrice,
-        organization_percentage: formData.organizationPercentage,
-        jackpot_percentage: formData.jackpotPercentage,
-        minimum_starting_jackpot: formData.minimumStartingJackpot,
-        carryover_jackpot: carryoverJackpot,
-        card_payouts: config.card_payouts,
-        configuration_version: config.version,
-        user_id: user.id
-      };
-
-      console.log('7. Complete gameData being inserted:', JSON.stringify(gameData, null, 2));
-      console.log('8. gameData.start_date specifically:', gameData.start_date);
-
-      const { data: insertResult, error } = await supabase
+      const { data, error } = await supabase
         .from('games')
-        .insert(gameData)
-        .select('*');
+        .insert([
+          {
+            name: values.name,
+            game_number: values.game_number,
+            start_date: values.start_date.toISOString().split('T')[0],
+            ticket_price: values.ticket_price,
+            organization_percentage: values.organization_percentage,
+            jackpot_percentage: values.jackpot_percentage,
+            minimum_starting_jackpot: values.minimum_starting_jackpot,
+            user_id: currentUserId,
+            carryover_jackpot: carryoverJackpot
+          },
+        ]);
 
       if (error) {
-        console.error('9. Supabase insert error:', error);
-        throw error;
+        console.error("Error creating game:", error);
+        toast({
+          title: "Error",
+          description: `Failed to create game: ${error.message}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Game created successfully!",
+        });
+        onComplete();
+        onOpenChange(false);
+        form.reset();
       }
-
-      console.log('10. SUCCESS - Insert completed, returned data:', JSON.stringify(insertResult, null, 2));
-      console.log('11. Returned start_date from DB:', insertResult?.[0]?.start_date);
-      console.log('12. String comparison - sent vs returned:', {
-        sent: dateStringForDB,
-        returned: insertResult?.[0]?.start_date,
-        match: dateStringForDB === insertResult?.[0]?.start_date
+    } catch (error: any) {
+      console.error("Error creating game:", error);
+      toast({
+        title: "Error",
+        description: `Failed to create game: ${error.message}`,
+        variant: "destructive",
       });
-
-      toast.success("Game created successfully!");
-      onComplete();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error creating game:', error);
-      toast.error("Failed to create game");
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedDate = e.target.value;
-    console.log('=== DATE INPUT CHANGE (PURE STRING) ===');
-    console.log('1. Raw input value:', selectedDate);
-    console.log('2. typeof selectedDate:', typeof selectedDate);
-    console.log('3. String length:', selectedDate.length);
-    console.log('4. User timezone when changed:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-    console.log('5. NO Date object will be created - working with pure strings only');
-    
-    // Set exactly what HTML date input gives us (YYYY-MM-DD string)
-    setFormData({ ...formData, startDate: selectedDate });
-    console.log('6. Updated formData.startDate to pure string:', selectedDate);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle>Create New Game</CardTitle>
-            <CardDescription>Set up a new Queen of Hearts game</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Game Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Game 1"
-                  required
-                />
-              </div>
+    <div className="relative">
+      {/* Backdrop */}
+      {open && <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40" />}
 
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={handleStartDateChange}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ticketPrice">Ticket Price ($)</Label>
-                <Input
-                  id="ticketPrice"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={formData.ticketPrice}
-                  onChange={(e) => setFormData({ ...formData, ticketPrice: parseFloat(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="organizationPercentage">Organization Percentage (%)</Label>
-                <Input
-                  id="organizationPercentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.organizationPercentage}
-                  onChange={(e) => setFormData({ ...formData, organizationPercentage: parseInt(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="jackpotPercentage">Jackpot Percentage (%)</Label>
-                <Input
-                  id="jackpotPercentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.jackpotPercentage}
-                  onChange={(e) => setFormData({ ...formData, jackpotPercentage: parseInt(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="minimumStartingJackpot">Minimum Starting Jackpot ($)</Label>
-                <Input
-                  id="minimumStartingJackpot"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.minimumStartingJackpot}
-                  onChange={(e) => setFormData({ ...formData, minimumStartingJackpot: parseFloat(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                  {isLoading ? "Creating..." : "Create Game"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </DialogContent>
-    </Dialog>
+      <div
+        className={cn(
+          "fixed inset-0 z-50 overflow-y-auto",
+          open ? "block" : "hidden"
+        )}
+      >
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Create New Game</h2>
+              <Form {...form}>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Game Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Queen of Hearts" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This is the name of your game.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="game_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Game Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="1"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This is the number of your game.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="start_date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Start Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-[240px] pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  form.format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <DatePicker
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={false}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          The date that the game will start on.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="ticket_price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ticket Price</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="1.00"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This is the price of a single ticket.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="organization_percentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization Percentage</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="50"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This is the percentage of the ticket price that the organization will receive.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="jackpot_percentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Jackpot Percentage</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="50"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This is the percentage of the ticket price that will go towards the jackpot.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="minimum_starting_jackpot"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Minimum Starting Jackpot</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="500"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This is the minimum amount that the jackpot will start at.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => onOpenChange(false)}
+                      className="mr-2"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting} className="bg-[#1F4E4A] hover:bg-[#1F4E4A]/90">
+                      {isSubmitting ? "Creating..." : "Create Game"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
-}
+};

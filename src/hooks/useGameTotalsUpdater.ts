@@ -32,30 +32,33 @@ export const useGameTotalsUpdater = () => {
         .eq('game_id', gameId)
         .eq('user_id', user.id);
 
+      // Get game info including contribution
+      const { data: gameInfo } = await supabase
+        .from('games')
+        .select('jackpot_contribution_to_next_game, minimum_starting_jackpot')
+        .eq('id', gameId)
+        .eq('user_id', user.id)
+        .single();
+
       const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       const totalPayouts = weeks?.reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
+      const jackpotContribution = gameInfo?.jackpot_contribution_to_next_game || 0;
       
       // Calculate organization net profit: organization portion - expenses - donations
       const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
 
-      // Calculate game profit/loss using the new jackpot calculation
+      // Calculate game profit/loss using the existing jackpot calculation
       let gameJackpotLoss = 0;
       try {
-        // Get game minimum jackpot
-        const { data: game } = await supabase
-          .from('games')
-          .select('minimum_starting_jackpot')
-          .eq('id', gameId)
-          .eq('user_id', user.id)
-          .single();
-
-        const minimumJackpot = game?.minimum_starting_jackpot || 500;
+        const minimumJackpot = gameInfo?.minimum_starting_jackpot || 500;
         const jackpotResult = await calculateGameJackpotLoss(gameId, user.id, minimumJackpot);
         gameJackpotLoss = jackpotResult.totalJackpotLoss;
+        
+        // Adjust for contribution - if winner contributed, it reduces the loss
+        gameJackpotLoss = Math.max(0, gameJackpotLoss - jackpotContribution);
       } catch (error) {
         console.error('Error calculating game jackpot loss:', error);
-        // Fallback to 0 if calculation fails
         gameJackpotLoss = 0;
       }
 
