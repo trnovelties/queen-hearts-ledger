@@ -1,18 +1,23 @@
 
 import { Button } from "@/components/ui/button";
+import { Crown } from "lucide-react";
 
 interface WinnerSelectionSectionProps {
   week: any;
   isWeekComplete: boolean;
   hasWinner: boolean;
   onWinnerButtonClick: () => void;
+  onCompleteGameClick?: () => void;
+  needsGameCompletion?: boolean;
 }
 
 export const WinnerSelectionSection = ({
   week,
   isWeekComplete,
   hasWinner,
-  onWinnerButtonClick
+  onWinnerButtonClick,
+  onCompleteGameClick,
+  needsGameCompletion = false
 }: WinnerSelectionSectionProps) => {
   return (
     <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
@@ -33,17 +38,39 @@ export const WinnerSelectionSection = ({
              isWeekComplete ? 'All 7 days have entries. Ready to select a winner.' :
              `${week.ticket_sales.length}/7 days entered`}
           </p>
+          
+          {/* NEW: Show completion message for Queen of Hearts */}
+          {needsGameCompletion && (
+            <p className="text-sm text-yellow-700 font-medium mt-1">
+              🎉 Queen of Hearts won! Complete your game to distribute the jackpot.
+            </p>
+          )}
         </div>
-        <Button
-          onClick={onWinnerButtonClick}
-          className={`font-semibold px-6 py-2 ${
-            hasWinner ? 'bg-green-600 hover:bg-green-700 text-white' :
-            isWeekComplete ? 'bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]' :
-            'bg-gray-300 hover:bg-gray-400 text-gray-600'
-          }`}
-        >
-          {hasWinner ? 'View Winner Details' : 'Add Winner Details'}
-        </Button>
+        
+        <div className="flex flex-col gap-2">
+          {/* Main Winner Button */}
+          <Button
+            onClick={onWinnerButtonClick}
+            className={`font-semibold px-6 py-2 ${
+              hasWinner ? 'bg-green-600 hover:bg-green-700 text-white' :
+              isWeekComplete ? 'bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]' :
+              'bg-gray-300 hover:bg-gray-400 text-gray-600'
+            }`}
+          >
+            {hasWinner ? 'View Winner Details' : 'Add Winner Details'}
+          </Button>
+          
+          {/* NEW: Complete Your Game Button for Queen of Hearts */}
+          {needsGameCompletion && onCompleteGameClick && (
+            <Button
+              onClick={onCompleteGameClick}
+              className="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-yellow-900 font-bold px-6 py-2 rounded shadow-lg border border-yellow-300"
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Complete Your Game
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

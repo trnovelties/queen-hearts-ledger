@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,6 @@ interface WinnerFormProps {
   jackpotContributions?: number;
   onComplete: () => void;
   onOpenPayoutSlip: (winnerData: any) => void;
-  onOpenJackpotContribution?: (gameId: string, totalJackpot: number, winnerName: string, winnerData: any) => void;
 }
 
 export function WinnerForm({ 
@@ -43,8 +43,7 @@ export function WinnerForm({
   currentJackpotTotal = 0, 
   jackpotContributions = 0,
   onComplete, 
-  onOpenPayoutSlip,
-  onOpenJackpotContribution
+  onOpenPayoutSlip
 }: WinnerFormProps) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
@@ -58,7 +57,6 @@ export function WinnerForm({
   const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
-  const [waitingForJackpotModal, setWaitingForJackpotModal] = useState(false);
 
   // Use the hook to calculate proper displayed jackpot
   const displayedJackpot = useJackpotCalculation({
@@ -198,27 +196,6 @@ export function WinnerForm({
     }
   };
 
-  const completeGame = async (finalDistribution: number, endingJackpot: number) => {
-    try {
-      console.log('=== COMPLETING GAME ===');
-
-      // Update game totals
-      const { error: gameUpdateError } = await supabase
-        .from('games')
-        .update({
-          total_payouts: (gameData?.total_payouts || 0) + finalDistribution
-        })
-        .eq('id', gameId);
-
-      if (gameUpdateError) throw gameUpdateError;
-
-      console.log('=== GAME COMPLETED ===');
-    } catch (error) {
-      console.error('Error completing game:', error);
-      throw error;
-    }
-  };
-
   useEffect(() => {
     const loadGameConfiguration = async () => {
       if (!gameId || !open) return;
@@ -309,130 +286,70 @@ export function WinnerForm({
 
       console.log('🏆 Card Selected:', formData.cardSelected);
 
-      // Handle Queen of Hearts - Keep form open until jackpot modal is confirmed
+      // Handle Queen of Hearts - set payout amount to displayed jackpot
       if (formData.cardSelected === 'Queen of Hearts') {
         console.log('🏆 === QUEEN OF HEARTS FLOW START ===');
         finalDistribution = displayedJackpot;
         
-        // Validation checks
-        if (!onOpenJackpotContribution) {
-          toast.error("Cannot open jackpot contribution modal. Please try again.");
-          return;
-        }
-
         if (displayedJackpot <= 0) {
           toast.error("Invalid jackpot amount. Please refresh and try again.");
           return;
         }
 
-        console.log('🏆 ✅ All validations passed, proceeding with Queen of Hearts flow');
-        
-        // STEP 1: Save winner details first
-        console.log('🏆 STEP 1: Saving winner details...');
-        const endingJackpot = await saveWinnerDetails(finalDistribution);
-        console.log('🏆 STEP 1: Winner details saved successfully');
-
-        // STEP 2: Fetch the week data to get proper dates for the payout slip
-        const { data: weekData, error: weekDataError } = await supabase
-          .from('weeks')
-          .select('*')
-          .eq('id', weekId)
-          .single();
-
-        if (weekDataError) throw weekDataError;
-
-        // STEP 3: Prepare winner data for the jackpot contribution modal
-        const todayDateString = getTodayDateString();
-        const winnerData = {
-          winnerName: formData.winnerName,
-          cardSelected: formData.cardSelected,
-          slotChosen: formData.slotChosen,
-          amountWon: finalDistribution,
-          authorizedSignatureName: formData.authorizedSignatureName,
-          gameId,
-          weekId,
-          date: todayDateString,
-          weekNumber: weekData.week_number,
-          weekStartDate: weekData.start_date,
-          weekEndDate: weekData.end_date,
-          winnerPresent: formData.winnerPresent
-        };
-
-        console.log('🏆 STEP 3: Winner data prepared:', winnerData);
-
-        // STEP 4: Set waiting state and call the jackpot contribution modal
-        console.log('🏆 STEP 4: Opening jackpot contribution modal...');
-        setWaitingForJackpotModal(true);
-        
-        // Call the parent to open the jackpot modal
-        console.log('🏆 STEP 4: Calling onOpenJackpotContribution...');
-        onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
-        
-        toast.success("Winner details saved! Opening jackpot contribution modal...");
-        
-        console.log('🏆 ✅ Queen of Hearts flow initiated - staying open until modal confirms');
-        
-      } else {
-        console.log('🏆 === NON-QUEEN OF HEARTS FLOW ===');
-        // For all other cards: complete the game normally
-        const endingJackpot = await saveWinnerDetails(finalDistribution);
-        await completeGame(finalDistribution, endingJackpot);
-        
-        // Fetch week data for payout slip
-        const { data: weekData, error: weekDataError } = await supabase
-          .from('weeks')
-          .select('*')
-          .eq('id', weekId)
-          .single();
-
-        if (weekDataError) throw weekDataError;
-
-        const todayDateString = getTodayDateString();
-        const winnerData = {
-          winnerName: formData.winnerName,
-          cardSelected: formData.cardSelected,
-          slotChosen: formData.slotChosen,
-          amountWon: finalDistribution,
-          authorizedSignatureName: formData.authorizedSignatureName,
-          gameId,
-          weekId,
-          date: todayDateString,
-          weekNumber: weekData.week_number,
-          weekStartDate: weekData.start_date,
-          weekEndDate: weekData.end_date,
-          winnerPresent: formData.winnerPresent
-        };
-
-        toast.success("Winner details saved successfully!");
-        onComplete();
-        onOpenPayoutSlip(winnerData);
-        onOpenChange(false);
-        
-        // Reset form
-        setFormData({
-          winnerName: '',
-          cardSelected: '',
-          slotChosen: 1,
-          winnerPresent: true,
-          authorizedSignatureName: ''
-        });
-        setSelectedDistribution(0);
+        console.log('🏆 ✅ Queen of Hearts selected, using displayed jackpot as payout:', finalDistribution);
       }
-      
-      console.log('🏆 === WINNER FORM HANDLESUBMIT END ===');
-    } catch (error) {
-      console.error('🏆 ❌ Error in winner form handleSubmit:', error);
-      toast.error("Failed to save winner details");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Effect to handle when the jackpot modal is confirmed to be open
-  useEffect(() => {
-    if (waitingForJackpotModal && !open) {
-      console.log('🏆 ✅ Jackpot modal confirmed open, resetting form state');
-      setWaitingForJackpotModal(false);
+      // PHASE 1: Save winner details only (no game completion for Queen of Hearts)
+      console.log('🏆 PHASE 1: Saving winner details...');
+      const endingJackpot = await saveWinnerDetails(finalDistribution);
+      console.log('🏆 PHASE 1: Winner details saved successfully');
+
+      // For non-Queen of Hearts, update game totals immediately
+      if (formData.cardSelected !== 'Queen of Hearts') {
+        const { error: gameUpdateError } = await supabase
+          .from('games')
+          .update({
+            total_payouts: (gameData?.total_payouts || 0) + finalDistribution
+          })
+          .eq('id', gameId);
+
+        if (gameUpdateError) throw gameUpdateError;
+      }
+
+      // Fetch the week data to get proper dates for the payout slip
+      const { data: weekData, error: weekDataError } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('id', weekId)
+        .single();
+
+      if (weekDataError) throw weekDataError;
+
+      const todayDateString = getTodayDateString();
+      const winnerData = {
+        winnerName: formData.winnerName,
+        cardSelected: formData.cardSelected,
+        slotChosen: formData.slotChosen,
+        amountWon: finalDistribution,
+        authorizedSignatureName: formData.authorizedSignatureName,
+        gameId,
+        weekId,
+        date: todayDateString,
+        weekNumber: weekData.week_number,
+        weekStartDate: weekData.start_date,
+        weekEndDate: weekData.end_date,
+        winnerPresent: formData.winnerPresent
+      };
+
+      if (formData.cardSelected === 'Queen of Hearts') {
+        toast.success("Winner details saved! Click 'Complete Your Game' to finish the game and distribute the jackpot.");
+      } else {
+        toast.success("Winner details saved successfully!");
+        onOpenPayoutSlip(winnerData);
+      }
+
+      onComplete();
+      onOpenChange(false);
       
       // Reset form
       setFormData({
@@ -443,8 +360,15 @@ export function WinnerForm({
         authorizedSignatureName: ''
       });
       setSelectedDistribution(0);
+      
+      console.log('🏆 === WINNER FORM HANDLESUBMIT END ===');
+    } catch (error) {
+      console.error('🏆 ❌ Error in winner form handleSubmit:', error);
+      toast.error("Failed to save winner details");
+    } finally {
+      setIsLoading(false);
     }
-  }, [waitingForJackpotModal, open]);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -454,11 +378,6 @@ export function WinnerForm({
             <CardTitle>Record Winner Details</CardTitle>
             <CardDescription>
               Enter the winner's information for this week
-              {waitingForJackpotModal && (
-                <div className="mt-2 text-amber-600 font-medium">
-                  Opening jackpot contribution modal...
-                </div>
-              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -472,7 +391,6 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
                   placeholder="John Doe"
                   required
-                  disabled={waitingForJackpotModal}
                 />
               </div>
 
@@ -484,7 +402,6 @@ export function WinnerForm({
                     const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
                     setSelectedDistribution(distribution);
                   }}
-                  disabled={waitingForJackpotModal}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a card" />
@@ -506,7 +423,6 @@ export function WinnerForm({
                     type="number"
                     value={selectedDistribution}
                     readOnly
-                    disabled={waitingForJackpotModal}
                   />
                 </div>
               )}
@@ -521,7 +437,6 @@ export function WinnerForm({
                   value={formData.slotChosen}
                   onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
                   required
-                  disabled={waitingForJackpotModal}
                 />
               </div>
 
@@ -530,7 +445,6 @@ export function WinnerForm({
                   id="winnerPresent"
                   checked={formData.winnerPresent}
                   onCheckedChange={(checked) => setFormData({ ...formData, winnerPresent: checked === true })}
-                  disabled={waitingForJackpotModal}
                 />
                 <Label htmlFor="winnerPresent">Winner Present</Label>
               </div>
@@ -544,23 +458,22 @@ export function WinnerForm({
                   onChange={(e) => setFormData({ ...formData, authorizedSignatureName: e.target.value })}
                   placeholder="Jane Smith"
                   required
-                  disabled={waitingForJackpotModal}
                 />
               </div>
 
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
-                  disabled={isLoading || waitingForJackpotModal} 
+                  disabled={isLoading} 
                   className="flex-1"
                 >
-                  {isLoading ? "Saving..." : waitingForJackpotModal ? "Opening Modal..." : "Save Winner Details"}
+                  {isLoading ? "Saving..." : "Save Winner Details"}
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => onOpenChange(false)}
-                  disabled={isLoading || waitingForJackpotModal}
+                  disabled={isLoading}
                 >
                   Cancel
                 </Button>

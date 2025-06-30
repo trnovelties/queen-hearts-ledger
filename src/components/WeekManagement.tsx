@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Plus, Trash2, Crown } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
@@ -79,53 +79,41 @@ export const WeekManagement = ({
     }
   };
 
-  // FIXED: Enhanced handler for Queen of Hearts jackpot contribution
-  const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string, winnerData?: any) => {
-    console.log('🎯 === OPENING JACKPOT CONTRIBUTION (WEEK MANAGEMENT) ===');
-    console.log('🎯 Game ID:', gameId);
-    console.log('🎯 Total Jackpot:', totalJackpot);
-    console.log('🎯 Winner Name:', winnerName);
-    console.log('🎯 Winner Data:', winnerData);
+  // NEW: Handle "Complete Your Game" button for Queen of Hearts winners
+  const handleCompleteGame = (week: any) => {
+    console.log('🎯 === OPENING JACKPOT CONTRIBUTION FROM COMPLETE BUTTON ===');
+    console.log('🎯 Week:', week);
+    console.log('🎯 Game ID:', game.id);
+    console.log('🎯 Winner Name:', week.winner_name);
+    console.log('🎯 Ending Jackpot:', week.ending_jackpot);
     
-    // Enhanced validation checks with user feedback
-    if (!gameId) {
-      console.error('❌ No gameId provided');
-      toast.error("Missing game ID. Cannot open jackpot contribution modal.");
+    if (!week.ending_jackpot || week.ending_jackpot <= 0) {
+      toast.error("Invalid jackpot amount. Please refresh and try again.");
       return;
     }
     
-    if (!totalJackpot || totalJackpot <= 0) {
-      console.error('❌ Invalid totalJackpot:', totalJackpot);
-      toast.error("Invalid jackpot amount. Cannot open contribution modal.");
-      return;
-    }
-    
-    if (!winnerName || winnerName.trim() === '') {
-      console.error('❌ No winnerName provided');
-      toast.error("Missing winner name. Cannot open contribution modal.");
-      return;
-    }
-    
-    console.log('✅ All validation passed, opening jackpot contribution modal...');
-    
-    // STEP 1: Set the data for the modal
+    // Set jackpot contribution data and open modal
     setJackpotContributionData({
-      gameId,
-      totalJackpot,
-      winnerName,
-      winnerData
+      gameId: game.id,
+      totalJackpot: week.ending_jackpot,
+      winnerName: week.winner_name,
+      winnerData: {
+        winnerName: week.winner_name,
+        cardSelected: week.card_selected,
+        slotChosen: week.slot_chosen,
+        amountWon: week.ending_jackpot,
+        authorizedSignatureName: week.authorized_signature_name,
+        gameId: game.id,
+        weekId: week.id,
+        weekNumber: week.week_number,
+        weekStartDate: week.start_date,
+        weekEndDate: week.end_date,
+        winnerPresent: week.winner_present
+      }
     });
-    
-    // STEP 2: Open the modal
     setJackpotContributionOpen(true);
     
-    // STEP 3: Close the winner form since we're transitioning to jackpot modal
-    setWinnerFormOpen(false);
-    setSelectedGameId(null);
-    setSelectedWeekId(null);
-    
-    console.log('✅ Jackpot contribution modal opened successfully');
-    toast.success("Opening jackpot contribution modal...");
+    console.log('✅ Jackpot contribution modal opened from complete button');
   };
 
   const handleJackpotContributionComplete = () => {
@@ -184,6 +172,14 @@ export const WeekManagement = ({
     return weekJackpotContributions;
   };
 
+  // NEW: Check if a week needs game completion (Queen of Hearts winner but game not ended)
+  const needsGameCompletion = (week: any) => {
+    return week.winner_name && 
+           week.card_selected === 'Queen of Hearts' && 
+           !game.end_date && 
+           week.ending_jackpot > 0;
+  };
+
   return (
     <div className="p-4 border-t">
       <div className="flex justify-between items-center mb-4">
@@ -230,6 +226,18 @@ export const WeekManagement = ({
                 >
                   Week {week.week_number}
                 </Button>
+                
+                {/* NEW: Complete Your Game Button for Queen of Hearts winners */}
+                {needsGameCompletion(week) && (
+                  <Button
+                    onClick={() => handleCompleteGame(week)}
+                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-yellow-900 font-bold text-xs py-1 px-2 rounded shadow-lg border border-yellow-300"
+                    size="sm"
+                  >
+                    <Crown className="h-3 w-3 mr-1" />
+                    Complete Your Game
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -264,7 +272,6 @@ export const WeekManagement = ({
         jackpotContributions={calculateCurrentJackpotTotal()}
         onComplete={handleWinnerFormComplete}
         onOpenPayoutSlip={handleOpenPayoutSlip}
-        onOpenJackpotContribution={handleOpenJackpotContribution}
       />
 
       {/* Jackpot Contribution Modal */}
