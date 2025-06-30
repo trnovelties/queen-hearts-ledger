@@ -78,29 +78,50 @@ export const WeekManagement = ({
     }
   };
 
-  // NEW: Handle "Complete Your Game" button for Queen of Hearts winners
+  // Calculate the actual total jackpot for Queen of Hearts winners
+  const calculateTotalJackpot = (week: any) => {
+    // Calculate total jackpot contributions from all weeks in the game
+    const totalContributions = game.weeks.reduce((total: number, w: any) => {
+      const weekContributions = w.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
+      return total + weekContributions;
+    }, 0);
+    
+    // Add carryover jackpot from previous game
+    const totalJackpot = (game.carryover_jackpot || 0) + totalContributions;
+    
+    console.log('🎰 Calculated total jackpot:', totalJackpot);
+    console.log('🎰 Carryover jackpot:', game.carryover_jackpot);
+    console.log('🎰 Total contributions:', totalContributions);
+    
+    return Math.max(totalJackpot, 100); // Ensure minimum jackpot for modal validation
+  };
+
+  // Handle "Complete Your Game" button for Queen of Hearts winners
   const handleCompleteGame = (week: any) => {
     console.log('🎯 === OPENING JACKPOT CONTRIBUTION FROM COMPLETE BUTTON ===');
     console.log('🎯 Week:', week);
     console.log('🎯 Game ID:', game.id);
     console.log('🎯 Winner Name:', week.winner_name);
-    console.log('🎯 Ending Jackpot:', week.ending_jackpot);
     
-    if (!week.ending_jackpot || week.ending_jackpot <= 0) {
-      toast.error("Invalid jackpot amount. Please refresh and try again.");
+    const totalJackpot = calculateTotalJackpot(week);
+    
+    console.log('🎯 Calculated Total Jackpot:', totalJackpot);
+    
+    if (!totalJackpot || totalJackpot <= 0) {
+      toast.error("Unable to calculate jackpot amount. Please refresh and try again.");
       return;
     }
     
     // Set jackpot contribution data and open modal
     setJackpotContributionData({
       gameId: game.id,
-      totalJackpot: week.ending_jackpot,
+      totalJackpot: totalJackpot,
       winnerName: week.winner_name,
       winnerData: {
         winnerName: week.winner_name,
         cardSelected: week.card_selected,
         slotChosen: week.slot_chosen,
-        amountWon: week.ending_jackpot,
+        amountWon: totalJackpot,
         authorizedSignatureName: week.authorized_signature_name,
         gameId: game.id,
         weekId: week.id,
@@ -171,7 +192,7 @@ export const WeekManagement = ({
     return weekJackpotContributions;
   };
 
-  // NEW: Check if a week needs game completion (Queen of Hearts winner but game not ended)
+  // Check if a week needs game completion (Queen of Hearts winner but game not ended)
   const needsGameCompletion = (week: any) => {
     return week.winner_name && 
            week.card_selected === 'Queen of Hearts' && 
