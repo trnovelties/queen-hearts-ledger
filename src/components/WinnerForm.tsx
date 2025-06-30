@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -305,20 +304,16 @@ export function WinnerForm({
 
       let finalDistribution = selectedDistribution;
 
-      // Calculate payout for Queen of Hearts
-      if (formData.cardSelected === 'Queen of Hearts') {
-        finalDistribution = displayedJackpot;
-        
-        // Apply penalty if winner not present
-        if (!formData.winnerPresent) {
-          const penalty = finalDistribution * (penaltyPercentage / 100);
-          finalDistribution = finalDistribution - penalty;
-        }
-      }
-
       console.log('=== WINNER FORM SUBMISSION ===');
       console.log('Card Selected:', formData.cardSelected);
-      console.log('Final Distribution (Payout):', finalDistribution);
+
+      // Handle Queen of Hearts - NO penalty calculation here
+      if (formData.cardSelected === 'Queen of Hearts') {
+        finalDistribution = displayedJackpot; // Always use full jackpot amount
+        console.log('Queen of Hearts selected - Full Jackpot Amount:', finalDistribution);
+      } else {
+        console.log('Other card selected - Payout Amount:', finalDistribution);
+      }
 
       // PHASE 2: Save winner details first for ALL cards
       const endingJackpot = await saveWinnerDetails(finalDistribution);
@@ -338,7 +333,7 @@ export function WinnerForm({
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
         slotChosen: formData.slotChosen,
-        amountWon: finalDistribution,
+        amountWon: finalDistribution, // This will be the full jackpot for Queen of Hearts
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
         weekId,
@@ -349,10 +344,14 @@ export function WinnerForm({
         winnerPresent: formData.winnerPresent
       };
 
-      // PHASE 2: Handle Queen of Hearts differently - open contribution modal instead of completing game
+      // PHASE 2: Handle Queen of Hearts differently - open contribution modal
       if (formData.cardSelected === 'Queen of Hearts') {
         if (onOpenJackpotContribution) {
-          console.log('Queen of Hearts drawn - opening contribution modal');
+          console.log('=== OPENING JACKPOT CONTRIBUTION MODAL ===');
+          console.log('Full Jackpot Amount being passed:', displayedJackpot);
+          console.log('Winner Name:', formData.winnerName);
+          console.log('Game ID:', gameId);
+          
           onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName);
           onOpenPayoutSlip(winnerData);
           onOpenChange(false);
