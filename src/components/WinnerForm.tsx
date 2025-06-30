@@ -55,9 +55,17 @@ export function WinnerForm({
     authorizedSignatureName: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [cardDistributions, setCardDistributions = useState<{ card: string; distribution: number }[]>([]);
+  const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
+
+  // Debug logging for winner form state
+  useEffect(() => {
+    console.log('🏆 WinnerForm open changed:', open);
+    console.log('🏆 WinnerForm gameId:', gameId);
+    console.log('🏆 WinnerForm weekId:', weekId);
+    console.log('🏆 WinnerForm onOpenJackpotContribution available:', !!onOpenJackpotContribution);
+  }, [open, gameId, weekId, onOpenJackpotContribution]);
 
   // Use the hook to calculate proper displayed jackpot
   const displayedJackpot = useJackpotCalculation({
@@ -287,6 +295,12 @@ export function WinnerForm({
     setIsLoading(true);
 
     try {
+      console.log('🏆 === WINNER FORM HANDLESUBMIT START ===');
+      console.log('🏆 Form Data:', formData);
+      console.log('🏆 Selected Distribution:', selectedDistribution);
+      console.log('🏆 Displayed Jackpot:', displayedJackpot);
+      console.log('🏆 onOpenJackpotContribution function exists:', !!onOpenJackpotContribution);
+
       if (!gameId || !weekId) {
         toast.error("Missing game or week information");
         return;
@@ -304,19 +318,27 @@ export function WinnerForm({
 
       let finalDistribution = selectedDistribution;
 
-      console.log('=== WINNER FORM SUBMISSION ===');
-      console.log('Card Selected:', formData.cardSelected);
+      console.log('🏆 Card Selected:', formData.cardSelected);
 
       // Handle Queen of Hearts - NO penalty calculation here
       if (formData.cardSelected === 'Queen of Hearts') {
         finalDistribution = displayedJackpot; // Always use full jackpot amount
-        console.log('Queen of Hearts selected - Full Jackpot Amount:', finalDistribution);
+        console.log('🏆 Queen of Hearts selected - Full Jackpot Amount:', finalDistribution);
+        
+        // ENHANCED DEBUG: Check if function exists before calling
+        if (onOpenJackpotContribution) {
+          console.log('🏆 ✅ onOpenJackpotContribution function is available - proceeding with Queen of Hearts flow');
+        } else {
+          console.log('🏆 ❌ onOpenJackpotContribution function is NOT available - will use fallback');
+        }
       } else {
-        console.log('Other card selected - Payout Amount:', finalDistribution);
+        console.log('🏆 Other card selected - Payout Amount:', finalDistribution);
       }
 
-      // PHASE 2: Save winner details first for ALL cards
+      // PHASE 1: Save winner details first for ALL cards
+      console.log('🏆 PHASE 1: Saving winner details...');
       const endingJackpot = await saveWinnerDetails(finalDistribution);
+      console.log('🏆 PHASE 1: Winner details saved, ending jackpot:', endingJackpot);
 
       // Fetch the week data to get proper dates for the payout slip
       const { data: weekData, error: weekDataError } = await supabase
@@ -344,31 +366,34 @@ export function WinnerForm({
         winnerPresent: formData.winnerPresent
       };
 
+      console.log('🏆 Winner data prepared:', winnerData);
+
       // PHASE 2: Handle Queen of Hearts differently - open contribution modal
       if (formData.cardSelected === 'Queen of Hearts') {
-        console.log('🎯 === QUEEN OF HEARTS DETECTED ===');
-        console.log('🎯 Checking if onOpenJackpotContribution exists:', !!onOpenJackpotContribution);
+        console.log('🏆 === QUEEN OF HEARTS FLOW START ===');
         
         if (onOpenJackpotContribution) {
-          console.log('🎯 === CALLING JACKPOT CONTRIBUTION FUNCTION ===');
-          console.log('🎯 Full Jackpot Amount being passed:', displayedJackpot);
-          console.log('🎯 Winner Name:', formData.winnerName);
-          console.log('🎯 Game ID:', gameId);
-          console.log('🎯 Winner Data:', winnerData);
+          console.log('🏆 ✅ Calling onOpenJackpotContribution function...');
+          console.log('🏆 Parameters being passed:');
+          console.log('🏆   - gameId:', gameId);
+          console.log('🏆   - totalJackpot:', displayedJackpot);
+          console.log('🏆   - winnerName:', formData.winnerName);
+          console.log('🏆   - winnerData:', winnerData);
           
-          // Don't close the modal immediately - let the contribution modal handle the flow
-          console.log('🎯 Calling onOpenJackpotContribution...');
+          // Call the function to open jackpot contribution modal
           onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
           
-          // Use setTimeout to ensure the contribution modal opens before closing this one
-          setTimeout(() => {
-            console.log('🎯 Closing winner form after delay...');
-            onOpenChange(false);
-          }, 200);
+          console.log('🏆 ✅ onOpenJackpotContribution called successfully');
+          console.log('🏆 ✅ Closing winner form and letting contribution modal handle the rest...');
           
+          // Success message
           toast.success("Winner details saved! Please set the jackpot contribution.");
+          
+          // Close this modal - contribution modal should now be opening
+          onOpenChange(false);
+          
         } else {
-          console.log('🎯 onOpenJackpotContribution not available, using fallback');
+          console.log('🏆 ❌ onOpenJackpotContribution not available, using fallback');
           // Fallback if contribution modal not available - complete game normally
           await completeGame(finalDistribution, endingJackpot);
           const todayDateString = getTodayDateString();
@@ -388,6 +413,7 @@ export function WinnerForm({
           onOpenChange(false);
         }
       } else {
+        console.log('🏆 === NON-QUEEN OF HEARTS FLOW ===');
         // For all other cards: complete the game normally
         await completeGame(finalDistribution, endingJackpot);
         toast.success("Winner details saved successfully!");
@@ -405,8 +431,10 @@ export function WinnerForm({
         authorizedSignatureName: ''
       });
       setSelectedDistribution(0);
+      
+      console.log('🏆 === WINNER FORM HANDLESUBMIT END ===');
     } catch (error) {
-      console.error('Error saving winner details:', error);
+      console.error('🏆 ❌ Error in winner form handleSubmit:', error);
       toast.error("Failed to save winner details");
     } finally {
       setIsLoading(false);
