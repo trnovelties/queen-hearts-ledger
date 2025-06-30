@@ -19,10 +19,12 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
     return total + (week.weekly_tickets_sold || 0);
   }, 0);
 
-  // Calculate total jackpot contributions from all weeks (excluding carryover)
+  // Calculate net jackpot contributions from all weeks (subtracting weekly payouts)
   const totalJackpotContributions = game.weeks.reduce((total: number, week: any) => {
     const weekJackpotContributions = week.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
-    return total + weekJackpotContributions;
+    const weekPayouts = week.weekly_payout || 0;
+    const netWeekContribution = weekJackpotContributions - weekPayouts;
+    return total + netWeekContribution;
   }, 0);
 
   // Get minimum starting jackpot requirement
@@ -77,7 +79,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className={`h-5 w-5 ${isProfitable ? 'text-green-600' : 'text-red-600'}`} />
-              <h4 className="font-semibold text-gray-700">Actual Lodge Net Profit</h4>
+              <h4 className="font-semibold text-gray-700">Actual Organization Net Profit</h4>
               {hasShortfall && <AlertTriangle className="h-4 w-4 text-orange-500" />}
             </div>
             <div className="space-y-1">
@@ -110,8 +112,9 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-gray-600">Jackpot Contributions:</p>
+                <p className="text-gray-600">Net Jackpot Contributions:</p>
                 <p className="font-medium text-gray-800">{formatCurrency(totalJackpotContributions)}</p>
+                <p className="text-xs text-gray-500">(After weekly payouts)</p>
               </div>
               <div>
                 <p className="text-gray-600">Minimum Required:</p>
@@ -155,7 +158,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
               </div>
               <hr className="my-2" />
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-medium">Actual Lodge Net Profit:</span>
+                <span className="text-gray-700 font-medium">Actual Organization Net Profit:</span>
                 <div className="flex items-center gap-1">
                   {isProfitable ? (
                     <TrendingUp className="h-4 w-4 text-green-600" />
@@ -179,7 +182,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="font-medium">{formatCurrency(minimumJackpotRequired)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Jackpot Contributions:</span>
+                <span className="text-gray-600">Net Jackpot Contributions:</span>
                 <span className="font-medium">{formatCurrency(totalJackpotContributions)}</span>
               </div>
               <div className="flex justify-between">
@@ -210,7 +213,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             {hasShortfall && (
               <>The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the minimum jackpot requirement. </>
             )}
-            The actual lodge net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualLodgeNetProfit)}. 
+            The actual organization net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualLodgeNetProfit)}. 
             {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations.'}
           </p>
         </div>
