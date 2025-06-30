@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ interface WinnerFormProps {
   jackpotContributions?: number;
   onComplete: () => void;
   onOpenPayoutSlip: (winnerData: any) => void;
-  onOpenJackpotContribution?: (gameId: string, totalJackpot: number, winnerName: string) => void;
+  onOpenJackpotContribution?: (gameId: string, totalJackpot: number, winnerName: string, winnerData: any) => void;
 }
 
 export function WinnerForm({ 
@@ -351,10 +352,14 @@ export function WinnerForm({
           console.log('Full Jackpot Amount being passed:', displayedJackpot);
           console.log('Winner Name:', formData.winnerName);
           console.log('Game ID:', gameId);
+          console.log('Winner Data:', winnerData);
           
-          onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName);
-          onOpenPayoutSlip(winnerData);
+          // Close this modal first
           onOpenChange(false);
+          
+          // Pass the winner data to the contribution modal handler
+          onOpenJackpotContribution(gameId, displayedJackpot, formData.winnerName, winnerData);
+          
           toast.success("Winner details saved! Please set the jackpot contribution.");
         } else {
           // Fallback if contribution modal not available - complete game normally

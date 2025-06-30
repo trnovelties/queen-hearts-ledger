@@ -49,6 +49,7 @@ export const WeekManagement = ({
     gameId: string;
     totalJackpot: number;
     winnerName: string;
+    winnerData?: any;
   } | null>(null);
 
   const formatCurrency = (amount: number) => {
@@ -60,12 +61,16 @@ export const WeekManagement = ({
   };
 
   const handleOpenWinnerForm = (gameId: string, weekId: string) => {
+    console.log('=== OPENING WINNER FORM ===');
+    console.log('Game ID:', gameId);
+    console.log('Week ID:', weekId);
     setSelectedGameId(gameId);
     setSelectedWeekId(weekId);
     setWinnerFormOpen(true);
   };
 
   const handleWinnerFormComplete = () => {
+    console.log('=== WINNER FORM COMPLETED ===');
     setWinnerFormOpen(false);
     setSelectedGameId(null);
     setSelectedWeekId(null);
@@ -75,19 +80,35 @@ export const WeekManagement = ({
     }
   };
 
-  // New handler for Queen of Hearts jackpot contribution
-  const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string) => {
+  // Updated handler for Queen of Hearts jackpot contribution
+  const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string, winnerData?: any) => {
+    console.log('=== WEEK MANAGEMENT: OPENING JACKPOT CONTRIBUTION ===');
+    console.log('Game ID:', gameId);
+    console.log('Total Jackpot:', totalJackpot);
+    console.log('Winner Name:', winnerName);
+    console.log('Winner Data:', winnerData);
+    
     setJackpotContributionData({
       gameId,
       totalJackpot,
-      winnerName
+      winnerName,
+      winnerData
     });
     setJackpotContributionOpen(true);
   };
 
   const handleJackpotContributionComplete = () => {
+    console.log('=== JACKPOT CONTRIBUTION COMPLETED ===');
+    
+    // Open payout slip if we have winner data
+    if (jackpotContributionData?.winnerData) {
+      console.log('Opening payout slip with winner data:', jackpotContributionData.winnerData);
+      handleOpenPayoutSlip(jackpotContributionData.winnerData);
+    }
+    
     setJackpotContributionOpen(false);
     setJackpotContributionData(null);
+    
     // Refresh the data to show updated game status
     if (onRefreshData) {
       onRefreshData();
@@ -95,6 +116,9 @@ export const WeekManagement = ({
   };
 
   const handleOpenPayoutSlip = (winnerData: any) => {
+    console.log('=== OPENING PAYOUT SLIP ===');
+    console.log('Winner Data:', winnerData);
+    
     // Enhance winnerData with game information
     const enhancedWinnerData = {
       ...winnerData,
