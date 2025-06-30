@@ -33,13 +33,21 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
   // Calculate jackpot shortfall if contributions don't meet minimum
   const jackpotShortfall = Math.max(0, minimumJackpotRequired - totalJackpotContributions);
   
-  // Calculate actual lodge net profit after covering shortfall
-  const actualLodgeNetProfit = game.organization_net_profit - jackpotShortfall;
+  // Calculate total expenses including shortfall coverage
+  const totalExpensesWithShortfall = game.total_expenses + jackpotShortfall;
   
-  // Total jackpot pool including carryover and shortfall coverage
-  const totalJackpotPool = totalJackpotContributions + (game.carryover_jackpot || 0) + jackpotShortfall;
+  // Calculate actual organization net profit after covering shortfall
+  const actualOrganizationNetProfit = game.organization_net_profit - jackpotShortfall;
+  
+  // Calculate total payouts (all weekly payouts + final jackpot payout)
+  const totalWeeklyPayouts = game.weeks.reduce((total: number, week: any) => total + (week.weekly_payout || 0), 0);
+  const finalJackpotPayout = Math.max(minimumJackpotRequired, totalJackpotContributions + (game.carryover_jackpot || 0));
+  const totalPayouts = totalWeeklyPayouts + finalJackpotPayout;
+  
+  // Total jackpot pool including carryover
+  const totalJackpotPool = Math.max(minimumJackpotRequired, totalJackpotContributions) + (game.carryover_jackpot || 0);
 
-  const isProfitable = actualLodgeNetProfit >= 0;
+  const isProfitable = actualOrganizationNetProfit >= 0;
   const hasShortfall = jackpotShortfall > 0;
 
   return (
@@ -75,7 +83,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             </div>
           </div>
 
-          {/* Actual Lodge Net Profit */}
+          {/* Actual Organization Net Profit */}
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className={`h-5 w-5 ${isProfitable ? 'text-green-600' : 'text-red-600'}`} />
@@ -84,21 +92,21 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             </div>
             <div className="space-y-1">
               <p className={`text-2xl font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(actualLodgeNetProfit)}
+                {formatCurrency(actualOrganizationNetProfit)}
               </p>
               <p className="text-sm text-gray-600">After jackpot shortfall coverage</p>
             </div>
           </div>
 
-          {/* Total Jackpot Pool */}
+          {/* Total Payouts */}
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Target className="h-5 w-5 text-purple-600" />
-              <h4 className="font-semibold text-gray-700">Total Jackpot Pool</h4>
+              <h4 className="font-semibold text-gray-700">Total Payouts</h4>
             </div>
             <div className="space-y-1">
-              <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalJackpotPool)}</p>
-              <p className="text-sm text-gray-600">Including minimum guarantee</p>
+              <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalPayouts)}</p>
+              <p className="text-sm text-gray-600">Weekly + Final jackpot payouts</p>
             </div>
           </div>
         </div>
@@ -130,7 +138,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
 
         {/* Detailed Financial Breakdown */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Left Column - Payouts & Expenses */}
+          {/* Left Column - Financial Summary */}
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <h4 className="font-semibold text-gray-700 mb-3">Financial Breakdown</h4>
             <div className="space-y-2">
@@ -138,19 +146,23 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="text-gray-600">Organization Net (Before Shortfall):</span>
                 <span className="font-medium">{formatCurrency(game.organization_net_profit)}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Payouts:</span>
+                <span className="font-medium">{formatCurrency(totalPayouts)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Regular Expenses:</span>
+                <span className="font-medium">{formatCurrency(game.total_expenses)}</span>
+              </div>
               {hasShortfall && (
                 <div className="flex justify-between text-orange-600">
-                  <span>Jackpot Shortfall Coverage:</span>
-                  <span className="font-medium">-{formatCurrency(jackpotShortfall)}</span>
+                  <span>Shortfall Coverage (Expense):</span>
+                  <span className="font-medium">{formatCurrency(jackpotShortfall)}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Payouts:</span>
-                <span className="font-medium">{formatCurrency(game.total_payouts)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Expenses:</span>
-                <span className="font-medium">{formatCurrency(game.total_expenses)}</span>
+                <span className="text-gray-600">Total Expenses (Including Shortfall):</span>
+                <span className="font-medium">{formatCurrency(totalExpensesWithShortfall)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Donations:</span>
@@ -166,7 +178,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                     <TrendingDown className="h-4 w-4 text-red-600" />
                   )}
                   <span className={`font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(Math.abs(actualLodgeNetProfit))}
+                    {formatCurrency(actualOrganizationNetProfit)}
                   </span>
                 </div>
               </div>
@@ -190,6 +202,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-gray-600">Final Jackpot Pool:</span>
+                <span className="font-medium">{formatCurrency(totalJackpotPool)}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>
                 <span className="font-medium">{game.weeks.length} weeks</span>
               </div>
@@ -211,10 +227,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             <strong>Game Summary:</strong> This {game.weeks.length}-week game generated {formatCurrency(game.total_sales)} in total sales 
             with {totalTicketsSold.toLocaleString()} tickets sold. 
             {hasShortfall && (
-              <>The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the minimum jackpot requirement. </>
+              <>The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the minimum jackpot requirement, which was treated as an additional expense. </>
             )}
-            The actual organization net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualLodgeNetProfit)}. 
-            {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations.'}
+            The actual organization net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualOrganizationNetProfit)}. 
+            {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations exceeding available funds.'}
           </p>
         </div>
       </CardContent>
