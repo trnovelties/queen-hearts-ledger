@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -235,9 +236,15 @@ export function GameManagement() {
                       <span className="font-medium text-green-600">{formatCurrency(game.total_donations)}</span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold border-t pt-2">
-                      <span>Net Profit:</span>
+                      <span>Organization Net:</span>
                       <span className={game.organization_net_profit >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {formatCurrency(game.organization_net_profit)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Game Performance:</span>
+                      <span className={game.game_profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {game.game_profit_loss >= 0 ? '+' : ''}{formatCurrency(game.game_profit_loss)}
                       </span>
                     </div>
                   </div>

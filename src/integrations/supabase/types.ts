@@ -100,6 +100,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           game_number: number
+          game_profit_loss: number
           id: string
           jackpot_percentage: number
           minimum_starting_jackpot: number | null
@@ -121,6 +122,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           game_number: number
+          game_profit_loss?: number
           id?: string
           jackpot_percentage?: number
           minimum_starting_jackpot?: number | null
@@ -142,6 +144,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           game_number?: number
+          game_profit_loss?: number
           id?: string
           jackpot_percentage?: number
           minimum_starting_jackpot?: number | null
