@@ -43,8 +43,6 @@ export const WeekManagement = ({
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [payoutSlipData, setPayoutSlipData] = useState<any>(null);
-  
-  // Simplified state for JackpotContributionModal
   const [jackpotContributionOpen, setJackpotContributionOpen] = useState(false);
   const [jackpotContributionData, setJackpotContributionData] = useState<{
     gameId: string;
@@ -81,15 +79,15 @@ export const WeekManagement = ({
     }
   };
 
-  // Simplified handler for Queen of Hearts jackpot contribution
+  // FIXED: Enhanced handler for Queen of Hearts jackpot contribution
   const handleOpenJackpotContribution = (gameId: string, totalJackpot: number, winnerName: string, winnerData?: any) => {
-    console.log('🎯 === OPENING JACKPOT CONTRIBUTION ===');
+    console.log('🎯 === OPENING JACKPOT CONTRIBUTION (WEEK MANAGEMENT) ===');
     console.log('🎯 Game ID:', gameId);
     console.log('🎯 Total Jackpot:', totalJackpot);
     console.log('🎯 Winner Name:', winnerName);
     console.log('🎯 Winner Data:', winnerData);
     
-    // Validation checks with user feedback
+    // Enhanced validation checks with user feedback
     if (!gameId) {
       console.error('❌ No gameId provided');
       toast.error("Missing game ID. Cannot open jackpot contribution modal.");
@@ -110,7 +108,7 @@ export const WeekManagement = ({
     
     console.log('✅ All validation passed, opening jackpot contribution modal...');
     
-    // Set the data and open the modal
+    // STEP 1: Set the data for the modal
     setJackpotContributionData({
       gameId,
       totalJackpot,
@@ -118,7 +116,15 @@ export const WeekManagement = ({
       winnerData
     });
     
+    // STEP 2: Open the modal
     setJackpotContributionOpen(true);
+    
+    // STEP 3: Close the winner form since we're transitioning to jackpot modal
+    setWinnerFormOpen(false);
+    setSelectedGameId(null);
+    setSelectedWeekId(null);
+    
+    console.log('✅ Jackpot contribution modal opened successfully');
     toast.success("Opening jackpot contribution modal...");
   };
 
