@@ -18,11 +18,35 @@ export const useGameTotalsUpdater = () => {
       .eq('user_id', user.id);
 
     if (gameSales) {
-      const gameTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-      const gameTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
+      // Get game data to access carryover jackpot and percentages
+      const { data: gameData } = await supabase
+        .from('games')
+        .select('carryover_jackpot, organization_percentage, jackpot_percentage')
+        .eq('id', gameId)
+        .eq('user_id', user.id)
+        .single();
 
-      console.log('💰 Game Total Sales:', gameTotalSales);
-      console.log('🏢 Game Total Organization:', gameTotalOrganization);
+      const carryoverJackpot = gameData?.carryover_jackpot || 0;
+      const organizationPercentage = gameData?.organization_percentage || 40;
+      const jackpotPercentage = gameData?.jackpot_percentage || 60;
+
+      // Calculate totals from actual sales
+      const salesTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+      const salesTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
+
+      // Calculate carryover distribution
+      const carryoverOrganizationPortion = carryoverJackpot * (organizationPercentage / 100);
+      const carryoverJackpotPortion = carryoverJackpot * (jackpotPercentage / 100);
+
+      // Add carryover to totals
+      const gameTotalSales = salesTotalSales + carryoverJackpot;
+      const gameTotalOrganization = salesTotalOrganization + carryoverOrganizationPortion;
+
+      console.log('💰 Sales from Tickets:', salesTotalSales);
+      console.log('🎯 Carryover Jackpot:', carryoverJackpot);
+      console.log('📊 Carryover Organization Portion:', carryoverOrganizationPortion);
+      console.log('💰 Game Total Sales (including carryover):', gameTotalSales);
+      console.log('🏢 Game Total Organization (including carryover):', gameTotalOrganization);
 
       // Get expenses
       const { data: expenses } = await supabase
