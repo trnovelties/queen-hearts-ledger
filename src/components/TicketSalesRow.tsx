@@ -52,7 +52,7 @@ export function TicketSalesRow({
   const displayedJackpot = useJackpotCalculation({
     jackpotContributions: totalJackpotContributions,
     minimumJackpot: gameData.minimum_starting_jackpot,
-    carryoverJackpot: gameData.carryover_jackpot
+    carryoverJackpot: 0 // Carryover is already distributed through sales, don't double-count
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

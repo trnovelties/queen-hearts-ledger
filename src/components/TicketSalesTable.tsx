@@ -111,16 +111,16 @@ export const TicketSalesTable = ({
               previousEndingJackpot = Number(previousWeek.ending_jackpot);
               console.log('Found previous week ending jackpot:', previousEndingJackpot);
             } else {
-              // Fallback to game carryover if previous week not found or has no ending jackpot
-              console.log('No previous week ending jackpot found, using game carryover:', game.carryover_jackpot);
+              // Fallback to 0 if previous week not found - carryover is already distributed through sales
+              console.log('No previous week ending jackpot found, starting from 0 (carryover distributed through sales)');
               console.log('Previous week data:', previousWeek);
               console.log('Query error:', error);
-              previousEndingJackpot = game.carryover_jackpot || 0;
+              previousEndingJackpot = 0;
             }
           } else {
-            // Week 1 starts with game's carryover jackpot
-            previousEndingJackpot = game.carryover_jackpot || 0;
-            console.log('Week 1, using game carryover jackpot:', previousEndingJackpot);
+            // Week 1 starts with 0 - carryover is already distributed through sales
+            previousEndingJackpot = 0;
+            console.log('Week 1, starting jackpot from 0 (carryover distributed through sales)');
           }
 
           // Add current week's jackpot contributions to get the current running total
