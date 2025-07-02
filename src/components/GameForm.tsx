@@ -91,11 +91,13 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         return;
       }
 
-      // Get carryover from last game
+      // Get carryover from last game's contribution
       let carryoverJackpot = 0;
       if (games.length > 0) {
         const lastGame = games[games.length - 1];
-        carryoverJackpot = lastGame.carryover_jackpot || 0;
+        // Use jackpot_contribution_to_next_game from previous game, not carryover_jackpot
+        carryoverJackpot = lastGame.jackpot_contribution_to_next_game || 0;
+        console.log('Using previous game contribution as carryover:', carryoverJackpot);
       }
 
       const gameNumber = games.length + 1;
