@@ -15,12 +15,15 @@ export const useJackpotCalculation = ({
   const [displayedJackpot, setDisplayedJackpot] = useState(0);
 
   useEffect(() => {
-    // If contributions haven't reached minimum, show minimum + carryover
-    if (jackpotContributions < minimumJackpot) {
-      setDisplayedJackpot(minimumJackpot + carryoverJackpot);
+    // Calculate total accumulated jackpot: current contributions + carryover from previous weeks
+    const totalAccumulated = jackpotContributions + carryoverJackpot;
+    
+    // If total accumulated is less than minimum, show minimum
+    // Otherwise, show the full accumulated amount
+    if (totalAccumulated < minimumJackpot) {
+      setDisplayedJackpot(minimumJackpot);
     } else {
-      // Once threshold is met, show contributions + carryover
-      setDisplayedJackpot(jackpotContributions + carryoverJackpot);
+      setDisplayedJackpot(totalAccumulated);
     }
   }, [jackpotContributions, minimumJackpot, carryoverJackpot]);
 

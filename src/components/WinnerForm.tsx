@@ -59,11 +59,14 @@ export function WinnerForm({
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
 
+  // Calculate total accumulated jackpot for this week
+  const totalAccumulatedJackpot = (currentJackpotTotal || 0);
+  
   // Use the hook to calculate proper displayed jackpot
   const displayedJackpot = useJackpotCalculation({
     jackpotContributions: jackpotContributions,
     minimumJackpot: gameData?.minimum_starting_jackpot || 500,
-    carryoverJackpot: gameData?.carryover_jackpot || 0
+    carryoverJackpot: 0 // Don't double-count carryover as it's already in currentJackpotTotal
   });
 
   const calculateEndingJackpotForWeek = async (weeklyPayout: number) => {
@@ -287,17 +290,21 @@ export function WinnerForm({
 
       console.log('🏆 Card Selected:', formData.cardSelected);
 
-      // Handle Queen of Hearts - set payout amount to displayed jackpot
+      // Handle Queen of Hearts - set payout amount to total accumulated jackpot
       if (formData.cardSelected === 'Queen of Hearts') {
         console.log('🏆 === QUEEN OF HEARTS FLOW START ===');
-        finalDistribution = displayedJackpot;
         
-        if (displayedJackpot <= 0) {
+        // Use the total accumulated jackpot amount (includes previous weeks + current week)
+        finalDistribution = totalAccumulatedJackpot > 0 ? totalAccumulatedJackpot : displayedJackpot;
+        
+        if (finalDistribution <= 0) {
           toast.error("Invalid jackpot amount. Please refresh and try again.");
           return;
         }
 
-        console.log('🏆 ✅ Queen of Hearts selected, using displayed jackpot as payout:', finalDistribution);
+        console.log('🏆 ✅ Queen of Hearts selected, using total accumulated jackpot as payout:', finalDistribution);
+        console.log('🏆 Total Accumulated Jackpot:', totalAccumulatedJackpot);
+        console.log('🏆 Current Jackpot Total:', currentJackpotTotal);
       }
 
       // Save winner details

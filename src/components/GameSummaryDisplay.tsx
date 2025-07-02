@@ -44,8 +44,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
   // Get minimum starting jackpot requirement (what the final winner should receive)
   const minimumJackpotRequired = game.minimum_starting_jackpot || 500;
   
-  // Calculate shortfall: difference between what winner got and net contributions available
-  const jackpotShortfall = Math.max(0, finalJackpotPayout - netJackpotContributions);
+  // Calculate shortfall: difference between what winner got and what was actually available
+  // If winner received more than net contributions, organization covered the difference
+  const jackpotShortfall = finalJackpotPayout > netJackpotContributions ? 
+    (finalJackpotPayout - netJackpotContributions) : 0;
   
   // Total payouts = weekly payouts + final jackpot winner payout
   const totalPayouts = weeklyPayoutsDistributed + finalJackpotPayout;
@@ -218,10 +220,12 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="text-gray-600">Net Available for Final Winner:</span>
                 <span className="font-medium">{formatCurrency(netJackpotContributions)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Final Winner Actually Received:</span>
-                <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
-              </div>
+              {jackpotShortfall > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Final Winner Actually Received:</span>
+                  <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
