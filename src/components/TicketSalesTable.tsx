@@ -106,12 +106,15 @@ export const TicketSalesTable = ({
               .eq('user_id', user?.id)
               .single();
 
-            if (!error && previousWeek && previousWeek.ending_jackpot !== null) {
-              previousEndingJackpot = previousWeek.ending_jackpot;
+            console.log('Query result:', { error, previousWeek });
+            if (!error && previousWeek && previousWeek.ending_jackpot !== null && previousWeek.ending_jackpot !== undefined) {
+              previousEndingJackpot = Number(previousWeek.ending_jackpot);
               console.log('Found previous week ending jackpot:', previousEndingJackpot);
             } else {
               // Fallback to game carryover if previous week not found or has no ending jackpot
               console.log('No previous week ending jackpot found, using game carryover:', game.carryover_jackpot);
+              console.log('Previous week data:', previousWeek);
+              console.log('Query error:', error);
               previousEndingJackpot = game.carryover_jackpot || 0;
             }
           } else {
