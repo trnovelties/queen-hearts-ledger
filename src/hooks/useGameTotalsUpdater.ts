@@ -91,7 +91,7 @@ export const useGameTotalsUpdater = () => {
       const jackpotShortfallCovered = Math.max(0, finalJackpotPayout - netAvailableForFinalWinner);
       
       // Calculate actual organization net profit (after covering any jackpot shortfall)
-      const actualOrganizationNetProfit = organizationNetProfit - jackpotShortfallCovered;
+      const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations - jackpotShortfallCovered;
       
       // Calculate game duration in weeks
       const gameDurationWeeks = weeks?.length || 0;
