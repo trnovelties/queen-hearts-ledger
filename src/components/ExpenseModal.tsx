@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getTodayDateString } from "@/lib/dateUtils";
+import { useGameTotalsUpdater } from "@/hooks/useGameTotalsUpdater";
 
 interface ExpenseModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface ExpenseModalProps {
 
 export function ExpenseModal({ open, onOpenChange, gameId, gameName, onSuccess }: ExpenseModalProps) {
   const { toast } = useToast();
+  const { updateGameTotals } = useGameTotalsUpdater();
   const [expenseData, setExpenseData] = useState({
     amount: "",
     memo: "",
@@ -93,28 +95,8 @@ export function ExpenseModal({ open, onOpenChange, gameId, gameName, onSuccess }
       console.log('8. DB returned date:', insertResult?.[0]?.date);
       console.log('9. Date match:', dateToSave === insertResult?.[0]?.date);
       
-      // Update game totals
-      const { data: game } = await supabase
-        .from('games')
-        .select('total_expenses, total_donations, organization_net_profit')
-        .eq('id', gameId)
-        .single();
-      
-      if (game) {
-        const amount = parseFloat(expenseData.amount);
-        const isDonation = expenseData.type === "donation";
-        
-        const updatedTotals = {
-          total_expenses: isDonation ? game.total_expenses : game.total_expenses + amount,
-          total_donations: isDonation ? game.total_donations + amount : game.total_donations,
-          organization_net_profit: game.organization_net_profit - amount,
-        };
-        
-        await supabase
-          .from('games')
-          .update(updatedTotals)
-          .eq('id', gameId);
-      }
+      // Update game totals using the proper calculation hook
+      await updateGameTotals(gameId);
       
       toast({
         title: "Success",

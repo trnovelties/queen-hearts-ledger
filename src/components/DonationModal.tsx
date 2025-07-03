@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { getTodayDateString } from "@/lib/dateUtils";
+import { useGameTotalsUpdater } from "@/hooks/useGameTotalsUpdater";
 
 interface DonationModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface DonationModalProps {
 
 export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDate, onSuccess }: DonationModalProps) {
   const { toast } = useToast();
+  const { updateGameTotals } = useGameTotalsUpdater();
   const [donationData, setDonationData] = useState({
     amount: "",
     memo: "",
@@ -93,26 +95,8 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
       console.log('8. DB returned date:', insertResult?.[0]?.date);
       console.log('9. Date match:', dateToSave === insertResult?.[0]?.date);
       
-      // Update game totals
-      const { data: game } = await supabase
-        .from('games')
-        .select('total_donations, organization_net_profit')
-        .eq('id', gameId)
-        .single();
-      
-      if (game) {
-        const amount = parseFloat(donationData.amount);
-        
-        const updatedTotals = {
-          total_donations: game.total_donations + amount,
-          organization_net_profit: game.organization_net_profit - amount,
-        };
-        
-        await supabase
-          .from('games')
-          .update(updatedTotals)
-          .eq('id', gameId);
-      }
+      // Update game totals using the proper calculation hook
+      await updateGameTotals(gameId);
       
       toast({
         title: "Success",
