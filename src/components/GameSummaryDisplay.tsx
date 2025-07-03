@@ -16,7 +16,8 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
 
   // Calculate total tickets sold across all weeks
   const totalTicketsSold = game.weeks.reduce((total: number, week: any) => {
-    return total + (week.weekly_tickets_sold || 0);
+    const weekTicketsSold = week.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.tickets_sold || 0), 0) || 0;
+    return total + weekTicketsSold;
   }, 0);
 
   // Calculate total jackpot contributions from all weeks
