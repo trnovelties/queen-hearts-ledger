@@ -35,8 +35,8 @@ interface FinancialOverviewProps {
 
 export function FinancialOverview({ summary, formatCurrency }: FinancialOverviewProps) {
   // Calculate key performance indicators
-  const profitMargin = summary.totalSales > 0 ? 
-    ((summary.organizationNetProfit / summary.totalSales) * 100) : 0;
+  const profitMargin = summary.organizationTotalPortion > 0 ? 
+    ((summary.organizationNetProfit / summary.organizationTotalPortion) * 100) : 0;
   
   const expenseRatio = summary.organizationTotalPortion > 0 ? 
     ((summary.totalExpenses / summary.organizationTotalPortion) * 100) : 0;
@@ -51,7 +51,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
     summary.totalSales / summary.totalTicketsSold : 0;
 
   const totalGames = summary.filteredGames.length;
-  const avgGameRevenue = totalGames > 0 ? summary.totalSales / totalGames : 0;
+  const avgGameRevenue = totalGames > 0 ? summary.organizationTotalPortion / totalGames : 0;
 
   // KPI Card Component
   const KPICard = ({ 
@@ -166,8 +166,8 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           subtitle={`Avg. ${formatCurrency(avgTicketPrice)} per ticket`}
         />
         <KPICard
-          title="Total Sales"
-          value={summary.totalSales}
+          title="Organization Revenue"
+          value={summary.organizationTotalPortion}
           icon={DollarSign}
           colorScheme="green"
           subtitle={`${totalGames} games tracked`}
@@ -226,21 +226,21 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{summary.totalTicketsSold.toLocaleString()}</span>
               </div>
               
-              <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Gross Revenue</span>
-                </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalSales)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg per Game</span>
-                </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameRevenue)}</span>
-              </div>
+               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
+                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                   <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Organization Revenue</span>
+                 </div>
+                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
+               </div>
+               
+               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
+                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg per Game</span>
+                 </div>
+                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameRevenue)}</span>
+               </div>
             </div>
           </CardContent>
         </Card>
