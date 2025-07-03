@@ -21,7 +21,7 @@ export const useGameTotalsUpdater = () => {
       // Get game data to access carryover jackpot and percentages
       const { data: gameData } = await supabase
         .from('games')
-        .select('carryover_jackpot, organization_percentage, jackpot_percentage')
+        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game')
         .eq('id', gameId)
         .eq('user_id', user.id)
         .single();
@@ -65,33 +65,38 @@ export const useGameTotalsUpdater = () => {
       const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       
-      // Calculate total payouts correctly - sum all weekly payouts (including Queen of Hearts)
-      const totalPayouts = weeks?.reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
-      
-      console.log('💸 Total Payouts from weeks:', totalPayouts);
-      console.log('💳 Total Expenses:', totalExpenses);
-      console.log('🎁 Total Donations:', totalDonations);
-      
-      // Calculate organization net profit: organization portion - expenses - donations
-      const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
-
-      console.log('📊 Organization Net Profit (before shortfall):', organizationNetProfit);
-
       // Calculate detailed financial breakdown
       const totalJackpotContributions = gameSales.reduce((sum: number, sale: any) => sum + sale.jackpot_total, 0) + carryoverJackpotPortion;
       
+      // Total payouts should equal total jackpot contributions (what's allocated for payouts)
+      const totalPayouts = totalJackpotContributions;
+      
+      console.log('💰 Total Jackpot Contributions:', totalJackpotContributions);
+      console.log('💸 Total Payouts (should equal jackpot contributions):', totalPayouts);
+      console.log('💳 Total Expenses:', totalExpenses);
+      console.log('🎁 Total Donations:', totalDonations);
+      
+      // Calculate organization net profit: organization portion (before expenses/donations)
+      const organizationNetProfit = gameTotalOrganization;
+      
+      // Calculate actual organization net profit: after expenses and donations
+      const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations;
+
+      console.log('📊 Organization Net Profit (before expenses/donations):', organizationNetProfit);
+      console.log('📈 Actual Organization Net Profit (after expenses/donations):', actualOrganizationNetProfit);
+
       // Separate weekly payouts from final jackpot payout
       const weeklyPayoutsDistributed = weeks?.filter(w => w.card_selected !== 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
       const finalJackpotPayout = weeks?.filter(w => w.card_selected === 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
       
-      // Calculate net available for final winner
-      const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed;
+      // Calculate jackpot contribution to next game (if any)
+      const jackpotContributionToNextGame = gameData?.jackpot_contribution_to_next_game || 0;
+      
+      // Calculate net available for final winner: total contributions - weekly payouts - next game contribution
+      const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed - jackpotContributionToNextGame;
       
       // Calculate jackpot shortfall (if final winner payout exceeds available jackpot funds)
       const jackpotShortfallCovered = Math.max(0, finalJackpotPayout - netAvailableForFinalWinner);
-      
-      // Calculate actual organization net profit (after covering any jackpot shortfall)
-      const actualOrganizationNetProfit = organizationNetProfit - jackpotShortfallCovered;
       
       // Calculate game duration in weeks
       const gameDurationWeeks = weeks?.length || 0;
