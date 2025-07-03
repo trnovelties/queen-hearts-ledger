@@ -73,11 +73,13 @@ export const DailyEntryRow = ({
             onChange={(e) => onInputChange(week.id, dayIndex, e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                onInputSubmit(week.id, dayIndex, e.currentTarget.value, currentGameId!, games, setGames);
+                e.currentTarget.blur(); // This will trigger onBlur, so we don't call onInputSubmit here
               }
             }}
             onBlur={(e) => {
-              onInputSubmit(week.id, dayIndex, e.target.value, currentGameId!, games, setGames);
+              if (e.target.value !== (existingEntry?.tickets_sold?.toString() || '')) {
+                onInputSubmit(week.id, dayIndex, e.target.value, currentGameId!, games, setGames);
+              }
             }}
             className="w-28 h-9 text-center font-medium"
             placeholder="Enter tickets"
