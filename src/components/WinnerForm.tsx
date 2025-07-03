@@ -50,7 +50,7 @@ export function WinnerForm({
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
-    slotChosen: Math.floor(Math.random() * 52) + 1,
+    slotChosen: 1,
     winnerPresent: true,
     authorizedSignatureName: ''
   });
@@ -358,7 +358,7 @@ export function WinnerForm({
       setFormData({
         winnerName: '',
         cardSelected: '',
-        slotChosen: Math.floor(Math.random() * 52) + 1,
+        slotChosen: 1,
         winnerPresent: true,
         authorizedSignatureName: ''
       });
