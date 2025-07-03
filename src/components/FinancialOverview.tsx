@@ -156,8 +156,8 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
 
   return (
     <div className="space-y-6">
-      {/* Main KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Main KPI Grid - 3 columns, 2 rows for 6 cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <KPICard
           title="Tickets Sold"
           value={summary.totalTicketsSold.toLocaleString()}
@@ -186,6 +186,22 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           icon={Trophy}
           colorScheme="orange"
           subtitle={`${distributionEfficiency.toFixed(1)}% distribution efficiency`}
+        />
+        <KPICard
+          title="Total Expenses"
+          value={summary.totalExpenses}
+          icon={Receipt}
+          colorScheme="red"
+          percentage={expenseRatio}
+          subtitle="Operating expenses"
+        />
+        <KPICard
+          title="Total Donations"
+          value={summary.totalDonations}
+          icon={HeartHandshake}
+          colorScheme="purple"
+          percentage={donationRatio}
+          subtitle="Community donations"
         />
       </div>
 
