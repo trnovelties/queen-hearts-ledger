@@ -230,7 +230,6 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="text-gray-600">Carryover from Previous:</span>
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
               </div>
-              <br />
               <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>
                 <span className="font-medium">{game.weeks.length} weeks</span>

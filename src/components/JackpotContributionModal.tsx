@@ -251,7 +251,6 @@ export const JackpotContributionModal = ({
                 <span>🎯 Next game gets:</span>
                 <span className="font-medium text-blue-600">{formatCurrency(nextGameGets)}</span>
               </div>
-              <br />
               <div className="flex justify-between border-t pt-1 mt-2">
                 <span className="font-medium">💎 Total jackpot:</span>
                 <span className="font-medium">{formatCurrency(totalJackpot)}</span>
