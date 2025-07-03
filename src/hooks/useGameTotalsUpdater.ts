@@ -77,6 +77,33 @@ export const useGameTotalsUpdater = () => {
 
       console.log('📊 Organization Net Profit (before shortfall):', organizationNetProfit);
 
+      // Calculate detailed financial breakdown
+      const totalJackpotContributions = gameSales.reduce((sum: number, sale: any) => sum + sale.jackpot_total, 0) + carryoverJackpotPortion;
+      
+      // Separate weekly payouts from final jackpot payout
+      const weeklyPayoutsDistributed = weeks?.filter(w => w.card_selected !== 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
+      const finalJackpotPayout = weeks?.filter(w => w.card_selected === 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
+      
+      // Calculate net available for final winner
+      const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed;
+      
+      // Calculate jackpot shortfall (if final winner payout exceeds available jackpot funds)
+      const jackpotShortfallCovered = Math.max(0, finalJackpotPayout - netAvailableForFinalWinner);
+      
+      // Calculate actual organization net profit (after covering any jackpot shortfall)
+      const actualOrganizationNetProfit = organizationNetProfit - jackpotShortfallCovered;
+      
+      // Calculate game duration in weeks
+      const gameDurationWeeks = weeks?.length || 0;
+
+      console.log('💰 Total Jackpot Contributions:', totalJackpotContributions);
+      console.log('📊 Weekly Payouts Distributed:', weeklyPayoutsDistributed);
+      console.log('🏆 Final Jackpot Payout:', finalJackpotPayout);
+      console.log('💵 Net Available for Final Winner:', netAvailableForFinalWinner);
+      console.log('⚠️ Jackpot Shortfall Covered:', jackpotShortfallCovered);
+      console.log('📈 Actual Organization Net Profit:', actualOrganizationNetProfit);
+      console.log('📅 Game Duration (weeks):', gameDurationWeeks);
+
       // Update game totals in database
       const { error: updateError } = await supabase
         .from('games')
@@ -85,7 +112,14 @@ export const useGameTotalsUpdater = () => {
           total_payouts: totalPayouts,
           total_expenses: totalExpenses,
           total_donations: totalDonations,
-          organization_net_profit: organizationNetProfit
+          organization_net_profit: organizationNetProfit,
+          actual_organization_net_profit: actualOrganizationNetProfit,
+          weekly_payouts_distributed: weeklyPayoutsDistributed,
+          final_jackpot_payout: finalJackpotPayout,
+          total_jackpot_contributions: totalJackpotContributions,
+          net_available_for_final_winner: netAvailableForFinalWinner,
+          jackpot_shortfall_covered: jackpotShortfallCovered,
+          game_duration_weeks: gameDurationWeeks
         })
         .eq('id', gameId)
         .eq('user_id', user.id);

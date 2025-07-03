@@ -93,6 +93,7 @@ export default function IncomeExpense() {
           const totalDonations = game.expenses.filter((expense: any) => expense.is_donation).reduce((sum: number, expense: any) => sum + expense.amount, 0);
           const organizationTotalPortion = game.ticket_sales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
           const organizationNetProfit = organizationTotalPortion - totalExpenses - totalDonations;
+          const actualOrganizationNetProfit = game.actual_organization_net_profit || organizationNetProfit;
 
           return {
             ...game,
@@ -100,7 +101,8 @@ export default function IncomeExpense() {
             total_payouts: totalPayouts,
             total_expenses: totalExpenses,
             total_donations: totalDonations,
-            organization_net_profit: organizationNetProfit
+            organization_net_profit: organizationNetProfit,
+            actual_organization_net_profit: actualOrganizationNetProfit
           };
         });
         setGames(gamesWithTotals);
@@ -163,7 +165,7 @@ export default function IncomeExpense() {
     totalDonations: filteredGames.reduce((sum, game) => sum + game.total_donations, 0),
     organizationTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.organization_total, 0), 0),
     jackpotTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.jackpot_total, 0), 0),
-    organizationNetProfit: filteredGames.reduce((sum, game) => sum + game.organization_net_profit, 0),
+    organizationNetProfit: filteredGames.reduce((sum, game) => sum + (game.actual_organization_net_profit || game.organization_net_profit), 0),
     filteredGames: filteredGames
   };
 
@@ -344,7 +346,7 @@ export default function IncomeExpense() {
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Net Profit</div>
-                          <div className="font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</div>
+                          <div className="font-bold text-green-600">{formatCurrency(game.actual_organization_net_profit || game.organization_net_profit)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Carryover</div>
