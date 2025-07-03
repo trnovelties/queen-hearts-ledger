@@ -231,6 +231,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-gray-600">Next game Contribution:</span>
+                <span className="font-medium">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>
                 <span className="font-medium">{game.weeks.length} weeks</span>
               </div>
