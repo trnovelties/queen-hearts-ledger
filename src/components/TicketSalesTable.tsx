@@ -91,9 +91,13 @@ export const TicketSalesTable = ({
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
       if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - use the stored ending jackpot value from database
-        console.log('Using stored ending jackpot for completed week:', week.ending_jackpot);
-        setDisplayedEndingJackpot(week.ending_jackpot);
+        // Week is completed - calculate jackpot before payout for display
+        // ending_jackpot is after payout, so we add back the weekly_payout to show what was available
+        const jackpotBeforePayout = week.ending_jackpot + (week.weekly_payout || 0);
+        console.log('Week completed - showing jackpot before payout:', jackpotBeforePayout);
+        console.log('Stored ending jackpot (after payout):', week.ending_jackpot);
+        console.log('Weekly payout:', week.weekly_payout);
+        setDisplayedEndingJackpot(jackpotBeforePayout);
       } else {
         // Week is not completed - calculate current jackpot dynamically
         try {
