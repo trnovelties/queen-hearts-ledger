@@ -15,6 +15,7 @@ import { GameForm } from "@/components/GameForm";
 import { useAuth } from "@/context/AuthContext";
 import { useGameData } from "@/hooks/useGameData";
 import { usePdfReports } from "@/hooks/usePdfReports";
+import { useGameTotalsUpdater } from "@/hooks/useGameTotalsUpdater";
 import { GameCard } from "@/components/GameCard";
 import { formatDateStringForDisplay, getTodayDateString } from '@/lib/dateUtils';
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { games, setGames, loading, fetchGames } = useGameData();
   const { generateGamePdfReport } = usePdfReports();
+  const { updateGameTotals } = useGameTotalsUpdater();
   const { toast } = useToast();
 
   // UI State
@@ -156,9 +158,22 @@ export default function Dashboard() {
         setGames(prevGames => prevGames.filter(game => game.id !== deleteItemId));
         toast({ title: "Game Deleted", description: "Game and all associated data have been deleted successfully." });
       } else if (deleteType === 'week') {
+        // Get the game_id before deleting the week
+        const { data: weekData } = await supabase
+          .from('weeks')
+          .select('game_id')
+          .eq('id', deleteItemId)
+          .eq('user_id', user.id)
+          .single();
+
         // Delete all ticket sales for this week first
         await supabase.from('ticket_sales').delete().eq('week_id', deleteItemId).eq('user_id', user.id);
         await supabase.from('weeks').delete().eq('id', deleteItemId).eq('user_id', user.id);
+        
+        // Recalculate game totals after deletion
+        if (weekData?.game_id) {
+          await updateGameTotals(weekData.game_id);
+        }
         
         toast({ title: "Week Deleted", description: "Week and all associated data have been deleted successfully." });
       } else if (deleteType === 'entry') {
