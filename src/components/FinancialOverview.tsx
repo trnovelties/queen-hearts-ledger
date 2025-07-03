@@ -51,7 +51,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
     summary.totalSales / summary.totalTicketsSold : 0;
 
   const totalGames = summary.filteredGames.length;
-  const avgGameRevenue = totalGames > 0 ? summary.organizationTotalPortion / totalGames : 0;
+  const avgGameNet = totalGames > 0 ? summary.organizationNetProfit / totalGames : 0;
 
   // KPI Card Component
   const KPICard = ({ 
@@ -166,11 +166,11 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           subtitle={`Avg. ${formatCurrency(avgTicketPrice)} per ticket`}
         />
         <KPICard
-          title="Organization Revenue"
-          value={summary.organizationTotalPortion}
+          title="Organization Net"
+          value={summary.organizationNetProfit}
           icon={DollarSign}
           colorScheme="green"
-          subtitle={`${totalGames} games tracked`}
+          subtitle={`Avg. ${formatCurrency(avgGameNet)} per game`}
         />
         <KPICard
           title="Organization Net"
@@ -234,12 +234,12 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                  <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
                </div>
                
-               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
+                 <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                    <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg per Game</span>
+                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg Net per Game</span>
                  </div>
-                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameRevenue)}</span>
+                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameNet)}</span>
                </div>
             </div>
           </CardContent>
