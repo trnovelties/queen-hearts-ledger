@@ -28,6 +28,7 @@ interface FinancialOverviewProps {
     organizationTotalPortion: number;
     jackpotTotalPortion: number;
     organizationNetProfit: number;
+    totalActualOrganizationNetProfit: number;
     totalJackpotContributions: number;
     totalContributionsToNextGame: number;
     filteredGames: any[];
@@ -53,7 +54,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
     summary.totalSales / summary.totalTicketsSold : 0;
 
   const totalGames = summary.filteredGames.length;
-  const avgGameNet = totalGames > 0 ? summary.organizationNetProfit / totalGames : 0;
+  const avgGameNet = totalGames > 0 ? summary.totalActualOrganizationNetProfit / totalGames : 0;
 
   // KPI Card Component
   const KPICard = ({ 
@@ -221,18 +222,18 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Tickets</span>
+                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Organization Amount</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{summary.totalTicketsSold.toLocaleString()}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationNetProfit)}</span>
               </div>
               
                <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                    <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Organization Revenue</span>
                  </div>
-                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
+                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalActualOrganizationNetProfit)}</span>
                </div>
                
                  <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">

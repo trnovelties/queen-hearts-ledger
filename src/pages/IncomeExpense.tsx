@@ -39,6 +39,7 @@ interface SummaryData {
   organizationTotalPortion: number;
   jackpotTotalPortion: number;
   organizationNetProfit: number;
+  totalActualOrganizationNetProfit: number;
   totalJackpotContributions: number;
   totalContributionsToNextGame: number;
   filteredGames: any[];
@@ -167,7 +168,8 @@ export default function IncomeExpense() {
     totalDonations: filteredGames.reduce((sum, game) => sum + game.total_donations, 0),
     organizationTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.organization_total, 0), 0),
     jackpotTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.jackpot_total, 0), 0),
-    organizationNetProfit: filteredGames.reduce((sum, game) => sum + (game.actual_organization_net_profit || game.organization_net_profit), 0),
+    organizationNetProfit: filteredGames.reduce((sum, game) => sum + game.organization_net_profit, 0),
+    totalActualOrganizationNetProfit: filteredGames.reduce((sum, game) => sum + (game.actual_organization_net_profit || 0), 0),
     totalJackpotContributions: filteredGames.reduce((sum, game) => sum + (game.total_jackpot_contributions || 0), 0),
     totalContributionsToNextGame: filteredGames.reduce((sum, game) => sum + (game.jackpot_contribution_to_next_game || 0), 0),
     filteredGames: filteredGames
