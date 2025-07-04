@@ -105,7 +105,7 @@ export const GameSummaryDisplay = ({
                 <p className="font-medium text-gray-800">{formatCurrency(game.total_jackpot_contributions || 0)}</p>
               </div>
               <div>
-                <p className="text-gray-600">Weekly Payouts Distributed:</p>
+                <p className="text-gray-600">Weekly Distributions Distributed:</p>
                 <p className="font-medium text-gray-800">{formatCurrency(weeklyPayoutsDistributed)}</p>
               </div>
               <div>
@@ -130,7 +130,7 @@ export const GameSummaryDisplay = ({
                 <span className="font-medium">{formatCurrency(game.organization_net_profit)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Weekly Payouts Distributed:</span>
+                <span className="text-gray-600">Weekly Distributions Distributed:</span>
                 <span className="font-medium">{formatCurrency(weeklyPayoutsDistributed)}</span>
               </div>
               <div className="flex justify-between">
@@ -138,7 +138,7 @@ export const GameSummaryDisplay = ({
                 <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Payouts:</span>
+                <span className="text-gray-600">Total Distributions:</span>
                 <span className="font-medium">{formatCurrency(totalPayouts)}</span>
               </div>
               <div className="flex justify-between">
@@ -179,7 +179,7 @@ export const GameSummaryDisplay = ({
                 <span className="font-medium">{formatCurrency(game.total_jackpot_contributions || 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Weekly Payouts Distributed:</span>
+                <span className="text-gray-600">Weekly Distributions Distributed:</span>
                 <span className="font-medium">{formatCurrency(weeklyPayoutsDistributed)}</span>
               </div>
               <div className="flex justify-between">
@@ -218,8 +218,8 @@ export const GameSummaryDisplay = ({
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-700">
             <strong>Game Summary:</strong> This {game.weeks.length}-week game generated {formatCurrency(game.total_sales)} in total sales 
-            with {totalTicketsSold.toLocaleString()} tickets sold. Total payouts were {formatCurrency(totalPayouts)} 
-            ({formatCurrency(weeklyPayoutsDistributed)} in weekly payouts + {formatCurrency(finalJackpotPayout)} final jackpot).
+            with {totalTicketsSold.toLocaleString()} tickets sold. Total distributions were {formatCurrency(totalPayouts)} 
+            ({formatCurrency(weeklyPayoutsDistributed)} in weekly distributions + {formatCurrency(finalJackpotPayout)} final jackpot).
             {hasShortfall && <> The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the jackpot obligation.</>}
             The actual organization net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualOrganizationNetProfit)}. 
             {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations exceeding available funds.'}
