@@ -32,7 +32,9 @@ export const useGameTotalsUpdater = () => {
 
       // Calculate totals from actual sales
       const salesTotalSales = gameSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-      const salesTotalOrganization = gameSales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
+      
+      // Calculate organization portion directly from sales total (not from individual records)
+      const salesTotalOrganization = salesTotalSales * (organizationPercentage / 100);
 
       // Calculate carryover distribution
       const carryoverOrganizationPortion = carryoverJackpot * (organizationPercentage / 100);
