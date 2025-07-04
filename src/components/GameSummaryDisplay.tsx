@@ -194,16 +194,16 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="font-medium">{formatCurrency(weeklyPayoutsDistributed)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Net Available for Final Winner:</span>
-                <span className="font-medium">{formatCurrency(netJackpotContributions)}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Next game Contribution:</span>
                 <span className="font-medium">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 font-semibold">Net Available for Final Winner:</span>
+                <span className="font-medium">{formatCurrency(netJackpotContributions)}</span>
               </div>
               {jackpotShortfall > 0 && (
                 <div className="flex justify-between">
