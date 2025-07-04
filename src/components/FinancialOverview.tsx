@@ -224,7 +224,6 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Organization Amount</span>
                 </div>
                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
@@ -232,7 +231,6 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
               
                <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                    <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Organization Revenue</span>
                  </div>
                  <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalActualOrganizationNetProfit)}</span>
@@ -240,7 +238,6 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                
                  <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                    <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg Net per Game</span>
                  </div>
                  <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameNet)}</span>
