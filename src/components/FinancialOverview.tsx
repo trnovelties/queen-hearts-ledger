@@ -31,6 +31,8 @@ interface FinancialOverviewProps {
     totalActualOrganizationNetProfit: number;
     totalJackpotContributions: number;
     totalContributionsToNextGame: number;
+    totalWeeklyPayoutAmount: number;
+    totalWinnerAmountPaid: number;
     filteredGames: any[];
   };
   formatCurrency: (amount: number) => string;
@@ -261,25 +263,25 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#F7F8FC] rounded-lg border">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Jackpot Portion</span>
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Jackpot Contributions</span>
                 </div>
-                <span className="font-bold text-orange-600 text-sm sm:text-lg">{formatCurrency(summary.jackpotTotalPortion)}</span>
+                <span className="font-bold text-orange-600 text-sm sm:text-lg">{formatCurrency(summary.totalJackpotContributions)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#F7F8FC] rounded-lg border">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Distributions</span>
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Weekly Payout Amount</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalDistributions)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWeeklyPayoutAmount)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#A1E96C]/10 rounded-lg border border-[#A1E96C]/30">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <Percent className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Efficiency</span>
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Winner Amount Paid</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{distributionEfficiency.toFixed(1)}%</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWinnerAmountPaid)}</span>
               </div>
             </div>
           </CardContent>
