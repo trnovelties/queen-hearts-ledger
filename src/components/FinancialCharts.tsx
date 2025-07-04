@@ -187,8 +187,8 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
   const trendData = generatePerformanceTrend();
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      {/* Main Revenue Chart */}
+    <div className="space-y-6">
+      {/* Game Comparison Chart */}
       <Card className="bg-white border-[#1F4E4A]/10">
         <CardHeader>
           <CardTitle className="text-[#1F4E4A] font-inter">
@@ -258,44 +258,9 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
         </CardContent>
       </Card>
 
-      {/* Financial Allocation Pie Chart */}
-      <Card className="bg-white border-[#1F4E4A]/10">
-        <CardHeader>
-          <CardTitle className="text-[#1F4E4A] font-inter">Financial Allocation</CardTitle>
-          <CardDescription>
-            {reportType === "weekly" ? "Weekly fund distribution" :
-             reportType === "game" ? "Game-level allocation breakdown" :
-             "Overall fund allocation across all activities"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={expenseBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
-                  outerRadius={120}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {expenseBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: any) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Performance Trend Analysis */}
+      {/* Game Performance Trend Analysis */}
       {(reportType === "weekly" || reportType === "game") && chartData.length > 1 && (
-        <Card className="bg-white border-[#1F4E4A]/10 xl:col-span-2">
+        <Card className="bg-white border-[#1F4E4A]/10">
           <CardHeader>
             <CardTitle className="text-[#1F4E4A] font-inter">
               {reportType === "weekly" ? "Weekly Trend Analysis" : "Game Performance Trends"}
@@ -390,7 +355,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
 
       {/* Additional Metrics for Weekly View */}
       {reportType === "weekly" && (
-        <Card className="bg-white border-[#1F4E4A]/10 xl:col-span-2">
+        <Card className="bg-white border-[#1F4E4A]/10">
           <CardHeader>
             <CardTitle className="text-[#1F4E4A] font-inter">Weekly Performance Metrics</CardTitle>
             <CardDescription>Detailed week-by-week performance indicators</CardDescription>
