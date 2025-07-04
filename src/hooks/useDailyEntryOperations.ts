@@ -39,8 +39,17 @@ export const useDailyEntryOperations = () => {
       const amountCollected = ticketsSold * ticketPrice;
       const organizationPercentage = game.organization_percentage;
       const jackpotPercentage = game.jackpot_percentage;
-      const organizationTotal = amountCollected * (organizationPercentage / 100);
-      const jackpotTotal = amountCollected * (jackpotPercentage / 100);
+      
+      // Check if this is the first entry of the game to include carryover distribution
+      const isFirstGameEntry = week.week_number === 1 && dayIndex === 0;
+      const carryoverJackpot = game.carryover_jackpot || 0;
+      
+      // Distribute carryover proportionally on first entry only
+      const carryoverOrganizationPortion = isFirstGameEntry ? carryoverJackpot * (organizationPercentage / 100) : 0;
+      const carryoverJackpotPortion = isFirstGameEntry ? carryoverJackpot * (jackpotPercentage / 100) : 0;
+      
+      const organizationTotal = (amountCollected * (organizationPercentage / 100)) + carryoverOrganizationPortion;
+      const jackpotTotal = (amountCollected * (jackpotPercentage / 100)) + carryoverJackpotPortion;
 
       // Get cumulative collected up to this date
       const { data: allGameSales, error: salesError } = await supabase
@@ -52,7 +61,7 @@ export const useDailyEntryOperations = () => {
 
       if (salesError) throw salesError;
 
-      let cumulativeCollected = game.carryover_jackpot || 0;
+      let cumulativeCollected = isFirstGameEntry ? carryoverJackpot : 0;
       if (allGameSales) {
         for (const sale of allGameSales) {
           const saleDate = new Date(sale.date);
@@ -118,9 +127,10 @@ export const useDailyEntryOperations = () => {
                   ending_jackpot_total: tempEndingJackpot
                 }];
 
-            // Recalculate week totals
+            // Recalculate week totals including carryover for first week
             const weekTotalTickets = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
-            const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
+            const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0) + 
+              (w.week_number === 1 ? carryoverJackpot : 0);
             
             return {
               ...w,
