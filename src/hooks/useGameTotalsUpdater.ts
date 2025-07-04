@@ -102,15 +102,13 @@ export const useGameTotalsUpdater = () => {
       console.log('🔍 RAW DATABASE VALUE for jackpot_contribution_to_next_game:', gameData?.jackpot_contribution_to_next_game);
       console.log('🔍 gameData object:', gameData);
       
-      // Fix: For active games (no end_date), ensure minimum contribution of 10
-      const rawJackpotContribution = gameData?.jackpot_contribution_to_next_game || 0;
-      const jackpotContributionToNextGame = !gameData?.end_date && rawJackpotContribution === 0 ? 10 : rawJackpotContribution;
+      // Use the actual jackpot_contribution_to_next_game value from database
+      const jackpotContributionToNextGame = gameData?.jackpot_contribution_to_next_game || 0;
       
       console.log('🔍 DEBUGGING VALUES FOR GAME:', gameData?.name);
       console.log('📊 Total Jackpot Contributions:', totalJackpotContributions);
       console.log('💸 Weekly Payouts Distributed:', weeklyPayoutsDistributed);
-      console.log('🎯 Raw Jackpot Contribution (from DB):', rawJackpotContribution);
-      console.log('🎯 Adjusted Jackpot Contribution to Next Game:', jackpotContributionToNextGame);
+      console.log('🎯 Jackpot Contribution to Next Game:', jackpotContributionToNextGame);
       console.log('🧮 Calculation: netAvailable = totalContributions - weeklyPayouts - nextGameContribution');
       console.log('🧮 Calculation:', totalJackpotContributions, '-', weeklyPayoutsDistributed, '-', jackpotContributionToNextGame);
       
