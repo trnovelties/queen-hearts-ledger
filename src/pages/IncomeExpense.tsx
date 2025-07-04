@@ -344,37 +344,6 @@ export default function IncomeExpense() {
                </CollapsibleTrigger>
                
                <CollapsibleContent className="space-y-6 p-4 bg-[#F7F8FC] rounded-lg">
-                 {/* Game Summary Grid */}
-                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 p-4 bg-white rounded-lg shadow-sm">
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Total Sales</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-orange-600">{formatCurrency(game.total_jackpot_contributions || 0)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Jackpot Contributions</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-blue-600">{formatCurrency(game.net_available_for_final_winner || 0)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Winner Received</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Expenses</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Donations</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Net Profit</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.carryover_jackpot)}</div>
-                     <div className="text-xs text-[#132E2C]/70">Carryover</div>
-                   </div>
-                 </div>
 
                  {/* Weekly Performance Table */}
                  {game.weeks.length > 0 && (
