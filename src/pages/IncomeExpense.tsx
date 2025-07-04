@@ -337,14 +337,18 @@ export default function IncomeExpense() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 text-center w-full sm:w-auto">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 text-center w-full sm:w-auto">
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Total Sales</div>
                           <div className="font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-[#132E2C]/60">Payouts</div>
-                          <div className="font-bold text-orange-600">{formatCurrency(game.total_payouts)}</div>
+                          <div className="text-xs text-[#132E2C]/60">Jackpot Contributions</div>
+                          <div className="font-bold text-orange-600">{formatCurrency(game.total_jackpot_contributions || 0)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Winner Received</div>
+                          <div className="font-bold text-blue-600">{formatCurrency(game.net_available_for_final_winner || 0)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Expenses</div>
