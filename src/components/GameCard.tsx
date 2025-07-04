@@ -111,9 +111,11 @@ export const GameCard = ({
                   </span>
                 )}
               </div>
-              <div>
-                <span className="text-muted-foreground">Profit:</span> {formatCurrency(game.actual_organization_net_profit)}
-              </div>
+              {game.end_date && (
+                <div>
+                  <span className="text-muted-foreground">Profit:</span> {formatCurrency(game.actual_organization_net_profit)}
+                </div>
+              )}
             </div>
             
             <Button
