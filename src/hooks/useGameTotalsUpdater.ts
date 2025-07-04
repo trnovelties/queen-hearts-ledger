@@ -10,6 +10,19 @@ export const useGameTotalsUpdater = () => {
 
     console.log('🔄 Updating game totals for game:', gameId);
 
+    // First check if this is a completed game - if so, don't recalculate
+    const { data: gameCheck } = await supabase
+      .from('games')
+      .select('end_date, name')
+      .eq('id', gameId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (gameCheck?.end_date) {
+      console.log('⏭️ Skipping totals update for completed game:', gameCheck.name);
+      return;
+    }
+
     // Get all ticket sales for this game
     const { data: gameSales } = await supabase
       .from('ticket_sales')
@@ -21,7 +34,7 @@ export const useGameTotalsUpdater = () => {
       // Get game data to access carryover jackpot and percentages
       const { data: gameData } = await supabase
         .from('games')
-        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game')
+        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game, name')
         .eq('id', gameId)
         .eq('user_id', user.id)
         .single();
@@ -88,11 +101,24 @@ export const useGameTotalsUpdater = () => {
       // Get existing jackpot contribution to next game from database
       const jackpotContributionToNextGame = gameData?.jackpot_contribution_to_next_game || 0;
       
+      console.log('🔍 DEBUGGING VALUES FOR GAME:', gameData?.name);
+      console.log('📊 Total Jackpot Contributions:', totalJackpotContributions);
+      console.log('💸 Weekly Payouts Distributed:', weeklyPayoutsDistributed);
+      console.log('🎯 Jackpot Contribution to Next Game (from DB):', jackpotContributionToNextGame);
+      console.log('🧮 Calculation: netAvailable = totalContributions - weeklyPayouts - nextGameContribution');
+      console.log('🧮 Calculation:', totalJackpotContributions, '-', weeklyPayoutsDistributed, '-', jackpotContributionToNextGame);
+      
       // Calculate net available for final winner: total contributions - weekly payouts - next game contribution
       const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed - jackpotContributionToNextGame;
       
+      console.log('💵 CALCULATED Net Available for Final Winner:', netAvailableForFinalWinner);
+      console.log('💵 EXPECTED Net Available for Final Winner (for Game 8): 430');
+      
       // Calculate jackpot shortfall based on minimum $500 guarantee vs net available amount
       const jackpotShortfallCovered = Math.max(0, 500 - netAvailableForFinalWinner);
+      
+      console.log('⚠️ CALCULATED Jackpot Shortfall Covered:', jackpotShortfallCovered);
+      console.log('⚠️ EXPECTED Jackpot Shortfall Covered (for Game 8): 70');
       
       // Calculate actual organization net profit: after expenses, donations, and shortfall coverage
       const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations - jackpotShortfallCovered;
