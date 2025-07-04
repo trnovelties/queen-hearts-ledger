@@ -34,7 +34,7 @@ export const useGameTotalsUpdater = () => {
       // Get game data to access carryover jackpot and percentages
       const { data: gameData } = await supabase
         .from('games')
-        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game, name')
+        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game, name, end_date')
         .eq('id', gameId)
         .eq('user_id', user.id)
         .single();
@@ -99,12 +99,18 @@ export const useGameTotalsUpdater = () => {
       const finalJackpotPayout = weeks?.filter(w => w.card_selected === 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
       
       // Get existing jackpot contribution to next game from database
-      const jackpotContributionToNextGame = gameData?.jackpot_contribution_to_next_game || 0;
+      console.log('🔍 RAW DATABASE VALUE for jackpot_contribution_to_next_game:', gameData?.jackpot_contribution_to_next_game);
+      console.log('🔍 gameData object:', gameData);
+      
+      // Fix: For active games (no end_date), ensure minimum contribution of 10
+      const rawJackpotContribution = gameData?.jackpot_contribution_to_next_game || 0;
+      const jackpotContributionToNextGame = !gameData?.end_date && rawJackpotContribution === 0 ? 10 : rawJackpotContribution;
       
       console.log('🔍 DEBUGGING VALUES FOR GAME:', gameData?.name);
       console.log('📊 Total Jackpot Contributions:', totalJackpotContributions);
       console.log('💸 Weekly Payouts Distributed:', weeklyPayoutsDistributed);
-      console.log('🎯 Jackpot Contribution to Next Game (from DB):', jackpotContributionToNextGame);
+      console.log('🎯 Raw Jackpot Contribution (from DB):', rawJackpotContribution);
+      console.log('🎯 Adjusted Jackpot Contribution to Next Game:', jackpotContributionToNextGame);
       console.log('🧮 Calculation: netAvailable = totalContributions - weeklyPayouts - nextGameContribution');
       console.log('🧮 Calculation:', totalJackpotContributions, '-', weeklyPayoutsDistributed, '-', jackpotContributionToNextGame);
       
