@@ -68,7 +68,7 @@ export const useGameTotalsUpdater = () => {
       // Calculate detailed financial breakdown
       const totalJackpotContributions = gameTotalSales * (jackpotPercentage / 100);
       
-      // Total payouts should equal total jackpot contributions (what's allocated for payouts)
+      // Total payouts equals total jackpot contributions (what's allocated for payouts)
       const totalPayouts = totalJackpotContributions;
       
       console.log('💰 Total Jackpot Contributions:', totalJackpotContributions);
