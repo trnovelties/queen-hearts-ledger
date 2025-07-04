@@ -13,7 +13,8 @@ import {
   Users, 
   Calendar,
   Target,
-  Banknote
+  Banknote,
+  Award
 } from "lucide-react";
 import { formatDateStringForDisplay, formatDateStringShort } from "@/lib/dateUtils";
 
@@ -87,7 +88,7 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
           {expandedGames.has(game.id) && (
             <CardContent className="space-y-6 pt-0">
               {/* Game Summary Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-[#F7F8FC] rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 p-4 bg-[#F7F8FC] rounded-lg">
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-1">
                     <DollarSign className="h-4 w-4 text-[#1F4E4A]" />
@@ -97,10 +98,17 @@ export function DetailedFinancialTable({ games, formatCurrency }: DetailedFinanc
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-1">
-                    <Target className="h-4 w-4 text-[#1F4E4A]" />
+                    <Target className="h-4 w-4 text-orange-600" />
                   </div>
-                  <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.total_payouts)}</div>
-                  <div className="text-xs text-[#132E2C]/70">Distributions</div>
+                  <div className="text-lg font-bold text-orange-600">{formatCurrency(game.total_jackpot_contributions || 0)}</div>
+                  <div className="text-xs text-[#132E2C]/70">Jackpot Contributions</div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-1">
+                    <Award className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="text-lg font-bold text-blue-600">{formatCurrency(game.net_available_for_final_winner || 0)}</div>
+                  <div className="text-xs text-[#132E2C]/70">Winner Received</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-1">
