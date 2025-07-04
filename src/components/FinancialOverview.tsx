@@ -28,6 +28,8 @@ interface FinancialOverviewProps {
     organizationTotalPortion: number;
     jackpotTotalPortion: number;
     organizationNetProfit: number;
+    totalJackpotContributions: number;
+    totalContributionsToNextGame: number;
     filteredGames: any[];
   };
   formatCurrency: (amount: number) => string;
@@ -173,19 +175,18 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           subtitle={`Avg. ${formatCurrency(avgGameNet)} per game`}
         />
         <KPICard
-          title="Organization Net"
-          value={summary.organizationNetProfit}
-          icon={TrendingUp}
-          colorScheme="purple"
-          percentage={profitMargin}
-          subtitle="After expenses & donations"
-        />
-        <KPICard
           title="Jackpot Total"
-          value={summary.jackpotTotalPortion}
+          value={summary.totalJackpotContributions}
           icon={Trophy}
           colorScheme="orange"
-          subtitle={`${distributionEfficiency.toFixed(1)}% distribution efficiency`}
+          subtitle="Total jackpot contributions"
+        />
+        <KPICard
+          title="Total Contributions"
+          value={summary.totalContributionsToNextGame}
+          icon={Target}
+          colorScheme="purple"
+          subtitle="Contributions to next games"
         />
         <KPICard
           title="Total Expenses"
