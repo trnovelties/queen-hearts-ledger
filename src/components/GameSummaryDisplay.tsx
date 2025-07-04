@@ -134,10 +134,6 @@ export const GameSummaryDisplay = ({
                 <span className="font-medium">{formatCurrency(weeklyPayoutsDistributed)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Final Jackpot Winner Distribution:</span>
-                <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-600">Total Distributions:</span>
                 <span className="font-medium">{formatCurrency(totalPayouts)}</span>
               </div>
