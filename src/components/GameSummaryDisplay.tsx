@@ -16,7 +16,8 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
 
   // Calculate total tickets sold across all weeks
   const totalTicketsSold = game.weeks.reduce((total: number, week: any) => {
-    return total + (week.weekly_tickets_sold || 0);
+    const weekTicketsSold = week.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.tickets_sold || 0), 0) || 0;
+    return total + weekTicketsSold;
   }, 0);
 
   // Calculate total jackpot contributions from all weeks
@@ -229,6 +230,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
               <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Next game Contribution:</span>
+                <span className="font-medium">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>

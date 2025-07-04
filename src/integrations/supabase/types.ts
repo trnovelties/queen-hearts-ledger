@@ -94,73 +94,94 @@ export type Database = {
       }
       games: {
         Row: {
+          actual_organization_net_profit: number | null
           card_payouts: Json | null
           carryover_jackpot: number
           configuration_version: number | null
           created_at: string
           end_date: string | null
+          final_jackpot_payout: number | null
+          game_duration_weeks: number | null
           game_number: number
           game_profit_loss: number
           id: string
           jackpot_contribution_to_next_game: number
           jackpot_percentage: number
+          jackpot_shortfall_covered: number | null
           minimum_starting_jackpot: number | null
           name: string
+          net_available_for_final_winner: number | null
           organization_net_profit: number
           organization_percentage: number
           start_date: string
           ticket_price: number
           total_donations: number
           total_expenses: number
+          total_jackpot_contributions: number | null
           total_payouts: number
           total_sales: number
           user_id: string
+          weekly_payouts_distributed: number | null
         }
         Insert: {
+          actual_organization_net_profit?: number | null
           card_payouts?: Json | null
           carryover_jackpot?: number
           configuration_version?: number | null
           created_at?: string
           end_date?: string | null
+          final_jackpot_payout?: number | null
+          game_duration_weeks?: number | null
           game_number: number
           game_profit_loss?: number
           id?: string
           jackpot_contribution_to_next_game?: number
           jackpot_percentage?: number
+          jackpot_shortfall_covered?: number | null
           minimum_starting_jackpot?: number | null
           name: string
+          net_available_for_final_winner?: number | null
           organization_net_profit?: number
           organization_percentage?: number
           start_date: string
           ticket_price?: number
           total_donations?: number
           total_expenses?: number
+          total_jackpot_contributions?: number | null
           total_payouts?: number
           total_sales?: number
           user_id: string
+          weekly_payouts_distributed?: number | null
         }
         Update: {
+          actual_organization_net_profit?: number | null
           card_payouts?: Json | null
           carryover_jackpot?: number
           configuration_version?: number | null
           created_at?: string
           end_date?: string | null
+          final_jackpot_payout?: number | null
+          game_duration_weeks?: number | null
           game_number?: number
           game_profit_loss?: number
           id?: string
           jackpot_contribution_to_next_game?: number
           jackpot_percentage?: number
+          jackpot_shortfall_covered?: number | null
           minimum_starting_jackpot?: number | null
           name?: string
+          net_available_for_final_winner?: number | null
           organization_net_profit?: number
           organization_percentage?: number
           start_date?: string
           ticket_price?: number
           total_donations?: number
           total_expenses?: number
+          total_jackpot_contributions?: number | null
           total_payouts?: number
           total_sales?: number
           user_id?: string
+          weekly_payouts_distributed?: number | null
         }
         Relationships: []
       }

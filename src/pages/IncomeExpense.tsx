@@ -44,9 +44,7 @@ interface SummaryData {
 
 interface Filters {
   gameNumber: string;
-  startDate: string;
-  endDate: string;
-  reportType: "weekly" | "game" | "cumulative";
+  timePeriod: "7D" | "30D" | "365D" | "all";
 }
 
 export default function IncomeExpense() {
@@ -54,9 +52,7 @@ export default function IncomeExpense() {
   const [filteredGames, setFilteredGames] = useState<GameSummary[]>([]);
   const [filters, setFilters] = useState<Filters>({
     gameNumber: "all",
-    startDate: "",
-    endDate: "",
-    reportType: "weekly",
+    timePeriod: "all",
   });
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
@@ -97,6 +93,7 @@ export default function IncomeExpense() {
           const totalDonations = game.expenses.filter((expense: any) => expense.is_donation).reduce((sum: number, expense: any) => sum + expense.amount, 0);
           const organizationTotalPortion = game.ticket_sales.reduce((sum: number, sale: any) => sum + sale.organization_total, 0);
           const organizationNetProfit = organizationTotalPortion - totalExpenses - totalDonations;
+          const actualOrganizationNetProfit = game.actual_organization_net_profit || organizationNetProfit;
 
           return {
             ...game,
@@ -104,7 +101,8 @@ export default function IncomeExpense() {
             total_payouts: totalPayouts,
             total_expenses: totalExpenses,
             total_donations: totalDonations,
-            organization_net_profit: organizationNetProfit
+            organization_net_profit: organizationNetProfit,
+            actual_organization_net_profit: actualOrganizationNetProfit
           };
         });
         setGames(gamesWithTotals);
@@ -121,12 +119,26 @@ export default function IncomeExpense() {
       filtered = filtered.filter((game) => game.id === filters.gameNumber);
     }
 
-    if (filters.startDate) {
-      filtered = filtered.filter((game) => game.start_date >= filters.startDate);
-    }
-
-    if (filters.endDate) {
-      filtered = filtered.filter((game) => game.start_date <= filters.endDate);
+    // Apply time period filter
+    if (filters.timePeriod !== "all") {
+      const currentDate = new Date();
+      let cutoffDate: Date;
+      
+      switch (filters.timePeriod) {
+        case "7D":
+          cutoffDate = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "30D":
+          cutoffDate = new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case "365D":
+          cutoffDate = new Date(currentDate.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          cutoffDate = new Date(0);
+      }
+      
+      filtered = filtered.filter((game) => new Date(game.start_date) >= cutoffDate);
     }
 
     setFilteredGames(filtered);
@@ -153,7 +165,7 @@ export default function IncomeExpense() {
     totalDonations: filteredGames.reduce((sum, game) => sum + game.total_donations, 0),
     organizationTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.organization_total, 0), 0),
     jackpotTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.jackpot_total, 0), 0),
-    organizationNetProfit: filteredGames.reduce((sum, game) => sum + game.organization_net_profit, 0),
+    organizationNetProfit: filteredGames.reduce((sum, game) => sum + (game.actual_organization_net_profit || game.organization_net_profit), 0),
     filteredGames: filteredGames
   };
 
@@ -212,7 +224,7 @@ export default function IncomeExpense() {
           <CardTitle className="text-[#1F4E4A] font-inter">Filters</CardTitle>
           <CardDescription>Customize your financial view</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="gameNumber" className="text-sm font-semibold text-[#132E2C]">Game Number</Label>
             <Select value={filters.gameNumber} onValueChange={(value) => setFilters({ ...filters, gameNumber: value })}>
@@ -231,37 +243,16 @@ export default function IncomeExpense() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="startDate" className="text-sm font-semibold text-[#132E2C]">Start Date</Label>
-            <Input
-              type="date"
-              id="startDate"
-              value={filters.startDate}
-              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              className="bg-white"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="endDate" className="text-sm font-semibold text-[#132E2C]">End Date</Label>
-            <Input
-              type="date"
-              id="endDate"
-              value={filters.endDate}
-              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              className="bg-white"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="reportType" className="text-sm font-semibold text-[#132E2C]">Report Type</Label>
-            <Select value={filters.reportType} onValueChange={(value) => setFilters({ ...filters, reportType: value as "weekly" | "game" | "cumulative" })}>
+            <Label htmlFor="timePeriod" className="text-sm font-semibold text-[#132E2C]">Time Period</Label>
+            <Select value={filters.timePeriod} onValueChange={(value) => setFilters({ ...filters, timePeriod: value as "7D" | "30D" | "365D" | "all" })}>
               <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Select Report Type" />
+                <SelectValue placeholder="All Time" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="game">Game</SelectItem>
-                <SelectItem value="cumulative">Cumulative</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="7D">Last 7 Days</SelectItem>
+                <SelectItem value="30D">Last 30 Days</SelectItem>
+                <SelectItem value="365D">Last 365 Days</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -277,7 +268,7 @@ export default function IncomeExpense() {
       {/* Charts */}
       <FinancialCharts 
         games={filteredGames} 
-        reportType={filters.reportType}
+        reportType="game"
         selectedGame={filters.gameNumber}
       />
 
@@ -355,7 +346,7 @@ export default function IncomeExpense() {
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Net Profit</div>
-                          <div className="font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</div>
+                          <div className="font-bold text-green-600">{formatCurrency(game.actual_organization_net_profit || game.organization_net_profit)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Carryover</div>

@@ -23,6 +23,7 @@ interface TicketSalesTableProps {
   onRefreshData?: () => void;
   needsGameCompletion?: (week: any) => boolean;
   onCompleteGameClick?: (week: any) => void;
+  onDeleteWeek?: (weekId: string) => void;
 }
 
 export const TicketSalesTable = ({
@@ -38,7 +39,8 @@ export const TicketSalesTable = ({
   onOpenDonationModal,
   onRefreshData,
   needsGameCompletion,
-  onCompleteGameClick
+  onCompleteGameClick,
+  onDeleteWeek
 }: TicketSalesTableProps) => {
   const { handleTicketInputChange, handleTicketInputSubmit, tempTicketInputs } = useTicketSales();
   const [displayedEndingJackpot, setDisplayedEndingJackpot] = useState<number>(0);
@@ -89,8 +91,8 @@ export const TicketSalesTable = ({
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
       if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - use the stored ending jackpot value from database
-        console.log('Using stored ending jackpot for completed week:', week.ending_jackpot);
+        // Week is completed - use the stored ending jackpot value (already deducted payout)
+        console.log('Using stored ending jackpot for completed week (after payout):', week.ending_jackpot);
         setDisplayedEndingJackpot(week.ending_jackpot);
       } else {
         // Week is not completed - calculate current jackpot dynamically
@@ -148,7 +150,11 @@ export const TicketSalesTable = ({
     <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-lg p-6">
       {/* Week Details Header */}
       <div className="pb-6 border-b border-gray-200">
-        <WeekHeader week={week} onToggleWeek={onToggleWeek} />
+        <WeekHeader 
+          week={week} 
+          onToggleWeek={onToggleWeek}
+          onDeleteWeek={onDeleteWeek}
+        />
         
         {/* Week Summary Stats */}
         <WeekSummaryStats

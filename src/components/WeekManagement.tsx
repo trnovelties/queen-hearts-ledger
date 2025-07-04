@@ -24,6 +24,7 @@ interface WeekManagementProps {
   onRefreshData?: () => void;
   onOpenExpenseModal?: (date: string, gameId: string) => void;
   onOpenDonationModal?: (date: string, gameId: string) => void;
+  onDeleteWeek?: (weekId: string) => void;
 }
 
 export const WeekManagement = ({
@@ -38,7 +39,8 @@ export const WeekManagement = ({
   setGames,
   onRefreshData,
   onOpenExpenseModal,
-  onOpenDonationModal
+  onOpenDonationModal,
+  onDeleteWeek
 }: WeekManagementProps) => {
   const {
     winnerFormOpen,
@@ -162,6 +164,7 @@ export const WeekManagement = ({
               onRefreshData={onRefreshData}
               needsGameCompletion={needsGameCompletion}
               onCompleteGameClick={(week) => handleCompleteGame(week, game)}
+              onDeleteWeek={onDeleteWeek}
             />
           )}
         </div>

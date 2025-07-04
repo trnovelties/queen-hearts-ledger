@@ -50,7 +50,7 @@ export function WinnerForm({
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
-    slotChosen: 1,
+    slotChosen: '' as string | number,
     winnerPresent: true,
     authorizedSignatureName: ''
   });
@@ -156,7 +156,7 @@ export function WinnerForm({
         .update({
           winner_name: formData.winnerName,
           card_selected: formData.cardSelected,
-          slot_chosen: formData.slotChosen,
+          slot_chosen: Number(formData.slotChosen),
           winner_present: formData.winnerPresent,
           authorized_signature_name: formData.authorizedSignatureName,
           weekly_payout: finalDistribution,
@@ -332,7 +332,7 @@ export function WinnerForm({
       const winnerData = {
         winnerName: formData.winnerName,
         cardSelected: formData.cardSelected,
-        slotChosen: formData.slotChosen,
+        slotChosen: Number(formData.slotChosen),
         amountWon: finalDistribution,
         authorizedSignatureName: formData.authorizedSignatureName,
         gameId,
@@ -358,7 +358,7 @@ export function WinnerForm({
       setFormData({
         winnerName: '',
         cardSelected: '',
-        slotChosen: 1,
+        slotChosen: '' as string | number,
         winnerPresent: true,
         authorizedSignatureName: ''
       });
@@ -435,10 +435,8 @@ export function WinnerForm({
                 <Input
                   id="slotChosen"
                   type="number"
-                  min="1"
-                  max="52"
                   value={formData.slotChosen}
-                  onChange={(e) => setFormData({ ...formData, slotChosen: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setFormData({ ...formData, slotChosen: e.target.value })}
                   required
                 />
               </div>
