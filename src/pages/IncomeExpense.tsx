@@ -214,23 +214,6 @@ export default function IncomeExpense() {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1F4E4A] font-inter">Income vs. Expense</h1>
           <p className="text-[#132E2C]/60 mt-1">Comprehensive financial analysis and reporting</p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowAuditModal(true)}
-            className="border-[#1F4E4A]/20 text-[#1F4E4A] hover:bg-[#1F4E4A]/10"
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            Audit Trail
-          </Button>
-          <Button 
-            onClick={handleExportPDF}
-            className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white"
-          >
-            <FileDown className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-        </div>
       </div>
 
       {/* Filters */}
