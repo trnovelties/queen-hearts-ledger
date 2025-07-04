@@ -20,41 +20,16 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
     return total + weekTicketsSold;
   }, 0);
 
-  // Calculate total jackpot contributions from all weeks
-  const totalJackpotContributions = game.weeks.reduce((total: number, week: any) => {
-    const weekJackpotContributions = week.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
-    return total + weekJackpotContributions;
-  }, 0);
+  // No longer needed - using database values directly
 
-  // Calculate weekly payouts already distributed (excluding final Queen of Hearts payout)
-  const weeklyPayoutsDistributed = game.weeks.reduce((total: number, week: any) => {
-    // Only count non-Queen of Hearts payouts as "weekly" payouts
-    if (week.card_selected !== 'Queen of Hearts') {
-      return total + (week.weekly_payout || 0);
-    }
-    return total;
-  }, 0);
-
-  // Get the Queen of Hearts winner payout (final jackpot payout)
-  const queenOfHeartsWinner = game.weeks.find((week: any) => week.card_selected === 'Queen of Hearts');
-  const finalJackpotPayout = queenOfHeartsWinner ? (queenOfHeartsWinner.weekly_payout || 0) : 0;
-
-  // Calculate net jackpot contributions after weekly payouts and next game contribution
-  const nextGameContribution = game.jackpot_contribution_to_next_game || 0;
-  const netJackpotContributions = totalJackpotContributions - weeklyPayoutsDistributed - nextGameContribution;
-
-  // Get minimum starting jackpot requirement (what the final winner should receive)
-  const minimumJackpotRequired = game.minimum_starting_jackpot || 500;
+  // Use database values directly instead of recalculating
+  const weeklyPayoutsDistributed = game.weekly_payouts_distributed || 0;
+  const finalJackpotPayout = game.final_jackpot_payout || 0;
+  const netJackpotContributions = game.net_available_for_final_winner || 0;
+  const jackpotShortfall = game.jackpot_shortfall_covered || 0;
+  const totalPayouts = game.total_payouts || 0;
   
-  // Calculate shortfall based on minimum $500 guarantee vs net available amount
-  // If net available is less than $500, organization covers the difference
-  const jackpotShortfall = netJackpotContributions < 500 ? 
-    (500 - netJackpotContributions) : 0;
-  
-  // Total payouts = weekly payouts + final jackpot winner payout
-  const totalPayouts = weeklyPayoutsDistributed + finalJackpotPayout;
-  
-  // Use the correctly calculated value from the database
+  // Use the database value directly
   const actualOrganizationNetProfit = game.actual_organization_net_profit || 0;
   
   const isProfitable = actualOrganizationNetProfit >= 0;
@@ -131,7 +106,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-gray-600">Total Jackpot Contributions:</p>
-                <p className="font-medium text-gray-800">{formatCurrency(totalJackpotContributions)}</p>
+                <p className="font-medium text-gray-800">{formatCurrency(game.total_jackpot_contributions || 0)}</p>
               </div>
               <div>
                 <p className="text-gray-600">Weekly Payouts Distributed:</p>
@@ -208,11 +183,11 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-600">Minimum Starting Jackpot:</span>
-                <span className="font-medium">{formatCurrency(minimumJackpotRequired)}</span>
+                <span className="font-medium">{formatCurrency(game.minimum_starting_jackpot || 500)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Jackpot Contributions:</span>
-                <span className="font-medium">{formatCurrency(totalJackpotContributions)}</span>
+                <span className="font-medium">{formatCurrency(game.total_jackpot_contributions || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Weekly Payouts Distributed:</span>
