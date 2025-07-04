@@ -145,6 +145,10 @@ export const GameSummaryDisplay = ({
                 <span className="text-gray-600">Regular Expenses:</span>
                 <span className="font-medium">{formatCurrency(game.total_expenses)}</span>
               </div>
+              {hasShortfall && <div className="flex justify-between text-orange-600">
+                  <span>Shortfall Coverage (Additional Expense):</span>
+                  <span className="font-medium">{formatCurrency(jackpotShortfall)}</span>
+                </div>}
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Donations:</span>
                 <span className="font-medium">{formatCurrency(game.total_donations)}</span>
@@ -194,10 +198,6 @@ export const GameSummaryDisplay = ({
                 <span className="text-gray-600">Next game Contribution:</span>
                 <span className="font-medium">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
               </div>
-              {hasShortfall && <div className="flex justify-between">
-                  <span className="text-gray-600 font-bold">Shortfall Coverage (Additional Expense):</span>
-                  <span className="font-bold text-orange-600">{formatCurrency(jackpotShortfall)}</span>
-                </div>}
               <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>
                 <span className="font-medium">{game.weeks.length} weeks</span>
