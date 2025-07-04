@@ -53,8 +53,8 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
   // Total payouts = weekly payouts + final jackpot winner payout
   const totalPayouts = weeklyPayoutsDistributed + finalJackpotPayout;
   
-  // Calculate actual organization net profit after covering shortfall
-  const actualOrganizationNetProfit = game.organization_net_profit - jackpotShortfall;
+  // Use the correctly calculated value from the database
+  const actualOrganizationNetProfit = game.actual_organization_net_profit || 0;
   
   const isProfitable = actualOrganizationNetProfit >= 0;
   const hasShortfall = jackpotShortfall > 0;
