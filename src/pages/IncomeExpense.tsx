@@ -18,6 +18,7 @@ import { DonationModal } from "@/components/DonationModal";
 import { CalculationAuditModal } from "@/components/CalculationAuditModal";
 import { useCalculationValidation } from "@/hooks/useCalculationValidation";
 import { formatDateStringForDisplay } from "@/lib/dateUtils";
+import { useAuth } from "@/context/AuthContext";
 
 type Game = Tables<"games">;
 type Week = Tables<"weeks">;
@@ -65,6 +66,7 @@ export default function IncomeExpense() {
   const [selectedGameForDonation, setSelectedGameForDonation] = useState<string | null>(null);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const { validateGame } = useCalculationValidation();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchGames();
@@ -75,6 +77,8 @@ export default function IncomeExpense() {
   }, [games, filters]);
 
   const fetchGames = async () => {
+    if (!user?.id) return;
+    
     try {
       const { data, error } = await supabase
         .from('games')
@@ -84,6 +88,7 @@ export default function IncomeExpense() {
           ticket_sales (*),
           expenses (*)
         `)
+        .eq('user_id', user.id)
         .order('start_date', { ascending: false });
 
       if (error) {
