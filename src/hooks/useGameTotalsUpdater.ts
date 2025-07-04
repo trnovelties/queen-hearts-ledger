@@ -85,7 +85,7 @@ export const useGameTotalsUpdater = () => {
       const weeklyPayoutsDistributed = weeks?.filter(w => w.card_selected !== 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
       const finalJackpotPayout = weeks?.filter(w => w.card_selected === 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
       
-      // Calculate jackpot contribution to next game (if any)
+      // Get existing jackpot contribution to next game from database
       const jackpotContributionToNextGame = gameData?.jackpot_contribution_to_next_game || 0;
       
       // Calculate net available for final winner: total contributions - weekly payouts - next game contribution
