@@ -91,8 +91,8 @@ export const useGameTotalsUpdater = () => {
       // Calculate net available for final winner: total contributions - weekly payouts - next game contribution
       const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed - jackpotContributionToNextGame;
       
-      // Calculate jackpot shortfall based on minimum $500 guarantee vs total contributions
-      const jackpotShortfallCovered = Math.max(0, 500 - totalJackpotContributions);
+      // Calculate jackpot shortfall based on minimum $500 guarantee vs net available amount
+      const jackpotShortfallCovered = Math.max(0, 500 - netAvailableForFinalWinner);
       
       // Calculate actual organization net profit: after expenses, donations, and shortfall coverage
       const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations - jackpotShortfallCovered;
