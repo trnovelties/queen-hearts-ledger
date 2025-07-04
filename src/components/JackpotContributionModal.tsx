@@ -118,8 +118,7 @@ export const JackpotContributionModal = ({
       // PHASE 3: Complete the current game with proper end date
       const todayDateString = getTodayDateString();
       
-      console.log('🎰 Setting game end date to:', todayDateString);
-      console.log('🎰 Updating game with contribution:', contribution);
+      console.log('🎰 Setting game contribution first:', contribution);
       
       // Calculate final winner payout considering minimum $500 guarantee
       const finalWinnerPayout = Math.max(500, totalJackpot - contribution);
@@ -128,29 +127,43 @@ export const JackpotContributionModal = ({
       console.log('🎰 Total Jackpot Available:', totalJackpot);
       console.log('🎰 Contribution to Next Game:', contribution);
       
-      // Update current game: end it and set jackpot contribution
-      const { error: gameError } = await supabase
+      // STEP 1: First set jackpot contribution WITHOUT ending the game
+      const { error: contributionError } = await supabase
         .from('games')
         .update({
-          end_date: todayDateString,
           jackpot_contribution_to_next_game: contribution,
           total_payouts: finalWinnerPayout // Final winner gets at least $500
         })
         .eq('id', gameId)
         .eq('user_id', user.id);
 
-      if (gameError) {
-        console.error('🎰 ❌ Error updating game:', gameError);
-        throw gameError;
+      if (contributionError) {
+        console.error('🎰 ❌ Error setting jackpot contribution:', contributionError);
+        throw contributionError;
       }
 
-      console.log('🎰 ✅ Current game ended successfully with end_date:', todayDateString);
-      console.log('🎰 ✅ Game marked as completed with contribution:', contribution);
+      console.log('🎰 ✅ Jackpot contribution set successfully:', contribution);
 
-      // Recalculate game totals with the updated jackpot contribution
+      // STEP 2: Recalculate game totals with the updated jackpot contribution (while game is still active)
       console.log('🎰 🔄 Recalculating game totals with updated contribution...');
       await updateGameTotals(gameId);
       console.log('🎰 ✅ Game totals recalculated successfully');
+
+      // STEP 3: Now end the game
+      const { error: endGameError } = await supabase
+        .from('games')
+        .update({
+          end_date: todayDateString
+        })
+        .eq('id', gameId)
+        .eq('user_id', user.id);
+
+      if (endGameError) {
+        console.error('🎰 ❌ Error ending game:', endGameError);
+        throw endGameError;
+      }
+
+      console.log('🎰 ✅ Current game ended successfully with end_date:', todayDateString);
 
       // Check if there's already a next game created
       const { data: nextGame, error: nextGameError } = await supabase
