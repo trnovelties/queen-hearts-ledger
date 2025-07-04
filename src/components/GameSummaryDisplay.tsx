@@ -88,7 +88,7 @@ export const GameSummaryDisplay = ({
             </div>
             <div className="space-y-1">
               <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalPayouts)}</p>
-              <p className="text-sm text-gray-600">Weekly + Final jackpot payouts</p>
+              <p className="text-sm text-gray-600">Weekly + Final jackpot distributions</p>
             </div>
           </div>
         </div>
