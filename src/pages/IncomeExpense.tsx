@@ -285,75 +285,99 @@ export default function IncomeExpense() {
       {/* Games List */}
       <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-[#1F4E4A] font-inter">Game Details</CardTitle>
-          <CardDescription>Detailed breakdown by game and week</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-[#1F4E4A] font-inter">Game Details</CardTitle>
+              <CardDescription>Detailed breakdown by game and week</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => {
+                  setSelectedGameForExpense(filters.gameNumber === "all" ? null : filters.gameNumber);
+                  setShowExpenseModal(true);
+                }}
+                size="sm"
+                className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Expense
+              </Button>
+              <Button 
+                onClick={() => {
+                  setSelectedGameForDonation(filters.gameNumber === "all" ? null : filters.gameNumber);
+                  setShowDonationModal(true);
+                }}
+                size="sm"
+                variant="outline"
+                className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/10"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Donation
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {filteredGames.map((game) => (
             <Collapsible key={game.id} className="space-y-2">
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-md transition-all duration-200 border-[#1F4E4A]/20 hover:border-[#1F4E4A]/40">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-xl font-bold text-[#1F4E4A]">{game.name}</h3>
-                        <ChevronDown className="h-5 w-5 text-[#132E2C]/60 transition-transform duration-200" />
+                <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-[#1F4E4A]">{game.name}</h3>
+                          <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
+                        </div>
+                        <div className="text-sm text-[#132E2C]/60">
+                          <span>Start: {formatDateStringForDisplay(game.start_date)}</span>
+                          {game.end_date && (
+                            <span> | End: {formatDateStringForDisplay(game.end_date)}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm text-[#132E2C]/60 bg-[#F7F8FC] px-3 py-1 rounded-full">
-                        <span>{formatDateStringForDisplay(game.start_date)}</span>
-                        {game.end_date && (
-                          <span> → {formatDateStringForDisplay(game.end_date)}</span>
-                        )}
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 text-center w-full sm:w-auto">
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Total Sales</div>
+                          <div className="font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Payouts</div>
+                          <div className="font-bold text-orange-600">{formatCurrency(game.total_payouts)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Expenses</div>
+                          <div className="font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Donations</div>
+                          <div className="font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Net Profit</div>
+                          <div className="font-bold text-green-600">{formatCurrency(game.actual_organization_net_profit || game.organization_net_profit)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-[#132E2C]/60">Carryover</div>
+                          <div className="font-bold text-[#A1E96C]">{formatCurrency(game.carryover_jackpot)}</div>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Revenue Section */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-[#132E2C]/70 uppercase tracking-wide">Revenue</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-[#132E2C]/60">Total Sales</span>
-                            <span className="font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-[#132E2C]/60">Carryover</span>
-                            <span className="font-bold text-[#A1E96C]">{formatCurrency(game.carryover_jackpot)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Distributions Section */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-[#132E2C]/70 uppercase tracking-wide">Distributions</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-[#132E2C]/60">Payouts</span>
-                            <span className="font-bold text-orange-600">{formatCurrency(game.total_payouts)}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-[#132E2C]/60">Expenses</span>
-                            <span className="font-bold text-red-600">{formatCurrency(game.total_expenses)}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-[#132E2C]/60">Donations</span>
-                            <span className="font-bold text-purple-600">{formatCurrency(game.total_donations)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Net Result Section */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-[#132E2C]/70 uppercase tracking-wide">Net Result</h4>
-                        <div className="bg-[#A1E96C]/10 p-4 rounded-lg border border-[#A1E96C]/30">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-[#132E2C]">Organization Profit</span>
-                            <span className="text-lg font-bold text-[#1F4E4A]">
-                              {formatCurrency(game.actual_organization_net_profit || game.organization_net_profit)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                    <div className="mt-4 pt-4 border-t border-[#1F4E4A]/10">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          validateGameTotals(game.id);
+                        }}
+                        className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/10"
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Validate Calculations
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -366,9 +390,8 @@ export default function IncomeExpense() {
           ))}
           
           {filteredGames.length === 0 && (
-            <div className="text-center py-12 text-[#132E2C]/60">
-              <div className="text-lg font-medium mb-2">No games found</div>
-              <div className="text-sm">Try adjusting your filters to see more results.</div>
+            <div className="text-center py-8 text-[#132E2C]/60">
+              No games found matching the current filters.
             </div>
           )}
         </CardContent>
