@@ -1,4 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 import { 
   ComposedChart, 
   Line, 
@@ -37,6 +39,8 @@ interface FinancialChartsProps {
 }
 
 export function FinancialCharts({ games, reportType, selectedGame }: FinancialChartsProps) {
+  const [selectedJackpotGame, setSelectedJackpotGame] = useState<string>(games[0]?.id || "");
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -44,6 +48,30 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // Generate jackpot increase data for selected game
+  const generateJackpotIncreaseData = () => {
+    const selectedGameData = games.find(game => game.id === selectedJackpotGame);
+    if (!selectedGameData) return [];
+
+    const sortedWeeks = selectedGameData.weeks.sort((a, b) => a.week_number - b.week_number);
+    
+    return sortedWeeks.map((week, index) => {
+      // Calculate jackpot increase: current week's ending jackpot - previous week's ending jackpot
+      const previousWeek = index > 0 ? sortedWeeks[index - 1] : null;
+      const jackpotIncrease = previousWeek 
+        ? (week.ending_jackpot || 0) - (previousWeek.ending_jackpot || 0)
+        : week.ending_jackpot || 0;
+
+      return {
+        name: `Week ${week.week_number}`,
+        weekNumber: week.week_number,
+        jackpotIncrease: Math.max(0, jackpotIncrease), // Ensure non-negative
+        endingJackpot: week.ending_jackpot || 0,
+        startDate: formatDateStringForShortDisplay(week.start_date)
+      };
+    });
   };
 
   // Generate chart data based on report type
@@ -258,105 +286,72 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
         </CardContent>
       </Card>
 
-      {/* Game Performance Trend Analysis */}
-      {(reportType === "weekly" || reportType === "game") && chartData.length > 1 && (
-        <Card className="bg-white border-[#1F4E4A]/10">
-          <CardHeader>
+      {/* Jackpot Increase Analysis */}
+      <Card className="bg-white border-[#1F4E4A]/10">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div>
             <CardTitle className="text-[#1F4E4A] font-inter">
-              {reportType === "weekly" ? "Weekly Trend Analysis" : "Game Performance Trends"}
+              Jackpot Increase Per Week
             </CardTitle>
             <CardDescription>
-              {reportType === "weekly" ? "Track weekly performance patterns and cumulative growth" :
-               "Analyze performance trends across different games"}
+              Track weekly jackpot growth for selected game
             </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#A1E96C" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#A1E96C" stopOpacity={0.3}/>
-                    </linearGradient>
-                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1F4E4A" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#1F4E4A" stopOpacity={0.3}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#999"
-                    tick={{ fill: "#999", fontSize: 12 }}
-                    angle={reportType === "weekly" ? -45 : 0}
-                    textAnchor={reportType === "weekly" ? "end" : "middle"}
-                    height={reportType === "weekly" ? 60 : 30}
-                  />
-                  <YAxis 
-                    stroke="#999" 
-                    tick={{ fill: "#999", fontSize: 12 }}
-                    tickFormatter={formatCurrency}
-                  />
-                  <Tooltip 
-                    formatter={(value: any, name: string) => [formatCurrency(value), name]}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '6px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <Legend />
-                  {reportType === "weekly" ? (
-                    <>
-                      <Area 
-                        type="monotone" 
-                        dataKey="CumulativeRevenue" 
-                        stroke="#A1E96C" 
-                        strokeWidth={2}
-                        fillOpacity={1} 
-                        fill="url(#revenueGradient)"
-                        name="Cumulative Revenue"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="CumulativeProfit" 
-                        stroke="#1F4E4A" 
-                        strokeWidth={2}
-                        fillOpacity={1} 
-                        fill="url(#profitGradient)"
-                        name="Cumulative Profit"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <Area 
-                        type="monotone" 
-                        dataKey="Revenue" 
-                        stroke="#A1E96C" 
-                        strokeWidth={2}
-                        fillOpacity={1} 
-                        fill="url(#revenueGradient)"
-                        name="Revenue"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="NetProfit" 
-                        stroke="#1F4E4A" 
-                        strokeWidth={2}
-                        fillOpacity={1} 
-                        fill="url(#profitGradient)"
-                        name="Net Profit"
-                      />
-                    </>
-                  )}
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          <Select value={selectedJackpotGame} onValueChange={setSelectedJackpotGame}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select a game" />
+            </SelectTrigger>
+            <SelectContent>
+              {games.map((game) => (
+                <SelectItem key={game.id} value={game.id}>
+                  {game.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={generateJackpotIncreaseData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#999"
+                  tick={{ fill: "#999", fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  stroke="#999" 
+                  tick={{ fill: "#999", fontSize: 12 }}
+                  tickFormatter={formatCurrency}
+                />
+                <Tooltip 
+                  formatter={(value: any, name: string) => [formatCurrency(value), name]}
+                  labelFormatter={(label: string) => `${label}`}
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="jackpotIncrease" 
+                  stroke="#1F4E4A" 
+                  strokeWidth={3}
+                  dot={{ fill: "#1F4E4A", r: 5 }}
+                  name="Jackpot Increase"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Additional Metrics for Weekly View */}
       {reportType === "weekly" && (
