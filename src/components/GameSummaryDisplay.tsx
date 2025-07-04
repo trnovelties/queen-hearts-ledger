@@ -45,10 +45,10 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
   // Get minimum starting jackpot requirement (what the final winner should receive)
   const minimumJackpotRequired = game.minimum_starting_jackpot || 500;
   
-  // Calculate shortfall: difference between what winner got and what was actually available
-  // If winner received more than net contributions, organization covered the difference
-  const jackpotShortfall = finalJackpotPayout > netJackpotContributions ? 
-    (finalJackpotPayout - netJackpotContributions) : 0;
+  // Calculate shortfall based on minimum $500 guarantee vs total contributions
+  // If total contributions are less than $500, organization covers the difference
+  const jackpotShortfall = totalJackpotContributions < 500 ? 
+    (500 - totalJackpotContributions) : 0;
   
   // Total payouts = weekly payouts + final jackpot winner payout
   const totalPayouts = weeklyPayoutsDistributed + finalJackpotPayout;

@@ -78,12 +78,6 @@ export const useGameTotalsUpdater = () => {
       
       // Calculate organization net profit: organization portion (before expenses/donations)
       const organizationNetProfit = gameTotalOrganization;
-      
-      // Calculate actual organization net profit: after expenses and donations
-      const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations;
-
-      console.log('📊 Organization Net Profit (before expenses/donations):', organizationNetProfit);
-      console.log('📈 Actual Organization Net Profit (after expenses/donations):', actualOrganizationNetProfit);
 
       // Separate weekly payouts from final jackpot payout
       const weeklyPayoutsDistributed = weeks?.filter(w => w.card_selected !== 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
@@ -95,8 +89,14 @@ export const useGameTotalsUpdater = () => {
       // Calculate net available for final winner: total contributions - weekly payouts - next game contribution
       const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed - jackpotContributionToNextGame;
       
-      // Calculate jackpot shortfall (if final winner payout exceeds available jackpot funds)
-      const jackpotShortfallCovered = Math.max(0, finalJackpotPayout - netAvailableForFinalWinner);
+      // Calculate jackpot shortfall based on minimum $500 guarantee vs total contributions
+      const jackpotShortfallCovered = Math.max(0, 500 - totalJackpotContributions);
+      
+      // Calculate actual organization net profit: after expenses, donations, and shortfall coverage
+      const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations - jackpotShortfallCovered;
+
+      console.log('📊 Organization Net Profit (before expenses/donations):', organizationNetProfit);
+      console.log('📈 Actual Organization Net Profit (after expenses/donations):', actualOrganizationNetProfit);
       
       // Calculate game duration in weeks
       const gameDurationWeeks = weeks?.length || 0;

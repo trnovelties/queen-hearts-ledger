@@ -119,13 +119,20 @@ export const JackpotContributionModal = ({
       console.log('🎰 Setting game end date to:', todayDateString);
       console.log('🎰 Updating game with contribution:', contribution);
       
+      // Calculate final winner payout considering minimum $500 guarantee
+      const finalWinnerPayout = Math.max(500, totalJackpot - contribution);
+      
+      console.log('🎰 Final Winner Payout (minimum $500 applied):', finalWinnerPayout);
+      console.log('🎰 Total Jackpot Available:', totalJackpot);
+      console.log('🎰 Contribution to Next Game:', contribution);
+      
       // Update current game: end it and set jackpot contribution
       const { error: gameError } = await supabase
         .from('games')
         .update({
           end_date: todayDateString,
           jackpot_contribution_to_next_game: contribution,
-          total_payouts: (totalJackpot - contribution) // Update total payouts with what winner actually receives
+          total_payouts: finalWinnerPayout // Final winner gets at least $500
         })
         .eq('id', gameId)
         .eq('user_id', user.id);
@@ -178,12 +185,13 @@ export const JackpotContributionModal = ({
 
       console.log('🎰 === PHASE 3: COMPLETION SUCCESSFUL ===');
 
-      // Provide detailed success feedback
-      toast.success(`Game completed! ${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game.`);
+      // Provide detailed success feedback with minimum guarantee
+      const actualWinnerReceives = Math.max(500, winnerReceives);
+      toast.success(`Game completed! ${winnerName} receives ${formatCurrency(actualWinnerReceives)} (minimum $500 guaranteed). ${formatCurrency(nextGameGets)} contributed to next game.`);
       
       shadcnToast({
         title: "Game Completed Successfully",
-        description: `${winnerName} receives ${formatCurrency(winnerReceives)}. ${formatCurrency(nextGameGets)} contributed to next game. Game has been ended and moved to archives.`,
+        description: `${winnerName} receives ${formatCurrency(actualWinnerReceives)} (minimum $500 guaranteed). ${formatCurrency(nextGameGets)} contributed to next game. Game has been ended and moved to archives.`,
       });
 
       // Complete the process
