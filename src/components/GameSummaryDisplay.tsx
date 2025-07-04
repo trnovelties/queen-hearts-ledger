@@ -231,8 +231,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-700">
             <strong>Game Summary:</strong> This {game.weeks.length}-week game generated {formatCurrency(game.total_sales)} in total sales 
-            with {totalTicketsSold.toLocaleString()} tickets sold. Total payouts were {formatCurrency(totalPayouts)} 
-            ({formatCurrency(weeklyPayoutsDistributed)} in weekly payouts + {formatCurrency(finalJackpotPayout)} final jackpot).
+            with {totalTicketsSold.toLocaleString()} tickets sold. Total payouts were {formatCurrency(totalPayouts)}.
             {hasShortfall && (
               <> The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the jackpot obligation.</>
             )}
