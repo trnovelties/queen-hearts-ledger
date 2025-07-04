@@ -112,7 +112,7 @@ export const GameCard = ({
                 )}
               </div>
               <div>
-                <span className="text-muted-foreground">Profit:</span> {formatCurrency(game.organization_net_profit)}
+                <span className="text-muted-foreground">Profit:</span> {formatCurrency(game.actual_organization_net_profit)}
               </div>
             </div>
             

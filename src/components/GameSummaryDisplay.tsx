@@ -83,11 +83,11 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             </div>
           </div>
 
-          {/* Total Payouts */}
+          {/* Total Distributions */}
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Target className="h-5 w-5 text-purple-600" />
-              <h4 className="font-semibold text-gray-700">Total Payouts</h4>
+              <h4 className="font-semibold text-gray-700">Total Distributions</h4>
             </div>
             <div className="space-y-1">
               <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalPayouts)}</p>
@@ -131,7 +131,7 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
             <h4 className="font-semibold text-gray-700 mb-3">Financial Breakdown</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Organization Net (Before Shortfall):</span>
+                <span className="text-gray-600">Organization Net:</span>
                 <span className="font-medium">{formatCurrency(game.organization_net_profit)}</span>
               </div>
               <div className="flex justify-between">
@@ -197,12 +197,6 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="text-gray-600">Net Available for Final Winner:</span>
                 <span className="font-medium">{formatCurrency(netJackpotContributions)}</span>
               </div>
-              {jackpotShortfall > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Final Winner Actually Received:</span>
-                  <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
-                </div>
-              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
                 <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
@@ -211,6 +205,12 @@ export const GameSummaryDisplay = ({ game, formatCurrency }: GameSummaryDisplayP
                 <span className="text-gray-600">Next game Contribution:</span>
                 <span className="font-medium">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
               </div>
+              {jackpotShortfall > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Final Winner Actually Received:</span>
+                  <span className="font-medium">{formatCurrency(finalJackpotPayout)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Game Duration:</span>
                 <span className="font-medium">{game.weeks.length} weeks</span>
