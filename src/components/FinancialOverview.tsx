@@ -225,7 +225,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Organization Amount</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationNetProfit)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
               </div>
               
                <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
