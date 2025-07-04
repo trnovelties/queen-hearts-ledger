@@ -84,7 +84,7 @@ export const GameSummaryDisplay = ({
           <div className="bg-white rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Target className="h-5 w-5 text-purple-600" />
-              <h4 className="font-semibold text-gray-700">Total Payouts</h4>
+              <h4 className="font-semibold text-gray-700">Total Distribution</h4>
             </div>
             <div className="space-y-1">
               <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalPayouts)}</p>
