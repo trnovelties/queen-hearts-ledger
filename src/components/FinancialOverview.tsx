@@ -31,8 +31,8 @@ interface FinancialOverviewProps {
     totalActualOrganizationNetProfit: number;
     totalJackpotContributions: number;
     totalContributionsToNextGame: number;
-    totalWeeklyPayoutAmount: number;
-    totalWinnerAmountPaid: number;
+    totalWeeklyPayoutsDistributed: number;
+    totalNetAvailableForFinalWinner: number;
     filteredGames: any[];
   };
   formatCurrency: (amount: number) => string;
@@ -271,17 +271,17 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#F7F8FC] rounded-lg border">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Weekly Payout Amount</span>
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Weekly Payouts Total</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWeeklyPayoutAmount)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWeeklyPayoutsDistributed)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#A1E96C]/10 rounded-lg border border-[#A1E96C]/30">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <Target className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Winner Amount Paid</span>
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Net Available for Final Winner</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWinnerAmountPaid)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalNetAvailableForFinalWinner)}</span>
               </div>
             </div>
           </CardContent>

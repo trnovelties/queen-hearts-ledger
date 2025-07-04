@@ -42,8 +42,8 @@ interface SummaryData {
   totalActualOrganizationNetProfit: number;
   totalJackpotContributions: number;
   totalContributionsToNextGame: number;
-  totalWeeklyPayoutAmount: number;
-  totalWinnerAmountPaid: number;
+  totalWeeklyPayoutsDistributed: number;
+  totalNetAvailableForFinalWinner: number;
   filteredGames: any[];
 }
 
@@ -174,8 +174,8 @@ export default function IncomeExpense() {
     totalActualOrganizationNetProfit: filteredGames.reduce((sum, game) => sum + (game.actual_organization_net_profit || 0), 0),
     totalJackpotContributions: filteredGames.reduce((sum, game) => sum + (game.total_jackpot_contributions || 0), 0),
     totalContributionsToNextGame: filteredGames.reduce((sum, game) => sum + (game.jackpot_contribution_to_next_game || 0), 0),
-    totalWeeklyPayoutAmount: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.weekly_payout_amount, 0), 0),
-    totalWinnerAmountPaid: filteredGames.reduce((sum, game) => sum + game.weeks.reduce((weekSum: number, week: any) => weekSum + week.weekly_payout, 0), 0),
+    totalWeeklyPayoutsDistributed: filteredGames.reduce((sum, game) => sum + (game.weekly_payouts_distributed || 0), 0),
+    totalNetAvailableForFinalWinner: filteredGames.reduce((sum, game) => sum + (game.net_available_for_final_winner || 0), 0),
     filteredGames: filteredGames
   };
 
