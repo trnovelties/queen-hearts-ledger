@@ -218,8 +218,7 @@ export const GameSummaryDisplay = ({
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-700">
             <strong>Game Summary:</strong> This {game.weeks.length}-week game generated {formatCurrency(game.total_sales)} in total sales 
-            with {totalTicketsSold.toLocaleString()} tickets sold. Total distributions were {formatCurrency(totalPayouts)} 
-            ({formatCurrency(weeklyPayoutsDistributed)} in weekly distributions + {formatCurrency(finalJackpotPayout)} final jackpot).
+            with {totalTicketsSold.toLocaleString()} tickets sold. Total distributions were {formatCurrency(totalPayouts)}.
             {hasShortfall && <> The organization covered a {formatCurrency(jackpotShortfall)} shortfall to meet the jackpot obligation.</>}
             The actual organization net profit after all expenses, donations{hasShortfall ? ', and jackpot shortfall coverage' : ''} is {formatCurrency(actualOrganizationNetProfit)}. 
             {isProfitable ? 'The organization maintained profitability.' : 'The organization experienced a net loss due to jackpot obligations exceeding available funds.'}
