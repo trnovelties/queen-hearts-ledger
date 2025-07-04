@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { getTodayDateString } from "@/lib/dateUtils";
 import { toast } from "sonner";
-import { useGameTotalsUpdater } from "@/hooks/useGameTotalsUpdater";
 
 interface JackpotContributionModalProps {
   open: boolean;
@@ -32,7 +31,6 @@ export const JackpotContributionModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast: shadcnToast } = useToast();
   const { user } = useAuth();
-  const { updateGameTotals } = useGameTotalsUpdater();
 
   // Enhanced logging when modal opens
   useEffect(() => {
@@ -146,11 +144,6 @@ export const JackpotContributionModal = ({
 
       console.log('🎰 ✅ Current game ended successfully with end_date:', todayDateString);
       console.log('🎰 ✅ Game marked as completed with contribution:', contribution);
-
-      // Recalculate game totals with the correct jackpot_contribution_to_next_game value
-      console.log('🎰 Recalculating game totals with updated contribution...');
-      await updateGameTotals(gameId);
-      console.log('🎰 ✅ Game totals recalculated successfully');
 
       // Check if there's already a next game created
       const { data: nextGame, error: nextGameError } = await supabase
