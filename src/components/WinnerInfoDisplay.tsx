@@ -1,7 +1,5 @@
-
 import { Button } from "@/components/ui/button";
 import { Printer, Edit } from 'lucide-react';
-
 interface WinnerInfoDisplayProps {
   week: any;
   formatCurrency: (amount: number) => string;
@@ -9,16 +7,14 @@ interface WinnerInfoDisplayProps {
   onOpenWinnerForm?: (gameId: string, weekId: string) => void;
   gameId?: string;
 }
-
-export const WinnerInfoDisplay = ({ 
-  week, 
-  formatCurrency, 
-  onOpenPayoutSlip, 
+export const WinnerInfoDisplay = ({
+  week,
+  formatCurrency,
+  onOpenPayoutSlip,
   onOpenWinnerForm,
-  gameId 
+  gameId
 }: WinnerInfoDisplayProps) => {
   if (!week.winner_name) return null;
-
   const handlePrintSlip = () => {
     if (onOpenPayoutSlip) {
       const winnerData = {
@@ -35,42 +31,25 @@ export const WinnerInfoDisplay = ({
       onOpenPayoutSlip(winnerData);
     }
   };
-
   const handleEditWinner = () => {
     if (onOpenWinnerForm && gameId) {
       onOpenWinnerForm(gameId, week.id);
     }
   };
-
-  return (
-    <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
+  return <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
       <div className="flex justify-between items-start mb-4">
         <h5 className="text-lg font-semibold text-yellow-800 flex items-center">
           🏆 Winner Information
         </h5>
         <div className="flex gap-2">
-          {onOpenWinnerForm && gameId && (
-            <Button
-              onClick={handleEditWinner}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
+          {onOpenWinnerForm && gameId && <Button onClick={handleEditWinner} variant="outline" size="sm" className="flex items-center gap-2">
               <Edit className="h-4 w-4" />
               Edit Winner Details
-            </Button>
-          )}
-          {onOpenPayoutSlip && (
-            <Button
-              onClick={handlePrintSlip}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
+            </Button>}
+          {onOpenPayoutSlip && <Button onClick={handlePrintSlip} variant="outline" size="sm" className="flex items-center gap-2">
               <Printer className="h-4 w-4" />
               Print Distribution Slip
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
@@ -87,7 +66,7 @@ export const WinnerInfoDisplay = ({
           <div className="text-yellow-900 font-semibold">{week.card_selected}</div>
         </div>
         <div className="space-y-1">
-          <div className="font-medium text-yellow-700">Payout Amount</div>
+          <div className="font-medium text-yellow-700">Distribution Amount</div>
           <div className="text-yellow-900 font-semibold">{formatCurrency(week.weekly_payout)}</div>
         </div>
         <div className="space-y-1">
@@ -97,6 +76,5 @@ export const WinnerInfoDisplay = ({
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
