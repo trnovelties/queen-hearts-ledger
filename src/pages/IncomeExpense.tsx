@@ -285,37 +285,8 @@ export default function IncomeExpense() {
       {/* Games List */}
       <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-[#1F4E4A] font-inter">Game Details</CardTitle>
-              <CardDescription>Detailed breakdown by game and week</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => {
-                  setSelectedGameForExpense(filters.gameNumber === "all" ? null : filters.gameNumber);
-                  setShowExpenseModal(true);
-                }}
-                size="sm"
-                className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Expense
-              </Button>
-              <Button 
-                onClick={() => {
-                  setSelectedGameForDonation(filters.gameNumber === "all" ? null : filters.gameNumber);
-                  setShowDonationModal(true);
-                }}
-                size="sm"
-                variant="outline"
-                className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/10"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Donation
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="text-[#1F4E4A] font-inter">Game Details</CardTitle>
+          <CardDescription>Detailed breakdown by game and week</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {filteredGames.map((game) => (
@@ -367,29 +338,144 @@ export default function IncomeExpense() {
                           <div className="font-bold text-[#A1E96C]">{formatCurrency(game.carryover_jackpot)}</div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="mt-4 pt-4 border-t border-[#1F4E4A]/10">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          validateGameTotals(game.id);
-                        }}
-                        className="border-[#A1E96C] text-[#1F4E4A] hover:bg-[#A1E96C]/10"
-                      >
-                        <Settings className="h-4 w-4 mr-1" />
-                        Validate Calculations
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent className="space-y-4">
-                <DetailedFinancialTable games={[game]} formatCurrency={formatCurrency} />
-              </CollapsibleContent>
+                     </div>
+                   </CardContent>
+                 </Card>
+               </CollapsibleTrigger>
+               
+               <CollapsibleContent className="space-y-6 p-4 bg-[#F7F8FC] rounded-lg">
+                 {/* Game Summary Grid */}
+                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 p-4 bg-white rounded-lg shadow-sm">
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Total Sales</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-orange-600">{formatCurrency(game.total_jackpot_contributions || 0)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Jackpot Contributions</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-blue-600">{formatCurrency(game.net_available_for_final_winner || 0)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Winner Received</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Expenses</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Donations</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-green-600">{formatCurrency(game.organization_net_profit)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Net Profit</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-lg font-bold text-[#1F4E4A]">{formatCurrency(game.carryover_jackpot)}</div>
+                     <div className="text-xs text-[#132E2C]/70">Carryover</div>
+                   </div>
+                 </div>
+
+                 {/* Weekly Performance Table */}
+                 {game.weeks.length > 0 && (
+                   <div className="bg-white rounded-lg shadow-sm p-4">
+                     <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">Weekly Performance</h4>
+                     <div className="overflow-x-auto">
+                       <table className="w-full text-sm">
+                         <thead>
+                           <tr className="border-b border-[#1F4E4A]/20">
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Week</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Period</th>
+                             <th className="text-center p-2 font-semibold text-[#132E2C]">Tickets Sold</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Sales</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Winner</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Card</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Distribution</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Present</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           {game.weeks.map((week: any) => (
+                             <tr key={week.id} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
+                               <td className="p-2 font-medium text-[#1F4E4A]">Week {week.week_number}</td>
+                               <td className="p-2 text-sm">{formatDateStringForDisplay(week.start_date)} - {formatDateStringForDisplay(week.end_date)}</td>
+                               <td className="p-2 text-center font-medium">{week.weekly_tickets_sold?.toLocaleString() || 0}</td>
+                               <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(week.weekly_sales)}</td>
+                               <td className="p-2 font-medium">{week.winner_name || <span className="text-[#132E2C]/50">No winner</span>}</td>
+                               <td className="p-2">
+                                 {week.card_selected ? (
+                                   <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                     week.card_selected === "Queen of Hearts" ? 
+                                     "bg-[#A1E96C]/20 text-[#132E2C]" : 
+                                     "bg-gray-100 text-gray-800"
+                                   }`}>
+                                     {week.card_selected}
+                                   </span>
+                                 ) : (
+                                   <span className="text-[#132E2C]/50">-</span>
+                                 )}
+                               </td>
+                               <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(week.weekly_payout)}</td>
+                               <td className="p-2">
+                                 {week.winner_present !== null ? (
+                                   <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                     week.winner_present ? 
+                                     "bg-green-100 text-green-800" : 
+                                     "bg-red-100 text-red-800"
+                                   }`}>
+                                     {week.winner_present ? 'Yes' : 'No'}
+                                   </span>
+                                 ) : (
+                                   <span className="text-[#132E2C]/50">-</span>
+                                 )}
+                               </td>
+                             </tr>
+                           ))}
+                         </tbody>
+                       </table>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Expenses & Donations Table */}
+                 {game.expenses.length > 0 && (
+                   <div className="bg-white rounded-lg shadow-sm p-4">
+                     <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">Expenses & Donations</h4>
+                     <div className="overflow-x-auto">
+                       <table className="w-full text-sm">
+                         <thead>
+                           <tr className="border-b border-[#1F4E4A]/20">
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Date</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Type</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Amount</th>
+                             <th className="text-left p-2 font-semibold text-[#132E2C]">Description</th>
+                           </tr>
+                         </thead>
+                         <tbody>
+                           {game.expenses.map((expense: any) => (
+                             <tr key={expense.id} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
+                               <td className="p-2 font-medium text-[#132E2C]">{formatDateStringForDisplay(expense.date)}</td>
+                               <td className="p-2">
+                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                   expense.is_donation ? 
+                                   "bg-purple-100 text-purple-800" : 
+                                   "bg-red-100 text-red-800"
+                                 }`}>
+                                   {expense.is_donation ? 'Donation' : 'Expense'}
+                                 </span>
+                               </td>
+                               <td className={`p-2 font-medium ${expense.is_donation ? 'text-purple-600' : 'text-red-600'}`}>
+                                 {formatCurrency(expense.amount)}
+                               </td>
+                               <td className="p-2 text-[#132E2C]/80">{expense.memo || <span className="text-[#132E2C]/50">No description</span>}</td>
+                             </tr>
+                           ))}
+                         </tbody>
+                       </table>
+                     </div>
+                   </div>
+                 )}
+               </CollapsibleContent>
             </Collapsible>
           ))}
           
