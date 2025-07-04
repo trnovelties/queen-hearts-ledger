@@ -126,8 +126,16 @@ export function WinnerForm({
       const currentWeekJackpotContributions = weekSales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0;
       console.log('Current Week Jackpot Contributions:', currentWeekJackpotContributions);
 
-      // Calculate ending jackpot: Previous ending jackpot + current week's contributions - payout
-      const endingJackpot = previousEndingJackpot + currentWeekJackpotContributions - weeklyPayout;
+      // For Week 1, the carryover is already included in jackpot_total values, so don't add it again
+      // For other weeks, use the previous week's ending jackpot
+      let endingJackpot;
+      if (currentWeek.week_number === 1) {
+        // Week 1: Just use current week contributions - payout (carryover is already in contributions)
+        endingJackpot = currentWeekJackpotContributions - weeklyPayout;
+      } else {
+        // Other weeks: Previous ending + current contributions - payout
+        endingJackpot = previousEndingJackpot + currentWeekJackpotContributions - weeklyPayout;
+      }
 
       console.log('Ending Jackpot Calculation:');
       console.log('Formula: Previous Ending Jackpot + Current Week Contributions - Weekly Payout');
