@@ -21,7 +21,7 @@ export const useGameTotalsUpdater = () => {
       // Get game data to access carryover jackpot and percentages
       const { data: gameData } = await supabase
         .from('games')
-        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game')
+        .select('carryover_jackpot, organization_percentage, jackpot_percentage')
         .eq('id', gameId)
         .eq('user_id', user.id)
         .single();
@@ -65,49 +65,17 @@ export const useGameTotalsUpdater = () => {
       const totalExpenses = expenses?.filter(e => !e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       
-      // Calculate detailed financial breakdown
-      const totalJackpotContributions = gameTotalSales * (jackpotPercentage / 100);
+      // Calculate total payouts correctly - sum all weekly payouts (including Queen of Hearts)
+      const totalPayouts = weeks?.reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
       
-      // Total payouts should equal total jackpot contributions (what's allocated for payouts)
-      const totalPayouts = totalJackpotContributions;
-      
-      console.log('💰 Total Jackpot Contributions:', totalJackpotContributions);
-      console.log('💸 Total Payouts (should equal jackpot contributions):', totalPayouts);
+      console.log('💸 Total Payouts from weeks:', totalPayouts);
       console.log('💳 Total Expenses:', totalExpenses);
       console.log('🎁 Total Donations:', totalDonations);
       
-      // Calculate organization net profit: organization portion (before expenses/donations)
-      const organizationNetProfit = gameTotalOrganization;
-      
-      // Calculate actual organization net profit: after expenses and donations
-      const actualOrganizationNetProfit = organizationNetProfit - totalExpenses - totalDonations;
+      // Calculate organization net profit: organization portion - expenses - donations
+      const organizationNetProfit = gameTotalOrganization - totalExpenses - totalDonations;
 
-      console.log('📊 Organization Net Profit (before expenses/donations):', organizationNetProfit);
-      console.log('📈 Actual Organization Net Profit (after expenses/donations):', actualOrganizationNetProfit);
-
-      // Separate weekly payouts from final jackpot payout
-      const weeklyPayoutsDistributed = weeks?.filter(w => w.card_selected !== 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
-      const finalJackpotPayout = weeks?.filter(w => w.card_selected === 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
-      
-      // Calculate jackpot contribution to next game (if any)
-      const jackpotContributionToNextGame = gameData?.jackpot_contribution_to_next_game || 0;
-      
-      // Calculate net available for final winner: total contributions - weekly payouts - next game contribution
-      const netAvailableForFinalWinner = totalJackpotContributions - weeklyPayoutsDistributed - jackpotContributionToNextGame;
-      
-      // Calculate jackpot shortfall (if final winner payout exceeds available jackpot funds)
-      const jackpotShortfallCovered = Math.max(0, finalJackpotPayout - netAvailableForFinalWinner);
-      
-      // Calculate game duration in weeks
-      const gameDurationWeeks = weeks?.length || 0;
-
-      console.log('💰 Total Jackpot Contributions:', totalJackpotContributions);
-      console.log('📊 Weekly Payouts Distributed:', weeklyPayoutsDistributed);
-      console.log('🏆 Final Jackpot Payout:', finalJackpotPayout);
-      console.log('💵 Net Available for Final Winner:', netAvailableForFinalWinner);
-      console.log('⚠️ Jackpot Shortfall Covered:', jackpotShortfallCovered);
-      console.log('📈 Actual Organization Net Profit:', actualOrganizationNetProfit);
-      console.log('📅 Game Duration (weeks):', gameDurationWeeks);
+      console.log('📊 Organization Net Profit (before shortfall):', organizationNetProfit);
 
       // Update game totals in database
       const { error: updateError } = await supabase
@@ -117,14 +85,7 @@ export const useGameTotalsUpdater = () => {
           total_payouts: totalPayouts,
           total_expenses: totalExpenses,
           total_donations: totalDonations,
-          organization_net_profit: organizationNetProfit,
-          actual_organization_net_profit: actualOrganizationNetProfit,
-          weekly_payouts_distributed: weeklyPayoutsDistributed,
-          final_jackpot_payout: finalJackpotPayout,
-          total_jackpot_contributions: totalJackpotContributions,
-          net_available_for_final_winner: netAvailableForFinalWinner,
-          jackpot_shortfall_covered: jackpotShortfallCovered,
-          game_duration_weeks: gameDurationWeeks
+          organization_net_profit: organizationNetProfit
         })
         .eq('id', gameId)
         .eq('user_id', user.id);

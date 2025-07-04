@@ -17,7 +17,7 @@ export const useTicketSalesOperations = () => {
     setGames: (games: any[]) => void,
     onError?: (message: string) => void
   ) => {
-    // Update the daily entry - this already updates local state optimistically
+    // Update the daily entry
     await updateDailyEntry(
       weekId,
       dayIndex,
@@ -28,8 +28,9 @@ export const useTicketSalesOperations = () => {
       onError
     );
 
-    // Note: Week and game totals are already calculated and updated in the local state
-    // by updateDailyEntry, so we don't need additional database calls here
+    // Update week and game totals
+    await updateWeekTotals(weekId);
+    await updateGameTotals(currentGameId);
   };
 
   return {

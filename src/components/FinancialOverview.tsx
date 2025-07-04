@@ -35,8 +35,8 @@ interface FinancialOverviewProps {
 
 export function FinancialOverview({ summary, formatCurrency }: FinancialOverviewProps) {
   // Calculate key performance indicators
-  const profitMargin = summary.organizationTotalPortion > 0 ? 
-    ((summary.organizationNetProfit / summary.organizationTotalPortion) * 100) : 0;
+  const profitMargin = summary.totalSales > 0 ? 
+    ((summary.organizationNetProfit / summary.totalSales) * 100) : 0;
   
   const expenseRatio = summary.organizationTotalPortion > 0 ? 
     ((summary.totalExpenses / summary.organizationTotalPortion) * 100) : 0;
@@ -51,7 +51,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
     summary.totalSales / summary.totalTicketsSold : 0;
 
   const totalGames = summary.filteredGames.length;
-  const avgGameNet = totalGames > 0 ? summary.organizationNetProfit / totalGames : 0;
+  const avgGameRevenue = totalGames > 0 ? summary.totalSales / totalGames : 0;
 
   // KPI Card Component
   const KPICard = ({ 
@@ -156,8 +156,8 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
 
   return (
     <div className="space-y-6">
-      {/* Main KPI Grid - 3 columns, 2 rows for 6 cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Main KPI Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <KPICard
           title="Tickets Sold"
           value={summary.totalTicketsSold.toLocaleString()}
@@ -166,11 +166,11 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           subtitle={`Avg. ${formatCurrency(avgTicketPrice)} per ticket`}
         />
         <KPICard
-          title="Organization Net"
-          value={summary.organizationNetProfit}
+          title="Total Sales"
+          value={summary.totalSales}
           icon={DollarSign}
           colorScheme="green"
-          subtitle={`Avg. ${formatCurrency(avgGameNet)} per game`}
+          subtitle={`${totalGames} games tracked`}
         />
         <KPICard
           title="Organization Net"
@@ -186,22 +186,6 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           icon={Trophy}
           colorScheme="orange"
           subtitle={`${distributionEfficiency.toFixed(1)}% distribution efficiency`}
-        />
-        <KPICard
-          title="Total Expenses"
-          value={summary.totalExpenses}
-          icon={Receipt}
-          colorScheme="red"
-          percentage={expenseRatio}
-          subtitle="Operating expenses"
-        />
-        <KPICard
-          title="Total Donations"
-          value={summary.totalDonations}
-          icon={HeartHandshake}
-          colorScheme="purple"
-          percentage={donationRatio}
-          subtitle="Community donations"
         />
       </div>
 
@@ -226,21 +210,21 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{summary.totalTicketsSold.toLocaleString()}</span>
               </div>
               
-               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Organization Revenue</span>
-                 </div>
-                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
-               </div>
-               
-                 <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg Net per Game</span>
-                 </div>
-                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameNet)}</span>
-               </div>
+              <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Gross Revenue</span>
+                </div>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalSales)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg per Game</span>
+                </div>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameRevenue)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>

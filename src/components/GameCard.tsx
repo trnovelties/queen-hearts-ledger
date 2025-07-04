@@ -154,7 +154,6 @@ export const GameCard = ({
             onRefreshData={onRefreshData}
             onOpenExpenseModal={handleDailyExpense}
             onOpenDonationModal={handleDailyDonation}
-            onDeleteWeek={(weekId) => onOpenDeleteConfirm(weekId, 'week')}
           />
           
           <ExpenseSection
