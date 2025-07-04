@@ -268,7 +268,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#F7F8FC] rounded-lg border">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Weekly Payouts Total</span>
+                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Weekly Total</span>
                 </div>
                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWeeklyPayoutsDistributed)}</span>
               </div>
