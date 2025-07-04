@@ -276,34 +276,35 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                 <AreaChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={chartColors.secondary} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={chartColors.secondary} stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#A1E96C" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#A1E96C" stopOpacity={0.3}/>
                     </linearGradient>
                     <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={chartColors.profit} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={chartColors.profit} stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#1F4E4A" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#1F4E4A" stopOpacity={0.3}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1F4E4A20" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis 
                     dataKey="name" 
-                    stroke="#132E2C"
-                    tick={{ fill: "#132E2C" }}
+                    stroke="#999"
+                    tick={{ fill: "#999", fontSize: 12 }}
                     angle={reportType === "weekly" ? -45 : 0}
                     textAnchor={reportType === "weekly" ? "end" : "middle"}
                     height={reportType === "weekly" ? 60 : 30}
                   />
                   <YAxis 
-                    stroke="#132E2C" 
-                    tick={{ fill: "#132E2C" }}
+                    stroke="#999" 
+                    tick={{ fill: "#999", fontSize: 12 }}
                     tickFormatter={formatCurrency}
                   />
                   <Tooltip 
                     formatter={(value: any, name: string) => [formatCurrency(value), name]}
                     contentStyle={{
                       backgroundColor: 'white',
-                      border: '1px solid #1F4E4A20',
-                      borderRadius: '8px'
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '6px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                     }}
                   />
                   <Legend />
@@ -312,7 +313,8 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                       <Area 
                         type="monotone" 
                         dataKey="CumulativeRevenue" 
-                        stroke={chartColors.secondary} 
+                        stroke="#A1E96C" 
+                        strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#revenueGradient)"
                         name="Cumulative Revenue"
@@ -320,7 +322,8 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                       <Area 
                         type="monotone" 
                         dataKey="CumulativeProfit" 
-                        stroke={chartColors.profit} 
+                        stroke="#1F4E4A" 
+                        strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#profitGradient)"
                         name="Cumulative Profit"
@@ -331,7 +334,8 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                       <Area 
                         type="monotone" 
                         dataKey="Revenue" 
-                        stroke={chartColors.secondary} 
+                        stroke="#A1E96C" 
+                        strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#revenueGradient)"
                         name="Revenue"
@@ -339,7 +343,8 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                       <Area 
                         type="monotone" 
                         dataKey="NetProfit" 
-                        stroke={chartColors.profit} 
+                        stroke="#1F4E4A" 
+                        strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#profitGradient)"
                         name="Net Profit"
