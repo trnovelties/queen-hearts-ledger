@@ -130,10 +130,6 @@ export const GameSummaryDisplay = ({
                 <span className="font-medium">{formatCurrency(game.organization_net_profit)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Distributions:</span>
-                <span className="font-medium">{formatCurrency(totalPayouts)}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-600">Regular Expenses:</span>
                 <span className="font-medium">{formatCurrency(game.total_expenses)}</span>
               </div>
