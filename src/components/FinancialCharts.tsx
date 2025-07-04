@@ -118,10 +118,10 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
       return games.map(game => ({
         name: game.name,
         Revenue: game.total_sales,
-        Distributions: game.total_payouts,
+        Distributions: game.total_jackpot_contributions || 0,
         Expenses: game.total_expenses,
         Donations: game.total_donations,
-        NetProfit: game.organization_net_profit,
+        NetProfit: game.actual_organization_net_profit || 0,
         TicketsSold: Math.round(game.total_sales / (game.ticket_price || 2)),
         WeeksPlayed: game.weeks.length,
         AvgWeeklyRevenue: game.weeks.length > 0 ? game.total_sales / game.weeks.length : 0
@@ -248,7 +248,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                   type="monotone" 
                   dataKey="NetProfit" 
                   stroke={chartColors.profit} 
-                  strokeWidth={3}
+                  strokeWidth={1.5}
                   dot={{ fill: chartColors.profit, r: 4 }}
                   name="Net Profit"
                 />
