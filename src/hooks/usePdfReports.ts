@@ -65,16 +65,16 @@ export const usePdfReports = () => {
         doc.setFont("helvetica", bold ? "bold" : "normal");
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
-        doc.text(label, margin + 3, yPosition);
+        doc.text(label, margin + 2, yPosition);
         doc.setFont("helvetica", "normal");
-        doc.text(value, margin + 65, yPosition);
-        yPosition += 6;
+        doc.text(value, margin + 70, yPosition);
+        yPosition += 7;
       };
 
       // Helper function to create professional tables
       const createTable = (headers: string[], rows: string[][], colWidths: number[]) => {
         const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
-        const startX = margin + (contentWidth - tableWidth) / 2;
+        const startX = margin;
         
         // Table header
         doc.setFillColor(220, 220, 220);
@@ -87,11 +87,11 @@ export const usePdfReports = () => {
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         
-        let xPos = startX + 1;
+        let xPos = startX + 2;
         headers.forEach((header, index) => {
           doc.text(header, xPos, yPosition + 5);
           if (index < headers.length - 1) {
-            doc.line(xPos + colWidths[index] - 1, yPosition, xPos + colWidths[index] - 1, yPosition + 8);
+            doc.line(xPos + colWidths[index] - 2, yPosition, xPos + colWidths[index] - 2, yPosition + 8);
           }
           xPos += colWidths[index];
         });
@@ -114,11 +114,11 @@ export const usePdfReports = () => {
           doc.setLineWidth(0.3);
           doc.rect(startX, yPosition, tableWidth, 7);
           
-          xPos = startX + 1;
+          xPos = startX + 2;
           row.forEach((cell, cellIndex) => {
             doc.text(cell, xPos, yPosition + 4.5);
             if (cellIndex < row.length - 1) {
-              doc.line(xPos + colWidths[cellIndex] - 1, yPosition, xPos + colWidths[cellIndex] - 1, yPosition + 7);
+              doc.line(xPos + colWidths[cellIndex] - 2, yPosition, xPos + colWidths[cellIndex] - 2, yPosition + 7);
             }
             xPos += colWidths[cellIndex];
           });
@@ -186,7 +186,7 @@ export const usePdfReports = () => {
       const financialData = [
         ['Total Tickets Sold:', `${totalTicketsSold.toLocaleString()}`],
         ['Total Sales Revenue:', formatCurrency(game.total_sales || 0)],
-        ['Total Winner Payouts:', formatCurrency(totalPayouts)],
+        ['Total Winner Distributions:', formatCurrency(totalPayouts)],
         ['Total Expenses:', formatCurrency(game.total_expenses || 0)],
         ['Total Donations:', formatCurrency(game.total_donations || 0)],
         ['Organization Net Profit:', formatCurrency(game.organization_net_profit || 0)],
@@ -200,8 +200,8 @@ export const usePdfReports = () => {
       addSectionHeader('DETAILED WEEKLY PERFORMANCE', 12);
       
       if (game.weeks && game.weeks.length > 0) {
-        const weekHeaders = ['Week #', 'Period', 'Tickets', 'Sales', 'Winner', 'Card', 'Payout', 'Present'];
-        const weekColWidths = [18, 38, 20, 25, 35, 30, 25, 18];
+        const weekHeaders = ['Week #', 'Period', 'Tickets', 'Sales', 'Winner', 'Card', 'Distribution', 'Present'];
+        const weekColWidths = [20, 40, 22, 28, 38, 32, 28, 20];
         
         const weekRows = game.weeks.map((week: any) => [
           `${week.week_number}`,
@@ -230,7 +230,7 @@ export const usePdfReports = () => {
             addSectionHeader(`WEEK ${week.week_number} - DAILY BREAKDOWN`, 11);
             
             const dailyHeaders = ['Date', 'Tickets Sold', 'Amount', 'Org. Total', 'Jackpot Total', 'Ending Jackpot'];
-            const dailyColWidths = [30, 25, 25, 25, 25, 30];
+            const dailyColWidths = [32, 28, 28, 28, 30, 34];
             
             const dailyRows = week.ticket_sales.map((sale: any) => [
               formatDateStringShort(sale.date),
@@ -251,8 +251,8 @@ export const usePdfReports = () => {
       if (winners.length > 0) {
         addSectionHeader('WINNERS DIRECTORY', 12);
         
-        const winnerHeaders = ['Week', 'Winner Name', 'Card Selected', 'Prize Amount', 'Date', 'Present'];
-        const winnerColWidths = [20, 40, 30, 30, 30, 20];
+        const winnerHeaders = ['Week', 'Winner Name', 'Card Selected', 'Distribution Amount', 'Date', 'Present'];
+        const winnerColWidths = [22, 42, 32, 35, 32, 22];
         
         const winnerRows = winners.map((week: any) => [
           `${week.week_number}`,
@@ -280,7 +280,7 @@ export const usePdfReports = () => {
           doc.setFont("helvetica", "normal");
           doc.setFontSize(10);
           doc.text(`${jackpotWinner.winner_name} - Week ${jackpotWinner.week_number}`, margin + 5, yPosition + 15);
-          doc.text(`Prize: ${formatCurrency(jackpotWinner.weekly_payout || 0)}`, margin + 5, yPosition + 21);
+          doc.text(`Distribution: ${formatCurrency(jackpotWinner.weekly_payout || 0)}`, margin + 5, yPosition + 21);
           yPosition += 30;
         }
       }
