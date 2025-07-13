@@ -52,9 +52,9 @@ export const WeekSummaryStats = ({
         </div>
 
         {/* Jackpot Pool moved after ORG cumulative */}
-        <div className="text-center bg-white border border-gray-200 rounded-lg py-2 px-3 shadow-sm">
-          <p className="text-sm text-gray-600">Jackpot Pool</p>
-          <p className="text-base font-semibold text-blue-600">{formatCurrency(weekJackpotTotal)}</p>
+        <div className="text-center bg-purple-50 border border-purple-200 rounded-lg py-2 px-3 shadow-sm">
+          <p className="text-sm text-purple-700 font-medium">Jackpot Pool</p>
+          <p className="text-base font-semibold text-purple-600">{formatCurrency(weekJackpotTotal)}</p>
         </div>
 
         {/* Jackpot Combined Card */}
