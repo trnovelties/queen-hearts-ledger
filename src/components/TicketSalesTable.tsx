@@ -165,6 +165,8 @@ export const TicketSalesTable = ({
           displayedEndingJackpot={displayedEndingJackpot}
           hasWinner={hasWinner()}
           formatCurrency={formatCurrency}
+          cumulativeOrganizationNet={0} // TODO: Calculate cumulative values
+          cumulativeCurrentJackpot={0} // TODO: Calculate cumulative values
         />
         
         {/* Winner Information */}
