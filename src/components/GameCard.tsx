@@ -104,6 +104,9 @@ export const GameCard = ({
                 )}
               </div>
               <div>
+                <span className="text-muted-foreground">Total Tickets Sold:</span> {game.weeks.reduce((total: number, week: any) => total + (week.weekly_tickets_sold || 0), 0).toLocaleString()}
+              </div>
+              <div>
                 <span className="text-muted-foreground">Total Sales:</span> {formatCurrency(game.total_sales)}
                 {game.carryover_jackpot > 0 && (
                   <span className="text-xs text-muted-foreground/70 ml-1">
