@@ -28,47 +28,50 @@ export const WeekSummaryStats = ({
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
         {/* Basic Stats */}
         <div className="text-center bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-gray-600">Tickets Sold</p>
-          <p className="text-sm font-semibold text-[#1F4E4A]">{weekTotalTickets}</p>
+          <p className="text-sm text-gray-600">Tickets Sold</p>
+          <p className="text-base font-semibold text-[#1F4E4A]">{weekTotalTickets}</p>
         </div>
         <div className="text-center bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-gray-600">Ticket Sales</p>
-          <p className="text-sm font-semibold text-[#1F4E4A]">{formatCurrency(weekTotalSales)}</p>
+          <p className="text-sm text-gray-600">Ticket Sales</p>
+          <p className="text-base font-semibold text-[#1F4E4A]">{formatCurrency(weekTotalSales)}</p>
         </div>
 
         {/* Organization Combined Card */}
         <div className="text-center bg-green-50 border border-green-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-green-700 font-medium mb-1">Organization</p>
+          <p className="text-sm text-green-700 font-medium mb-1">Organization</p>
           <div className="space-y-1">
             <div>
-              <p className="text-xs text-gray-600">Current</p>
-              <p className="text-sm font-semibold text-green-600">{formatCurrency(weekOrganizationTotal)}</p>
+              <p className="text-sm text-gray-600">Current</p>
+              <p className="text-base font-semibold text-green-600">{formatCurrency(weekOrganizationTotal)}</p>
             </div>
             <div className="border-t border-green-200 pt-1">
-              <p className="text-xs text-gray-600">Cumulative</p>
-              <p className="text-sm font-semibold text-green-700">{formatCurrency(cumulativeOrganizationNet)}</p>
+              <p className="text-sm text-gray-600">Cumulative</p>
+              <p className="text-base font-semibold text-green-700">{formatCurrency(cumulativeOrganizationNet)}</p>
             </div>
           </div>
         </div>
 
         {/* Jackpot Pool moved after ORG cumulative */}
         <div className="text-center bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-gray-600">Jackpot Pool</p>
-          <p className="text-sm font-semibold text-blue-600">{formatCurrency(weekJackpotTotal)}</p>
+          <p className="text-sm text-gray-600">Jackpot Pool</p>
+          <p className="text-base font-semibold text-blue-600">{formatCurrency(weekJackpotTotal)}</p>
         </div>
 
-        {/* Current Jackpot Group */}
+        {/* Jackpot Combined Card */}
         <div className="text-center bg-purple-50 border border-purple-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-purple-700 font-medium">JACKPOT</p>
-          <p className="text-xs text-gray-600">
-            {hasWinner ? 'Final' : 'Current'}
-          </p>
-          <p className="text-sm font-semibold text-purple-600">{formatCurrency(displayedEndingJackpot)}</p>
-        </div>
-        <div className="text-center bg-purple-50 border border-purple-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-purple-700 font-medium">JACKPOT</p>
-          <p className="text-xs text-gray-600">Cumulative</p>
-          <p className="text-sm font-semibold text-purple-700">{formatCurrency(cumulativeCurrentJackpot)}</p>
+          <p className="text-sm text-purple-700 font-medium mb-1">Jackpot</p>
+          <div className="space-y-1">
+            <div>
+              <p className="text-sm text-gray-600">
+                {hasWinner ? 'Final' : 'Current'}
+              </p>
+              <p className="text-base font-semibold text-purple-600">{formatCurrency(displayedEndingJackpot)}</p>
+            </div>
+            <div className="border-t border-purple-200 pt-1">
+              <p className="text-sm text-gray-600">Cumulative</p>
+              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeCurrentJackpot)}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
