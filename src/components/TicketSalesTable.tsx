@@ -81,11 +81,40 @@ export const TicketSalesTable = ({
     }
   };
 
+  // Helper function to calculate cumulative values
+  const calculateCumulativeValues = () => {
+    const currentGame = games.find(g => g.id === game.id);
+    if (!currentGame) return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0 };
+
+    // Get all weeks up to and including current week
+    const weeksUpToCurrent = currentGame.weeks
+      .filter((w: any) => w.week_number <= week.week_number)
+      .sort((a: any, b: any) => a.week_number - b.week_number);
+
+    let cumulativeOrganizationNet = 0;
+    let cumulativeCurrentJackpot = 0;
+
+    weeksUpToCurrent.forEach((w: any) => {
+      if (w.ticket_sales) {
+        const weekOrgTotal = w.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
+        const weekJackpotTotal = w.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
+        
+        cumulativeOrganizationNet += weekOrgTotal;
+        cumulativeCurrentJackpot += weekJackpotTotal;
+      }
+    });
+
+    return { cumulativeOrganizationNet, cumulativeCurrentJackpot };
+  };
+
   // Calculate week totals from daily entries
   const weekTotalTickets = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
   const weekTotalSales = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
   const weekOrganizationTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.organization_total, 0);
   const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
+
+  // Calculate cumulative values
+  const { cumulativeOrganizationNet, cumulativeCurrentJackpot } = calculateCumulativeValues();
 
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
@@ -165,8 +194,8 @@ export const TicketSalesTable = ({
           displayedEndingJackpot={displayedEndingJackpot}
           hasWinner={hasWinner()}
           formatCurrency={formatCurrency}
-          cumulativeOrganizationNet={0} // TODO: Calculate cumulative values
-          cumulativeCurrentJackpot={0} // TODO: Calculate cumulative values
+          cumulativeOrganizationNet={cumulativeOrganizationNet}
+          cumulativeCurrentJackpot={cumulativeCurrentJackpot}
         />
         
         {/* Winner Information */}
