@@ -35,21 +35,23 @@ export const WeekSummaryStats = ({
           <p className="text-xs text-gray-600">Ticket Sales</p>
           <p className="text-sm font-semibold text-[#1F4E4A]">{formatCurrency(weekTotalSales)}</p>
         </div>
-        <div className="text-center bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-gray-600">Jackpot Pool</p>
-          <p className="text-sm font-semibold text-blue-600">{formatCurrency(weekJackpotTotal)}</p>
-        </div>
 
         {/* Organization Net Group */}
         <div className="text-center bg-green-50 border border-green-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-green-700 font-medium">ORG NET</p>
+          <p className="text-xs text-green-700 font-medium">ORG.</p>
           <p className="text-xs text-gray-600">Current</p>
           <p className="text-sm font-semibold text-green-600">{formatCurrency(weekOrganizationTotal)}</p>
         </div>
         <div className="text-center bg-green-50 border border-green-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-green-700 font-medium">ORG NET</p>
+          <p className="text-xs text-green-700 font-medium">ORG.</p>
           <p className="text-xs text-gray-600">Cumulative</p>
           <p className="text-sm font-semibold text-green-700">{formatCurrency(cumulativeOrganizationNet)}</p>
+        </div>
+
+        {/* Jackpot Pool moved after ORG cumulative */}
+        <div className="text-center bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
+          <p className="text-xs text-gray-600">Jackpot Pool</p>
+          <p className="text-sm font-semibold text-blue-600">{formatCurrency(weekJackpotTotal)}</p>
         </div>
 
         {/* Current Jackpot Group */}
