@@ -131,7 +131,14 @@ export const GameCard = ({
               <div>
                 <span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
                   const weekJackpotTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.jackpot_total || 0), 0) || 0;
-                  return total + weekJackpotTotal;
+                  let runningTotal = total + weekJackpotTotal;
+                  
+                  // Deduct weekly payout if there's a winner
+                  if (week.winner_name && week.weekly_payout) {
+                    runningTotal -= week.weekly_payout;
+                  }
+                  
+                  return runningTotal;
                 }, 0))}
               </div>
               {game.end_date && (
