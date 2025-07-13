@@ -104,7 +104,7 @@ export const GameCard = ({
                 )}
               </div>
               <div>
-                <span className="text-muted-foreground">Total:</span> {formatCurrency(game.total_sales)}
+                <span className="text-muted-foreground">Total Sales:</span> {formatCurrency(game.total_sales)}
                 {game.carryover_jackpot > 0 && (
                   <span className="text-xs text-muted-foreground/70 ml-1">
                     (includes {formatCurrency(game.carryover_jackpot)} from previous game)
