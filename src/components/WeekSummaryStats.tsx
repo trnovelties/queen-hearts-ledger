@@ -25,7 +25,7 @@ export const WeekSummaryStats = ({
   return (
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-2 justify-start px-14">
         {/* Basic Stats */}
         <div className="text-center bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
           <p className="text-sm text-gray-600">Tickets Sold</p>
