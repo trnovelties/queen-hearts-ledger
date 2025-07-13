@@ -36,16 +36,19 @@ export const WeekSummaryStats = ({
           <p className="text-sm font-semibold text-[#1F4E4A]">{formatCurrency(weekTotalSales)}</p>
         </div>
 
-        {/* Organization Net Group */}
+        {/* Organization Combined Card */}
         <div className="text-center bg-green-50 border border-green-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-green-700 font-medium">ORG.</p>
-          <p className="text-xs text-gray-600">Current</p>
-          <p className="text-sm font-semibold text-green-600">{formatCurrency(weekOrganizationTotal)}</p>
-        </div>
-        <div className="text-center bg-green-50 border border-green-200 rounded-lg p-2 shadow-sm">
-          <p className="text-xs text-green-700 font-medium">ORG.</p>
-          <p className="text-xs text-gray-600">Cumulative</p>
-          <p className="text-sm font-semibold text-green-700">{formatCurrency(cumulativeOrganizationNet)}</p>
+          <p className="text-xs text-green-700 font-medium mb-1">Organization</p>
+          <div className="space-y-1">
+            <div>
+              <p className="text-xs text-gray-600">Current</p>
+              <p className="text-sm font-semibold text-green-600">{formatCurrency(weekOrganizationTotal)}</p>
+            </div>
+            <div className="border-t border-green-200 pt-1">
+              <p className="text-xs text-gray-600">Cumulative</p>
+              <p className="text-sm font-semibold text-green-700">{formatCurrency(cumulativeOrganizationNet)}</p>
+            </div>
+          </div>
         </div>
 
         {/* Jackpot Pool moved after ORG cumulative */}
