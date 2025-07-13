@@ -101,6 +101,11 @@ export const TicketSalesTable = ({
         
         cumulativeOrganizationNet += weekOrgTotal;
         cumulativeCurrentJackpot += weekJackpotTotal;
+        
+        // Deduct weekly payout if there's a winner
+        if (w.winner_name && w.weekly_payout) {
+          cumulativeCurrentJackpot -= w.weekly_payout;
+        }
       }
     });
 
