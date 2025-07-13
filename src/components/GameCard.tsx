@@ -114,6 +114,12 @@ export const GameCard = ({
                   </span>
                 )}
               </div>
+              <div>
+                <span className="text-muted-foreground">Organization Portion:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
+                  const weekOrganizationTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.organization_total || 0), 0) || 0;
+                  return total + weekOrganizationTotal;
+                }, 0))}
+              </div>
               {game.end_date && (
                 <div>
                   <span className="text-muted-foreground">Profit:</span> {formatCurrency(game.actual_organization_net_profit)}
