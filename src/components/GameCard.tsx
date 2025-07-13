@@ -123,7 +123,7 @@ export const GameCard = ({
                 )}
               </div>
               <div>
-                <span className="text-muted-foreground">Organization Portion:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
+                <span className="text-muted-foreground">Organization:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
                   const weekOrganizationTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.organization_total || 0), 0) || 0;
                   return total + weekOrganizationTotal;
                 }, 0))}
