@@ -59,7 +59,7 @@ export const WeekSummaryStats = ({
 
         {/* Jackpot Combined Card */}
         <div className="text-center bg-purple-50 border border-purple-200 rounded-lg py-2 px-3 shadow-sm w-auto">
-          <p className="text-sm text-purple-700 font-medium mb-1">Jackpot</p>
+          <p className="text-sm text-purple-700 font-medium mb-1">Ending Jackpot</p>
           <div className="flex gap-2">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">
