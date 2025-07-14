@@ -180,7 +180,7 @@ export const GameSummaryDisplay = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 font-bold">Net Available for Final Winner:</span>
-                <span className="font-medium">{formatCurrency(netJackpotContributions)}</span>
+                <span className="font-bold text-green-600">{formatCurrency(netJackpotContributions)}</span>
               </div>
               {jackpotShortfall > 0 && <div className="flex justify-between">
                   <span className="text-gray-600">Final Winner Actually Received:</span>
