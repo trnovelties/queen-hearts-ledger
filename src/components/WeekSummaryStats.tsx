@@ -36,10 +36,19 @@ export const WeekSummaryStats = ({
           <p className="text-base font-semibold text-[#1F4E4A]">{formatCurrency(weekTotalSales)}</p>
         </div>
 
-        {/* Jackpot Pool moved after Ticket Sales */}
-        <div className="text-center bg-purple-50 border border-purple-200 rounded-lg py-2 px-3 shadow-sm">
+        {/* Jackpot Pool Combined Card */}
+        <div className="text-center bg-purple-50 border border-purple-200 rounded-lg py-2 px-3 shadow-sm w-auto">
           <p className="text-sm text-purple-700 font-medium mb-1">Jackpot Pool</p>
-          <p className="text-base font-semibold text-purple-600">{formatCurrency(weekJackpotTotal)}</p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 mb-1">Current</p>
+              <p className="text-base font-semibold text-purple-600">{formatCurrency(weekJackpotTotal)}</p>
+            </div>
+            <div className="border-l border-purple-200 pl-2 flex-1">
+              <p className="text-sm text-gray-600 mb-1">Cumulative</p>
+              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeCurrentJackpot)}</p>
+            </div>
+          </div>
         </div>
 
         {/* Organization Combined Card */}
