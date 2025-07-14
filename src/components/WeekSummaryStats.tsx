@@ -27,7 +27,7 @@ export const WeekSummaryStats = ({
   return (
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
-      <div className="flex flex-wrap gap-6 justify-start">
+      <div className="flex flex-wrap gap-10 justify-start">
         {/* Ticket Stats Combined Card */}
         <div className="text-center bg-blue-50 border border-blue-200 rounded-lg py-2 px-3 shadow-sm w-auto">
           <p className="text-sm text-blue-700 font-medium mb-1">Ticket Stats</p>
