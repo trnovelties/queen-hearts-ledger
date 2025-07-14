@@ -168,7 +168,7 @@ export const GameSummaryDisplay = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Weekly Distributions Distributed:</span>
-                <span className="font-medium">{formatCurrency(weeklyPayoutsDistributed)}</span>
+                <span className="font-medium text-red-600">{formatCurrency(weeklyPayoutsDistributed)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
