@@ -125,9 +125,10 @@ export const TicketSalesTable = ({
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
       if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - use the stored ending jackpot value (already deducted payout)
-        console.log('Using stored ending jackpot for completed week (after payout):', week.ending_jackpot);
-        setDisplayedEndingJackpot(week.ending_jackpot);
+        // Week is completed - show current week's jackpot pool minus payout
+        const currentWeekEndingJackpot = weekJackpotTotal - (week.weekly_payout || 0);
+        console.log('Using current week jackpot pool minus payout for completed week:', currentWeekEndingJackpot);
+        setDisplayedEndingJackpot(currentWeekEndingJackpot);
       } else {
         // Week is not completed - calculate current jackpot dynamically
         try {
