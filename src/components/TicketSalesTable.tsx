@@ -128,9 +128,46 @@ export const TicketSalesTable = ({
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
       if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - show current week's jackpot pool minus payout
-        const currentWeekEndingJackpot = weekJackpotTotal - (week.weekly_payout || 0);
-        console.log('Using current week jackpot pool minus payout for completed week:', currentWeekEndingJackpot);
+        // Week is completed - calculate proper ending jackpot
+        // Get previous week's ending jackpot as starting point
+        let previousEndingJackpot = 0;
+        if (week.week_number > 1) {
+          try {
+            const { data: previousWeek, error } = await supabase
+              .from('weeks')
+              .select('ending_jackpot')
+              .eq('game_id', game.id)
+              .eq('week_number', week.week_number - 1)
+              .single();
+            
+            if (!error && previousWeek) {
+              previousEndingJackpot = previousWeek.ending_jackpot || 0;
+            }
+          } catch (error) {
+            console.log('Could not fetch previous week ending jackpot, using 0');
+          }
+        } else {
+          // First week starts with carryover jackpot
+          previousEndingJackpot = game.carryover_jackpot || 0;
+        }
+        
+        // Calculate: (previous ending jackpot + current week contributions) - payout
+        const accumulatedJackpotBeforeWin = previousEndingJackpot + weekJackpotTotal;
+        let currentWeekEndingJackpot = accumulatedJackpotBeforeWin - (week.weekly_payout || 0);
+        
+        // Special case: Queen of Hearts should always result in 0 ending jackpot
+        if (week.card_selected === "Queen of Hearts") {
+          currentWeekEndingJackpot = 0;
+        }
+        
+        console.log('Calculated ending jackpot for completed week:', {
+          previousEndingJackpot,
+          weekJackpotTotal,
+          accumulatedJackpotBeforeWin,
+          payout: week.weekly_payout,
+          finalEndingJackpot: currentWeekEndingJackpot,
+          isQueenOfHearts: week.card_selected === "Queen of Hearts"
+        });
         setDisplayedEndingJackpot(currentWeekEndingJackpot);
       } else {
         // Week is not completed - calculate current jackpot dynamically
