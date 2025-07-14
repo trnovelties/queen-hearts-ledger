@@ -294,7 +294,7 @@ export default function Dashboard() {
         return gameNeedingCompletion ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
             <p className="text-red-600 font-medium text-center">
-              🎉 Queen of Hearts Winner! Please complete Game {gameNeedingCompletion.game_number} below the last week tab.
+              🎉 We Got Queen of Hearts Winner! Please complete Game {gameNeedingCompletion.game_number} below the last week tab.
             </p>
           </div>
         ) : null;
