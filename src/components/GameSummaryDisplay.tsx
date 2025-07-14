@@ -176,7 +176,7 @@ export const GameSummaryDisplay = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Next game Contribution:</span>
-                <span className="font-medium">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
+                <span className="font-medium text-red-600">{formatCurrency(game.jackpot_contribution_to_next_game || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600 font-bold">Net Available for Final Winner:</span>
