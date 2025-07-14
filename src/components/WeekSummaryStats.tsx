@@ -30,7 +30,7 @@ export const WeekSummaryStats = ({
       <div className="flex flex-wrap gap-2 justify-start">
         {/* Ticket Stats Combined Card */}
         <div className="text-center bg-blue-50 border border-blue-200 rounded-lg py-2 px-6 shadow-sm w-auto">
-          <p className="text-sm text-blue-700 font-medium mb-1">Ticket Stats</p>
+          <p className="text-sm text-blue-700 font-medium mb-3">Ticket Stats</p>
           <div className="flex gap-6">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Sold</p>
