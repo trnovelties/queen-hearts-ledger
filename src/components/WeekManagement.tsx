@@ -89,9 +89,31 @@ export const WeekManagement = ({
     
     if (!gameData || !weekData) return 0;
 
-    // Get current week's jackpot contributions
+    // For Queen of Hearts scenarios, calculate the total accumulated jackpot
+    if (weekData.card_selected === 'Queen of Hearts' || (selectedWeekId && weekData.week_number)) {
+      // Calculate total jackpot contributions from all weeks up to current week
+      const allWeeksUpToCurrent = gameData.weeks
+        .filter((w: any) => w.week_number <= weekData.week_number)
+        .sort((a: any, b: any) => a.week_number - b.week_number);
+      
+      let totalAccumulatedJackpot = gameData.carryover_jackpot || 0;
+      
+      allWeeksUpToCurrent.forEach((w: any) => {
+        const weekJackpotContributions = w.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
+        totalAccumulatedJackpot += weekJackpotContributions;
+        
+        // Deduct previous weekly payouts (but not current week)
+        if (w.week_number < weekData.week_number && w.winner_name && w.weekly_payout) {
+          totalAccumulatedJackpot -= w.weekly_payout;
+        }
+      });
+      
+      console.log('🎯 Calculated total accumulated jackpot for Queen of Hearts:', totalAccumulatedJackpot);
+      return totalAccumulatedJackpot;
+    }
+
+    // For regular scenarios, just return current week's contributions
     const weekJackpotContributions = weekData.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
-    
     return weekJackpotContributions;
   };
 
@@ -177,7 +199,7 @@ export const WeekManagement = ({
         gameId={selectedGameId}
         weekId={selectedWeekId}
         gameData={getCurrentGameData()}
-        currentJackpotTotal={0}
+        currentJackpotTotal={calculateCurrentJackpotTotal()}
         jackpotContributions={calculateCurrentJackpotTotal()}
         onComplete={() => handleWinnerFormComplete(onRefreshData)}
         onOpenPayoutSlip={(winnerData) => handleOpenPayoutSlip(winnerData, game)}
