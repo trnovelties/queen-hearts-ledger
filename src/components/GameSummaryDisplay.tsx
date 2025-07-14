@@ -164,7 +164,7 @@ export const GameSummaryDisplay = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Jackpot Contributions:</span>
-                <span className="font-medium">{formatCurrency(game.total_jackpot_contributions || 0)}</span>
+                <span className="font-medium text-green-600">{formatCurrency(game.total_jackpot_contributions || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Weekly Distributions Distributed:</span>
