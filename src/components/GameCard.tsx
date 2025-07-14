@@ -94,7 +94,7 @@ export const GameCard = ({
             )}
           </CardTitle>
           <div className="flex items-center space-x-4">
-            <div className="text-sm hidden md:flex space-x-4">
+            <div className="text-sm hidden md:flex space-x-4 ml-auto">
               <div>
                 <span className="text-muted-foreground">Start:</span> {formatDateStringForDisplay(gameStartDate)}
                 {gameEndDate && (
