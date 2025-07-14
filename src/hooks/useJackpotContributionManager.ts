@@ -13,13 +13,19 @@ export const useJackpotContributionManager = () => {
 
   // Calculate the actual total jackpot for Queen of Hearts winners
   const calculateTotalJackpot = (week: any, game: any) => {
+    // For Queen of Hearts, use the actual weekly_payout amount (which is the total jackpot they won)
+    if (week.card_selected === 'Queen of Hearts' && week.weekly_payout) {
+      console.log('🎰 Using Queen of Hearts weekly_payout as total jackpot:', week.weekly_payout);
+      return week.weekly_payout;
+    }
+    
     // Calculate total jackpot contributions from all weeks in the game
     const totalContributions = game.weeks.reduce((total: number, w: any) => {
       const weekContributions = w.ticket_sales?.reduce((sum: number, sale: any) => sum + (sale.jackpot_total || 0), 0) || 0;
       return total + weekContributions;
     }, 0);
     
-    // Add carryover jackpot from previous game
+    // For non-Queen of Hearts scenarios, add carryover jackpot from previous game
     const totalJackpot = (game.carryover_jackpot || 0) + totalContributions;
     
     console.log('🎰 Calculated total jackpot:', totalJackpot);
