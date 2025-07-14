@@ -119,7 +119,7 @@ export const GameCard = ({
                 })()}
               </div>
               <div>
-                <span className="text-muted-foreground">Total Tickets Sold:</span> {game.weeks.reduce((total: number, week: any) => {
+                <span className="text-muted-foreground font-semibold">Tickets Sold:</span> {game.weeks.reduce((total: number, week: any) => {
                   const weekTicketsSold = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.tickets_sold || 0), 0) || 0;
                   return total + weekTicketsSold;
                 }, 0).toLocaleString()}
