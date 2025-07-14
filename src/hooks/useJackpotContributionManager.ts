@@ -13,9 +13,15 @@ export const useJackpotContributionManager = () => {
 
   // Calculate the actual total jackpot for Queen of Hearts winners
   const calculateTotalJackpot = (week: any, game: any) => {
-    // For Queen of Hearts, use the actual weekly_payout amount (which is the total jackpot they won)
+    // Use the net_available_for_final_winner from the database for Queen of Hearts
+    if (week.card_selected === 'Queen of Hearts' && game.net_available_for_final_winner) {
+      console.log('🎰 Using net_available_for_final_winner from database:', game.net_available_for_final_winner);
+      return game.net_available_for_final_winner;
+    }
+    
+    // For Queen of Hearts without net_available_for_final_winner, use weekly_payout
     if (week.card_selected === 'Queen of Hearts' && week.weekly_payout) {
-      console.log('🎰 Using Queen of Hearts weekly_payout as total jackpot:', week.weekly_payout);
+      console.log('🎰 Using Queen of Hearts weekly_payout as fallback:', week.weekly_payout);
       return week.weekly_payout;
     }
     
