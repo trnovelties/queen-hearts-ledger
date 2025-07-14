@@ -86,6 +86,11 @@ export const TicketSalesTable = ({
     const currentGame = games.find(g => g.id === game.id);
     if (!currentGame) return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0, cumulativeJackpotPool: 0 };
 
+    // Scenario 3: Game completion - both cumulative values should be 0
+    if (game.end_date) {
+      return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0, cumulativeJackpotPool: 0 };
+    }
+
     // Get all weeks up to and including current week
     const weeksUpToCurrent = currentGame.weeks
       .filter((w: any) => w.week_number <= week.week_number)
@@ -105,8 +110,14 @@ export const TicketSalesTable = ({
         // For jackpot pool cumulative, just sum all jackpot contributions without deducting payouts
         cumulativeJackpotPool += weekJackpotTotal;
         
-        // Deduct weekly payout from running jackpot if there's a winner
-        if (w.winner_name && w.weekly_payout) {
+        // Scenario 2: For Queen of Hearts, show cumulative before payout
+        if (w.card_selected === 'Queen of Hearts') {
+          // Don't deduct Queen of Hearts payout from cumulative display (show pre-payout total)
+          return;
+        }
+        
+        // Deduct weekly payout from running jackpot if there's a winner (but not Queen of Hearts)
+        if (w.winner_name && w.weekly_payout && w.card_selected !== 'Queen of Hearts') {
           cumulativeCurrentJackpot -= w.weekly_payout;
         }
       }
@@ -127,8 +138,20 @@ export const TicketSalesTable = ({
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
+      // Scenario 3: Game completion - current ending jackpot should be 0
+      if (game.end_date) {
+        setDisplayedEndingJackpot(0);
+        return;
+      }
+
       if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - show current week's jackpot pool minus payout
+        // Scenario 2: Queen of Hearts hit - current ending jackpot should be 0 (ignore minimum payout logic)
+        if (week.card_selected === 'Queen of Hearts') {
+          setDisplayedEndingJackpot(0);
+          return;
+        }
+        
+        // Week is completed (regular scenario) - show current week's jackpot pool minus payout
         const currentWeekEndingJackpot = weekJackpotTotal - (week.weekly_payout || 0);
         console.log('Using current week jackpot pool minus payout for completed week:', currentWeekEndingJackpot);
         setDisplayedEndingJackpot(currentWeekEndingJackpot);
