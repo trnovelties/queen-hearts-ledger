@@ -45,7 +45,7 @@ export const WeekSummaryStats = ({
 
         {/* Jackpot Pool Combined Card */}
         <div className="text-center bg-purple-50 border border-purple-200 rounded-lg py-2 px-6 shadow-sm w-auto">
-          <p className="text-sm text-purple-700 font-medium mb-1">Jackpot Pool</p>
+          <p className="text-sm text-purple-700 font-medium mb-3">Jackpot Pool</p>
           <div className="flex gap-6">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Current</p>
@@ -60,7 +60,7 @@ export const WeekSummaryStats = ({
 
         {/* Organization Combined Card */}
         <div className="text-center bg-green-50 border border-green-200 rounded-lg py-2 px-6 shadow-sm w-auto">
-          <p className="text-sm text-green-700 font-medium mb-1">Organization</p>
+          <p className="text-sm text-green-700 font-medium mb-3">Organization</p>
           <div className="flex gap-6">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Current</p>
@@ -75,7 +75,7 @@ export const WeekSummaryStats = ({
 
         {/* Ending Jackpot Combined Card */}
         <div className="text-center bg-purple-50 border border-purple-200 rounded-lg py-2 px-6 shadow-sm w-auto">
-          <p className="text-sm text-purple-700 font-medium mb-1">Ending Jackpot</p>
+          <p className="text-sm text-purple-700 font-medium mb-3">Ending Jackpot</p>
           <div className="flex gap-6">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Current</p>
