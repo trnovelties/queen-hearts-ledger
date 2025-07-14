@@ -34,7 +34,7 @@ export const useGameTotalsUpdater = () => {
       // Get game data to access carryover jackpot and percentages
       const { data: gameData } = await supabase
         .from('games')
-        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game, name, end_date')
+        .select('carryover_jackpot, organization_percentage, jackpot_percentage, jackpot_contribution_to_next_game, name, end_date, minimum_starting_jackpot')
         .eq('id', gameId)
         .eq('user_id', user.id)
         .single();
@@ -96,7 +96,24 @@ export const useGameTotalsUpdater = () => {
 
       // Separate weekly payouts from final jackpot payout
       const weeklyPayoutsDistributed = weeks?.filter(w => w.card_selected !== 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
-      const finalJackpotPayout = weeks?.filter(w => w.card_selected === 'Queen of Hearts').reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0) || 0;
+      
+      // Calculate final jackpot payout based on whether shortfall occurred
+      const queenOfHeartsWeeks = weeks?.filter(w => w.card_selected === 'Queen of Hearts') || [];
+      let finalJackpotPayout = 0;
+      
+      if (queenOfHeartsWeeks.length > 0) {
+        // Calculate net available for comparison
+        const tempNetAvailable = totalJackpotContributions - weeklyPayoutsDistributed - (gameData?.jackpot_contribution_to_next_game || 0);
+        const minimumJackpot = gameData?.minimum_starting_jackpot || 500;
+        
+        // If there's a shortfall, the final payout should be the minimum guaranteed amount
+        if (tempNetAvailable < minimumJackpot) {
+          finalJackpotPayout = minimumJackpot;
+        } else {
+          // No shortfall, use the actual weekly payout amount
+          finalJackpotPayout = queenOfHeartsWeeks.reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0);
+        }
+      }
       
       // Get existing jackpot contribution to next game from database
       console.log('🔍 RAW DATABASE VALUE for jackpot_contribution_to_next_game:', gameData?.jackpot_contribution_to_next_game);
@@ -118,8 +135,9 @@ export const useGameTotalsUpdater = () => {
       console.log('💵 CALCULATED Net Available for Final Winner:', netAvailableForFinalWinner);
       console.log('💵 EXPECTED Net Available for Final Winner (for Game 8): 430');
       
-      // Calculate jackpot shortfall based on minimum $500 guarantee vs net available amount
-      const jackpotShortfallCovered = Math.max(0, 500 - netAvailableForFinalWinner);
+      // Calculate jackpot shortfall based on minimum jackpot guarantee vs net available amount
+      const minimumJackpot = gameData?.minimum_starting_jackpot || 500;
+      const jackpotShortfallCovered = Math.max(0, minimumJackpot - netAvailableForFinalWinner);
       
       console.log('⚠️ CALCULATED Jackpot Shortfall Covered:', jackpotShortfallCovered);
       console.log('⚠️ EXPECTED Jackpot Shortfall Covered (for Game 8): 70');
