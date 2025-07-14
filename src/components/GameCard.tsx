@@ -130,12 +130,12 @@ export const GameCard = ({
                     const weekTotalSales = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.amount_collected || 0), 0) || 0;
                     return total + weekTotalSales;
                   }, 0) + (game.carryover_jackpot || 0))}
+                  {game.carryover_jackpot > 0 && (
+                    <span className="text-green-600 font-normal ml-1">
+                      + {formatCurrency(game.carryover_jackpot)} prev. game
+                    </span>
+                  )}
                 </div>
-                {game.carryover_jackpot > 0 && (
-                  <div className="text-xs text-muted-foreground/70">
-                    + {formatCurrency(game.carryover_jackpot)} prev. game
-                  </div>
-                )}
               </div>
               <div>
                 <span className="text-muted-foreground font-semibold">Organization:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
