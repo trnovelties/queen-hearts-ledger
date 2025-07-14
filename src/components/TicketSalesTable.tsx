@@ -92,7 +92,7 @@ export const TicketSalesTable = ({
       .sort((a: any, b: any) => a.week_number - b.week_number);
 
     let cumulativeOrganizationNet = 0;
-    let cumulativeCurrentJackpot = 0;
+    let runningJackpot = currentGame.carryover_jackpot || 0; // Start with carryover
     let cumulativeJackpotPool = 0;
 
     weeksUpToCurrent.forEach((w: any) => {
@@ -101,18 +101,33 @@ export const TicketSalesTable = ({
         const weekJackpotTotal = w.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
         
         cumulativeOrganizationNet += weekOrgTotal;
-        cumulativeCurrentJackpot += weekJackpotTotal;
-        // For jackpot pool cumulative, just sum all jackpot contributions without deducting payouts
+        
+        // Add this week's contributions to the running jackpot
+        runningJackpot += weekJackpotTotal;
+        
+        // For jackpot pool cumulative, sum all jackpot contributions including carryover
         cumulativeJackpotPool += weekJackpotTotal;
         
         // Deduct weekly payout from running jackpot if there's a winner
         if (w.winner_name && w.weekly_payout) {
-          cumulativeCurrentJackpot -= w.weekly_payout;
+          runningJackpot -= w.weekly_payout;
+          
+          // Special case: Queen of Hearts resets jackpot to 0
+          if (w.card_selected === "Queen of Hearts") {
+            runningJackpot = 0;
+          }
         }
       }
     });
 
-    return { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool };
+    // Add carryover to the total jackpot pool for cumulative display
+    const totalCumulativeJackpotPool = cumulativeJackpotPool + (currentGame.carryover_jackpot || 0);
+
+    return { 
+      cumulativeOrganizationNet, 
+      cumulativeCurrentJackpot: runningJackpot, 
+      cumulativeJackpotPool: totalCumulativeJackpotPool 
+    };
   };
 
   // Calculate week totals from daily entries
