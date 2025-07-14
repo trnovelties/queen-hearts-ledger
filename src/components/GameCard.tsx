@@ -133,7 +133,7 @@ export const GameCard = ({
                 </div>
                 {game.carryover_jackpot > 0 && (
                   <div className="text-xs text-muted-foreground/70">
-                    (includes {formatCurrency(game.carryover_jackpot)} from previous game)
+                    + {formatCurrency(game.carryover_jackpot)} prev. game
                   </div>
                 )}
               </div>
