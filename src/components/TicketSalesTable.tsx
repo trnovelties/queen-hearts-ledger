@@ -92,9 +92,8 @@ export const TicketSalesTable = ({
       .sort((a: any, b: any) => a.week_number - b.week_number);
 
     let cumulativeOrganizationNet = 0;
-    let runningJackpot = currentGame.carryover_jackpot || 0; // Start with carryover
+    let cumulativeCurrentJackpot = 0;
     let cumulativeJackpotPool = 0;
-    let cumulativeJackpotBeforeFinalPayout = 0; // Track jackpot before final Queen of Hearts
 
     weeksUpToCurrent.forEach((w: any) => {
       if (w.ticket_sales) {
@@ -102,37 +101,18 @@ export const TicketSalesTable = ({
         const weekJackpotTotal = w.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
         
         cumulativeOrganizationNet += weekOrgTotal;
-        
-        // Add this week's contributions to the running jackpot
-        runningJackpot += weekJackpotTotal;
-        
-        // For jackpot pool cumulative, sum all jackpot contributions including carryover
+        cumulativeCurrentJackpot += weekJackpotTotal;
+        // For jackpot pool cumulative, just sum all jackpot contributions without deducting payouts
         cumulativeJackpotPool += weekJackpotTotal;
-        
-        // Track cumulative jackpot before any payout (this will show the peak jackpot)
-        cumulativeJackpotBeforeFinalPayout = runningJackpot;
         
         // Deduct weekly payout from running jackpot if there's a winner
         if (w.winner_name && w.weekly_payout) {
-          runningJackpot -= w.weekly_payout;
-          
-          // Special case: Queen of Hearts resets jackpot to 0
-          if (w.card_selected === "Queen of Hearts") {
-            runningJackpot = 0;
-          }
+          cumulativeCurrentJackpot -= w.weekly_payout;
         }
       }
     });
 
-    // Add carryover to the total jackpot pool for cumulative display
-    const totalCumulativeJackpotPool = cumulativeJackpotPool + (currentGame.carryover_jackpot || 0);
-
-    return { 
-      cumulativeOrganizationNet, 
-      cumulativeCurrentJackpot: runningJackpot, 
-      cumulativeJackpotPool: totalCumulativeJackpotPool,
-      cumulativeJackpotBeforeFinalPayout
-    };
+    return { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool };
   };
 
   // Calculate week totals from daily entries
@@ -142,52 +122,15 @@ export const TicketSalesTable = ({
   const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
 
   // Calculate cumulative values
-  const { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool, cumulativeJackpotBeforeFinalPayout } = calculateCumulativeValues();
+  const { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool } = calculateCumulativeValues();
 
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
       if (week.winner_name && week.ending_jackpot !== null && week.ending_jackpot !== undefined) {
-        // Week is completed - calculate proper ending jackpot
-        // Get previous week's ending jackpot as starting point
-        let previousEndingJackpot = 0;
-        if (week.week_number > 1) {
-          try {
-            const { data: previousWeek, error } = await supabase
-              .from('weeks')
-              .select('ending_jackpot')
-              .eq('game_id', game.id)
-              .eq('week_number', week.week_number - 1)
-              .single();
-            
-            if (!error && previousWeek) {
-              previousEndingJackpot = previousWeek.ending_jackpot || 0;
-            }
-          } catch (error) {
-            console.log('Could not fetch previous week ending jackpot, using 0');
-          }
-        } else {
-          // First week starts with carryover jackpot
-          previousEndingJackpot = game.carryover_jackpot || 0;
-        }
-        
-        // Calculate: (previous ending jackpot + current week contributions) - payout
-        const accumulatedJackpotBeforeWin = previousEndingJackpot + weekJackpotTotal;
-        let currentWeekEndingJackpot = accumulatedJackpotBeforeWin - (week.weekly_payout || 0);
-        
-        // Special case: Queen of Hearts should always result in 0 ending jackpot
-        if (week.card_selected === "Queen of Hearts") {
-          currentWeekEndingJackpot = 0;
-        }
-        
-        console.log('Calculated ending jackpot for completed week:', {
-          previousEndingJackpot,
-          weekJackpotTotal,
-          accumulatedJackpotBeforeWin,
-          payout: week.weekly_payout,
-          finalEndingJackpot: currentWeekEndingJackpot,
-          isQueenOfHearts: week.card_selected === "Queen of Hearts"
-        });
+        // Week is completed - show current week's jackpot pool minus payout
+        const currentWeekEndingJackpot = weekJackpotTotal - (week.weekly_payout || 0);
+        console.log('Using current week jackpot pool minus payout for completed week:', currentWeekEndingJackpot);
         setDisplayedEndingJackpot(currentWeekEndingJackpot);
       } else {
         // Week is not completed - calculate current jackpot dynamically
@@ -261,7 +204,7 @@ export const TicketSalesTable = ({
           hasWinner={hasWinner()}
           formatCurrency={formatCurrency}
           cumulativeOrganizationNet={cumulativeOrganizationNet}
-          cumulativeCurrentJackpot={cumulativeJackpotBeforeFinalPayout}
+          cumulativeCurrentJackpot={cumulativeCurrentJackpot}
           cumulativeJackpotPool={cumulativeJackpotPool}
         />
         
