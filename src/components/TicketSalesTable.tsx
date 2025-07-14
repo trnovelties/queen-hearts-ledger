@@ -94,6 +94,7 @@ export const TicketSalesTable = ({
     let cumulativeOrganizationNet = 0;
     let runningJackpot = currentGame.carryover_jackpot || 0; // Start with carryover
     let cumulativeJackpotPool = 0;
+    let cumulativeJackpotBeforeFinalPayout = 0; // Track jackpot before final Queen of Hearts
 
     weeksUpToCurrent.forEach((w: any) => {
       if (w.ticket_sales) {
@@ -107,6 +108,9 @@ export const TicketSalesTable = ({
         
         // For jackpot pool cumulative, sum all jackpot contributions including carryover
         cumulativeJackpotPool += weekJackpotTotal;
+        
+        // Track cumulative jackpot before any payout (this will show the peak jackpot)
+        cumulativeJackpotBeforeFinalPayout = runningJackpot;
         
         // Deduct weekly payout from running jackpot if there's a winner
         if (w.winner_name && w.weekly_payout) {
@@ -126,7 +130,8 @@ export const TicketSalesTable = ({
     return { 
       cumulativeOrganizationNet, 
       cumulativeCurrentJackpot: runningJackpot, 
-      cumulativeJackpotPool: totalCumulativeJackpotPool 
+      cumulativeJackpotPool: totalCumulativeJackpotPool,
+      cumulativeJackpotBeforeFinalPayout
     };
   };
 
@@ -137,7 +142,7 @@ export const TicketSalesTable = ({
   const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
 
   // Calculate cumulative values
-  const { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool } = calculateCumulativeValues();
+  const { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool, cumulativeJackpotBeforeFinalPayout } = calculateCumulativeValues();
 
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
@@ -256,7 +261,7 @@ export const TicketSalesTable = ({
           hasWinner={hasWinner()}
           formatCurrency={formatCurrency}
           cumulativeOrganizationNet={cumulativeOrganizationNet}
-          cumulativeCurrentJackpot={cumulativeCurrentJackpot}
+          cumulativeCurrentJackpot={cumulativeJackpotBeforeFinalPayout}
           cumulativeJackpotPool={cumulativeJackpotPool}
         />
         
