@@ -62,9 +62,7 @@ export const WeekSummaryStats = ({
           <p className="text-sm text-purple-700 font-medium mb-1">Ending Jackpot</p>
           <div className="flex gap-2">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">
-                {hasWinner ? 'Final' : 'Current'}
-              </p>
+              <p className="text-sm text-gray-600 mb-1">Current</p>
               <p className="text-base font-semibold text-purple-600">{formatCurrency(displayedEndingJackpot)}</p>
             </div>
             <div className="border-l border-purple-200 pl-2 flex-1">
