@@ -84,7 +84,7 @@ export const TicketSalesTable = ({
   // Helper function to calculate cumulative values
   const calculateCumulativeValues = () => {
     const currentGame = games.find(g => g.id === game.id);
-    if (!currentGame) return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0 };
+    if (!currentGame) return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0, cumulativeJackpotPool: 0 };
 
     // Get all weeks up to and including current week
     const weeksUpToCurrent = currentGame.weeks
@@ -93,6 +93,7 @@ export const TicketSalesTable = ({
 
     let cumulativeOrganizationNet = 0;
     let cumulativeCurrentJackpot = 0;
+    let cumulativeJackpotPool = 0;
 
     weeksUpToCurrent.forEach((w: any) => {
       if (w.ticket_sales) {
@@ -101,15 +102,17 @@ export const TicketSalesTable = ({
         
         cumulativeOrganizationNet += weekOrgTotal;
         cumulativeCurrentJackpot += weekJackpotTotal;
+        // For jackpot pool cumulative, just sum all jackpot contributions without deducting payouts
+        cumulativeJackpotPool += weekJackpotTotal;
         
-        // Deduct weekly payout if there's a winner
+        // Deduct weekly payout from running jackpot if there's a winner
         if (w.winner_name && w.weekly_payout) {
           cumulativeCurrentJackpot -= w.weekly_payout;
         }
       }
     });
 
-    return { cumulativeOrganizationNet, cumulativeCurrentJackpot };
+    return { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool };
   };
 
   // Calculate week totals from daily entries
@@ -119,7 +122,7 @@ export const TicketSalesTable = ({
   const weekJackpotTotal = week.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
 
   // Calculate cumulative values
-  const { cumulativeOrganizationNet, cumulativeCurrentJackpot } = calculateCumulativeValues();
+  const { cumulativeOrganizationNet, cumulativeCurrentJackpot, cumulativeJackpotPool } = calculateCumulativeValues();
 
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
@@ -202,6 +205,7 @@ export const TicketSalesTable = ({
           formatCurrency={formatCurrency}
           cumulativeOrganizationNet={cumulativeOrganizationNet}
           cumulativeCurrentJackpot={cumulativeCurrentJackpot}
+          cumulativeJackpotPool={cumulativeJackpotPool}
         />
         
         {/* Winner Information */}

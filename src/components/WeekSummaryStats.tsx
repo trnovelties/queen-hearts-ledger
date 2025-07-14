@@ -9,6 +9,7 @@ interface WeekSummaryStatsProps {
   formatCurrency: (amount: number) => string;
   cumulativeOrganizationNet: number;
   cumulativeCurrentJackpot: number;
+  cumulativeJackpotPool: number;
 }
 
 export const WeekSummaryStats = ({
@@ -20,7 +21,8 @@ export const WeekSummaryStats = ({
   hasWinner,
   formatCurrency,
   cumulativeOrganizationNet,
-  cumulativeCurrentJackpot
+  cumulativeCurrentJackpot,
+  cumulativeJackpotPool
 }: WeekSummaryStatsProps) => {
   return (
     <div className="mt-4">
@@ -46,7 +48,7 @@ export const WeekSummaryStats = ({
             </div>
             <div className="border-l border-purple-200 pl-2 flex-1">
               <p className="text-sm text-gray-600 mb-1">Cumulative</p>
-              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeCurrentJackpot)}</p>
+              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeJackpotPool)}</p>
             </div>
           </div>
         </div>
