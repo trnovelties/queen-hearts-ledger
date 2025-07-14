@@ -131,7 +131,7 @@ export const GameCard = ({
                     return total + weekTotalSales;
                   }, 0) + (game.carryover_jackpot || 0))}
                   {game.carryover_jackpot > 0 && (
-                    <span className="text-green-600 font-normal ml-1">
+                    <span className="text-green-600 font-normal ml-1 text-sm">
                       + {formatCurrency(game.carryover_jackpot)} prev. game
                     </span>
                   )}
