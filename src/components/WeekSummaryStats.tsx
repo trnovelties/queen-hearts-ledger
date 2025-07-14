@@ -28,14 +28,19 @@ export const WeekSummaryStats = ({
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
       <div className="flex flex-wrap gap-2 justify-start">
-        {/* Basic Stats */}
-        <div className="text-center bg-white border border-gray-200 rounded-lg py-2 px-3 shadow-sm">
-          <p className="text-sm text-gray-600 mb-1">Tickets Sold</p>
-          <p className="text-base font-semibold text-[#1F4E4A]">{weekTotalTickets}</p>
-        </div>
-        <div className="text-center bg-white border border-gray-200 rounded-lg py-2 px-3 shadow-sm">
-          <p className="text-sm text-gray-600 mb-1">Ticket Sales</p>
-          <p className="text-base font-semibold text-[#1F4E4A]">{formatCurrency(weekTotalSales)}</p>
+        {/* Ticket Stats Combined Card */}
+        <div className="text-center bg-blue-50 border border-blue-200 rounded-lg py-2 px-3 shadow-sm w-auto">
+          <p className="text-sm text-blue-700 font-medium mb-1">Ticket Stats</p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 mb-1">Sold</p>
+              <p className="text-base font-semibold text-blue-600">{weekTotalTickets}</p>
+            </div>
+            <div className="border-l border-blue-200 pl-2 flex-1">
+              <p className="text-sm text-gray-600 mb-1">Sales</p>
+              <p className="text-base font-semibold text-blue-700">{formatCurrency(weekTotalSales)}</p>
+            </div>
+          </div>
         </div>
 
         {/* Jackpot Pool Combined Card */}
