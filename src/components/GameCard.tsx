@@ -126,7 +126,7 @@ export const GameCard = ({
               </div>
               <div>
                 <div>
-                  <span className="text-muted-foreground">Total Sales:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
+                  <span className="text-muted-foreground font-semibold">Total Sales:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
                     const weekTotalSales = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.amount_collected || 0), 0) || 0;
                     return total + weekTotalSales;
                   }, 0) + (game.carryover_jackpot || 0))}
@@ -138,13 +138,13 @@ export const GameCard = ({
                 )}
               </div>
               <div>
-                <span className="text-muted-foreground">Organization:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
+                <span className="text-muted-foreground font-semibold">Organization:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
                   const weekOrganizationTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.organization_total || 0), 0) || 0;
                   return total + weekOrganizationTotal;
                 }, 0))}
               </div>
               <div>
-                <span className="text-muted-foreground">Jackpot Total:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
+                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
                   const weekJackpotTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.jackpot_total || 0), 0) || 0;
                   let runningTotal = total + weekJackpotTotal;
                   
