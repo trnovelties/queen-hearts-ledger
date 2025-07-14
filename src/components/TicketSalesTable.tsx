@@ -92,7 +92,7 @@ export const TicketSalesTable = ({
       .sort((a: any, b: any) => a.week_number - b.week_number);
 
     let cumulativeOrganizationNet = 0;
-    let cumulativeCurrentJackpot = 0;
+    let cumulativeJackpotPool = 0;
 
     weeksUpToCurrent.forEach((w: any) => {
       if (w.ticket_sales) {
@@ -100,16 +100,12 @@ export const TicketSalesTable = ({
         const weekJackpotTotal = w.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
         
         cumulativeOrganizationNet += weekOrgTotal;
-        cumulativeCurrentJackpot += weekJackpotTotal;
-        
-        // Deduct weekly payout if there's a winner
-        if (w.winner_name && w.weekly_payout) {
-          cumulativeCurrentJackpot -= w.weekly_payout;
-        }
+        // For cumulative jackpot pool, sum all weeks' jackpot contributions without deducting payouts
+        cumulativeJackpotPool += weekJackpotTotal;
       }
     });
 
-    return { cumulativeOrganizationNet, cumulativeCurrentJackpot };
+    return { cumulativeOrganizationNet, cumulativeCurrentJackpot: cumulativeJackpotPool };
   };
 
   // Calculate week totals from daily entries
