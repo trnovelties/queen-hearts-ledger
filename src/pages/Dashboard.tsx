@@ -281,6 +281,25 @@ export default function Dashboard() {
         </Button>
       </div>
 
+      {/* Red notification for games that need completion */}
+      {(() => {
+        const gameNeedingCompletion = games.find(game => 
+          !game.end_date && 
+          game.weeks?.some((week: any) => 
+            week.winner_name && 
+            week.card_selected === 'Queen of Hearts'
+          )
+        );
+        
+        return gameNeedingCompletion ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-600 font-medium text-center">
+              Please complete your Game {gameNeedingCompletion.game_number} below last week tab.
+            </p>
+          </div>
+        ) : null;
+      })()}
+
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
         <button
