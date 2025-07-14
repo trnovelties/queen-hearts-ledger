@@ -96,12 +96,27 @@ export const GameCard = ({
           <div className="flex items-center space-x-4">
             <div className="text-sm hidden md:flex space-x-4 ml-auto">
               <div>
-                <span className="text-muted-foreground">Start:</span> {formatDateStringForDisplay(gameStartDate)}
-                {gameEndDate && (
-                  <>
-                    <span className="ml-4 text-muted-foreground">End:</span> {formatDateStringForDisplay(gameEndDate)}
-                  </>
-                )}
+                {(() => {
+                  const formatDateForRange = (dateString: string): string => {
+                    const [year, month, day] = dateString.split('-');
+                    const monthNames = [
+                      'January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'
+                    ];
+                    const monthIndex = parseInt(month, 10) - 1;
+                    const monthName = monthNames[monthIndex];
+                    const dayNumber = parseInt(day, 10);
+                    return `${monthName} ${dayNumber}`;
+                  };
+
+                  const startFormatted = formatDateForRange(gameStartDate);
+                  const endFormatted = gameEndDate ? formatDateForRange(gameEndDate) : null;
+                  const year = gameEndDate ? gameEndDate.split('-')[0] : gameStartDate.split('-')[0];
+
+                  return gameEndDate 
+                    ? `${startFormatted} - ${endFormatted}, ${year}`
+                    : `${startFormatted}, ${year}`;
+                })()}
               </div>
               <div>
                 <span className="text-muted-foreground">Total Tickets Sold:</span> {game.weeks.reduce((total: number, week: any) => {
