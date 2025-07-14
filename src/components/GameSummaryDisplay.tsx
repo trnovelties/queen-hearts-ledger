@@ -172,7 +172,7 @@ export const GameSummaryDisplay = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Carryover from Previous:</span>
-                <span className="font-medium text-red-600">{formatCurrency(game.carryover_jackpot || 0)}</span>
+                <span className="font-medium">{formatCurrency(game.carryover_jackpot || 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Next game Contribution:</span>
