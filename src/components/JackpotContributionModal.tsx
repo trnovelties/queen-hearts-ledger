@@ -258,7 +258,7 @@ export const JackpotContributionModal = ({
               step="0.01"
               min="0"
               max={totalJackpot}
-              value={contribution || ''}
+              value={contribution.toString()}
               onChange={(e) => handleContributionChange(e.target.value)}
               placeholder="0.00"
             />
