@@ -30,7 +30,8 @@ export const WeekSummaryStats = ({
   isFirstWeek = false,
   weeklyPayout = 0
 }: WeekSummaryStatsProps) => {
-  const currentEndingJackpot = hasWinner ? 0 : (weekTotalSales * 0.6) + weeklyPayout;
+  const currentEndingJackpot = hasWinner ? (weekTotalSales * 0.6) - weeklyPayout : (weekTotalSales * 0.6) + weeklyPayout;
+  const cumulativeEndingJackpot = hasWinner ? cumulativeJackpotPool - weeklyPayout : cumulativeCurrentJackpot + (carryoverJackpot || 0);
   return (
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
@@ -97,7 +98,7 @@ export const WeekSummaryStats = ({
             </div>
             <div className="border-l border-purple-200 pl-6 flex-1">
               <p className="text-sm text-gray-600 mb-1">Cumulative</p>
-              <p className="text-base font-semibold text-purple-700">{formatCurrency(hasWinner ? 0 : cumulativeCurrentJackpot + (carryoverJackpot || 0))}</p>
+              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeEndingJackpot)}</p>
             </div>
           </div>
         </div>
