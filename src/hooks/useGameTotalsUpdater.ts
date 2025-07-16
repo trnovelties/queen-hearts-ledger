@@ -49,19 +49,14 @@ export const useGameTotalsUpdater = () => {
       // Calculate organization portion directly from sales total (not from individual records)
       const salesTotalOrganization = salesTotalSales * (organizationPercentage / 100);
 
-      // Calculate carryover distribution
-      const carryoverOrganizationPortion = carryoverJackpot * (organizationPercentage / 100);
-      const carryoverJackpotPortion = carryoverJackpot * (jackpotPercentage / 100);
-
-      // Add carryover to totals
-      const gameTotalSales = salesTotalSales + carryoverJackpot;
-      const gameTotalOrganization = salesTotalOrganization + carryoverOrganizationPortion;
+      // Total sales should NOT include carryover - only actual ticket sales
+      const gameTotalSales = salesTotalSales;
+      const gameTotalOrganization = salesTotalOrganization;
 
       console.log('💰 Sales from Tickets:', salesTotalSales);
       console.log('🎯 Carryover Jackpot:', carryoverJackpot);
-      console.log('📊 Carryover Organization Portion:', carryoverOrganizationPortion);
-      console.log('💰 Game Total Sales (including carryover):', gameTotalSales);
-      console.log('🏢 Game Total Organization (including carryover):', gameTotalOrganization);
+      console.log('💰 Game Total Sales (ticket sales only):', gameTotalSales);
+      console.log('🏢 Game Total Organization:', gameTotalOrganization);
 
       // Get expenses
       const { data: expenses } = await supabase
