@@ -139,23 +139,7 @@ export const GameCard = ({
                 }, 0))}
               </div>
               <div>
-                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
-                  const weekJackpotTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.jackpot_total || 0), 0) || 0;
-                  let runningTotal = total + weekJackpotTotal;
-                  
-                  // For Queen of Hearts weeks, show the jackpot total before payout (what the winner received)
-                  if (week.card_selected === 'Queen of Hearts') {
-                    // Don't deduct Queen of Hearts payout - show the full jackpot that was won
-                    return runningTotal;
-                  }
-                  
-                  // Deduct weekly payout if there's a winner (but not Queen of Hearts)
-                  if (week.winner_name && week.weekly_payout && week.card_selected !== 'Queen of Hearts') {
-                    runningTotal -= week.weekly_payout;
-                  }
-                  
-                  return runningTotal;
-                }, 0))}
+                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency(game.total_jackpot_contributions || 0)}
               </div>
               {game.end_date && (
                 <div>
