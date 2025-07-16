@@ -12,6 +12,7 @@ interface WeekSummaryStatsProps {
   cumulativeJackpotPool: number;
   carryoverJackpot?: number;
   isFirstWeek?: boolean;
+  weeklyPayout?: number;
 }
 
 export const WeekSummaryStats = ({
@@ -26,8 +27,10 @@ export const WeekSummaryStats = ({
   cumulativeCurrentJackpot,
   cumulativeJackpotPool,
   carryoverJackpot = 0,
-  isFirstWeek = false
+  isFirstWeek = false,
+  weeklyPayout = 0
 }: WeekSummaryStatsProps) => {
+  const currentEndingJackpot = hasWinner ? 0 : (weekTotalSales * 0.6) + weeklyPayout;
   return (
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
@@ -90,7 +93,7 @@ export const WeekSummaryStats = ({
           <div className="flex gap-6">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Current</p>
-              <p className="text-base font-semibold text-purple-600">{formatCurrency(hasWinner ? 0 : displayedEndingJackpot + (carryoverJackpot || 0))}</p>
+              <p className="text-base font-semibold text-purple-600">{formatCurrency(currentEndingJackpot)}</p>
             </div>
             <div className="border-l border-purple-200 pl-6 flex-1">
               <p className="text-sm text-gray-600 mb-1">Cumulative</p>
