@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -28,15 +28,16 @@ export const JackpotContributionModal = ({
   winnerName,
   onComplete
 }: JackpotContributionModalProps) => {
-  const [contribution, setContribution] = useState<number>(0);
+  const [winnerPresent, setWinnerPresent] = useState<string>("present");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [penaltyPercentage, setPenaltyPercentage] = useState<number>(10);
   const { toast: shadcnToast } = useToast();
   const { user } = useAuth();
   const { updateGameTotals } = useGameTotalsUpdater();
 
-  // Enhanced logging when modal opens
+  // Enhanced logging when modal opens and fetch penalty percentage
   useEffect(() => {
-    if (open) {
+    if (open && user?.id) {
       console.log('🎰 === JACKPOT CONTRIBUTION MODAL OPENED ===');
       console.log('🎰 Game ID:', gameId);
       console.log('🎰 Total Jackpot:', totalJackpot);
@@ -64,10 +65,41 @@ export const JackpotContributionModal = ({
         return;
       }
       
+      // Fetch penalty percentage from configuration
+      loadPenaltyConfiguration();
+      
       console.log('🎰 ✅ All validation passed, modal ready for user input');
       toast.success("Jackpot contribution modal opened successfully!");
     }
   }, [open, gameId, totalJackpot, winnerName, user]);
+
+  const loadPenaltyConfiguration = async () => {
+    try {
+      const { data: config, error } = await supabase
+        .from('configurations')
+        .select('penalty_percentage')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading penalty configuration:', error);
+        // Use default 10% if configuration not found
+        setPenaltyPercentage(10);
+        return;
+      }
+
+      if (config) {
+        setPenaltyPercentage(config.penalty_percentage || 10);
+        console.log('🎰 Penalty percentage loaded:', config.penalty_percentage);
+      } else {
+        setPenaltyPercentage(10);
+        console.log('🎰 No configuration found, using default 10% penalty');
+      }
+    } catch (error) {
+      console.error('Error loading penalty configuration:', error);
+      setPenaltyPercentage(10);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -77,8 +109,11 @@ export const JackpotContributionModal = ({
     }).format(amount);
   };
 
-  const winnerReceives = totalJackpot - contribution;
-  const nextGameGets = contribution;
+  // Calculate amounts based on winner presence
+  const isWinnerPresent = winnerPresent === "present";
+  const penaltyAmount = isWinnerPresent ? 0 : (totalJackpot * penaltyPercentage / 100);
+  const winnerReceives = totalJackpot - penaltyAmount;
+  const nextGameGets = penaltyAmount;
 
   const handleSubmit = async () => {
     if (!gameId || !user?.id) {
@@ -87,20 +122,11 @@ export const JackpotContributionModal = ({
       return;
     }
 
-    // Enhanced validation
-    if (contribution < 0) {
+    // Validation - no need for complex validation since it's a radio selection
+    if (!winnerPresent) {
       shadcnToast({
-        title: "Invalid Amount",
-        description: "Contribution cannot be negative.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (contribution > totalJackpot) {
-      shadcnToast({
-        title: "Invalid Amount",
-        description: "Contribution cannot exceed the total jackpot.",
+        title: "Selection Required",
+        description: "Please select whether the winner is present or not.",
         variant: "destructive",
       });
       return;
@@ -112,26 +138,28 @@ export const JackpotContributionModal = ({
       console.log('🎰 === PHASE 3: JACKPOT CONTRIBUTION PROCESSING ===');
       console.log('🎰 Game ID:', gameId);
       console.log('🎰 Total Jackpot:', totalJackpot);
-      console.log('🎰 Contribution to Next Game:', contribution);
+      console.log('🎰 Winner Present:', isWinnerPresent);
+      console.log('🎰 Penalty Percentage:', penaltyPercentage);
+      console.log('🎰 Contribution to Next Game:', nextGameGets);
       console.log('🎰 Winner Receives:', winnerReceives);
 
       // PHASE 3: Complete the current game with proper end date
       const todayDateString = getTodayDateString();
       
-      console.log('🎰 Setting game contribution first:', contribution);
+      console.log('🎰 Setting game contribution first:', nextGameGets);
       
       // Calculate final winner payout considering minimum $500 guarantee
-      const finalWinnerPayout = Math.max(500, totalJackpot - contribution);
+      const finalWinnerPayout = Math.max(500, winnerReceives);
       
       console.log('🎰 Final Winner Payout (minimum $500 applied):', finalWinnerPayout);
       console.log('🎰 Total Jackpot Available:', totalJackpot);
-      console.log('🎰 Contribution to Next Game:', contribution);
+      console.log('🎰 Contribution to Next Game:', nextGameGets);
       
       // STEP 1: First set jackpot contribution WITHOUT ending the game
       const { error: contributionError } = await supabase
         .from('games')
         .update({
-          jackpot_contribution_to_next_game: contribution,
+          jackpot_contribution_to_next_game: nextGameGets,
           total_payouts: finalWinnerPayout // Final winner gets at least $500
         })
         .eq('id', gameId)
@@ -142,7 +170,7 @@ export const JackpotContributionModal = ({
         throw contributionError;
       }
 
-      console.log('🎰 ✅ Jackpot contribution set successfully:', contribution);
+      console.log('🎰 ✅ Jackpot contribution set successfully:', nextGameGets);
 
       // STEP 2: Recalculate game totals with the updated jackpot contribution (while game is still active)
       console.log('🎰 🔄 Recalculating game totals with updated contribution...');
@@ -183,12 +211,12 @@ export const JackpotContributionModal = ({
 
       if (nextGame) {
         // Update existing next game with additional carryover
-        console.log('🎰 Updating existing next game:', nextGame.name, 'with additional carryover:', contribution);
+        console.log('🎰 Updating existing next game:', nextGame.name, 'with additional carryover:', nextGameGets);
         
         const { error: updateError } = await supabase
           .from('games')
           .update({
-            carryover_jackpot: (nextGame.carryover_jackpot || 0) + contribution
+            carryover_jackpot: (nextGame.carryover_jackpot || 0) + nextGameGets
           })
           .eq('id', nextGame.id)
           .eq('user_id', user.id);
@@ -219,7 +247,7 @@ export const JackpotContributionModal = ({
       onOpenChange(false);
       
       // Reset form
-      setContribution(0);
+      setWinnerPresent("present");
 
     } catch (error: any) {
       console.error('🎰 ❌ Error completing Queen of Hearts game:', error);
@@ -234,10 +262,6 @@ export const JackpotContributionModal = ({
     }
   };
 
-  const handleContributionChange = (value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setContribution(numValue);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -245,26 +269,33 @@ export const JackpotContributionModal = ({
         <DialogHeader>
           <DialogTitle>🎉 Queen of Hearts Won!</DialogTitle>
           <DialogDescription>
-            {winnerName} has won the Queen of Hearts! Choose how much of the {formatCurrency(totalJackpot)} jackpot to contribute to the next game. This will end the current game and move it to archives.
+            {winnerName} has won the Queen of Hearts! Select whether the winner is present to determine the final distribution of the {formatCurrency(totalJackpot)} jackpot. This will end the current game and move it to archives.
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="contribution">Contribution to Next Game</Label>
-            <Input
-              id="contribution"
-              type="number"
-              step="0.01"
-              min="0"
-              max={totalJackpot}
-              value={contribution.toString()}
-              onChange={(e) => handleContributionChange(e.target.value)}
-              placeholder="0.00"
-            />
-            <p className="text-xs text-muted-foreground">
-              Maximum: {formatCurrency(totalJackpot)}
-            </p>
+          <div className="grid gap-3">
+            <Label className="text-base font-medium">Winner Attendance</Label>
+            <RadioGroup 
+              value={winnerPresent} 
+              onValueChange={setWinnerPresent}
+              className="flex flex-col gap-3"
+            >
+              <div className="flex items-center space-x-3 rounded-lg border p-3 hover:bg-muted/50">
+                <RadioGroupItem value="present" id="present" />
+                <Label htmlFor="present" className="flex-1 cursor-pointer">
+                  <div className="font-medium text-green-700">✅ Winner is Present</div>
+                  <div className="text-sm text-muted-foreground">Winner receives full jackpot amount</div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3 rounded-lg border p-3 hover:bg-muted/50">
+                <RadioGroupItem value="not-present" id="not-present" />
+                <Label htmlFor="not-present" className="flex-1 cursor-pointer">
+                  <div className="font-medium text-orange-700">⚠️ Winner is Not Present</div>
+                  <div className="text-sm text-muted-foreground">{penaltyPercentage}% penalty applied, goes to next game</div>
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
           
           {/* Enhanced Summary Display */}
@@ -285,6 +316,12 @@ export const JackpotContributionModal = ({
               </div>
             </div>
           </div>
+          
+          {!isWinnerPresent && (
+            <div className="text-sm text-orange-600 bg-orange-50 p-3 rounded-lg">
+              <strong>⚠️ Penalty Applied:</strong> Since the winner is not present, {penaltyPercentage}% of the jackpot ({formatCurrency(penaltyAmount)}) will be contributed to the next game.
+            </div>
+          )}
           
           <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
             <strong>⚠️ Important:</strong> Completing this action will end the current game immediately and move it to your archived games.
