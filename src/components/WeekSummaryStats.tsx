@@ -90,11 +90,11 @@ export const WeekSummaryStats = ({
           <div className="flex gap-6">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Current</p>
-              <p className="text-base font-semibold text-purple-600">{formatCurrency(displayedEndingJackpot + (carryoverJackpot || 0))}</p>
+              <p className="text-base font-semibold text-purple-600">{formatCurrency(hasWinner ? 0 : displayedEndingJackpot + (carryoverJackpot || 0))}</p>
             </div>
             <div className="border-l border-purple-200 pl-6 flex-1">
               <p className="text-sm text-gray-600 mb-1">Cumulative</p>
-              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeCurrentJackpot + (carryoverJackpot || 0))}</p>
+              <p className="text-base font-semibold text-purple-700">{formatCurrency(hasWinner ? 0 : cumulativeCurrentJackpot + (carryoverJackpot || 0))}</p>
             </div>
           </div>
         </div>
