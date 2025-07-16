@@ -10,6 +10,8 @@ interface WeekSummaryStatsProps {
   cumulativeOrganizationNet: number;
   cumulativeCurrentJackpot: number;
   cumulativeJackpotPool: number;
+  carryoverJackpot?: number;
+  isFirstWeek?: boolean;
 }
 
 export const WeekSummaryStats = ({
@@ -22,7 +24,9 @@ export const WeekSummaryStats = ({
   formatCurrency,
   cumulativeOrganizationNet,
   cumulativeCurrentJackpot,
-  cumulativeJackpotPool
+  cumulativeJackpotPool,
+  carryoverJackpot = 0,
+  isFirstWeek = false
 }: WeekSummaryStatsProps) => {
   return (
     <div className="mt-4">
@@ -53,7 +57,14 @@ export const WeekSummaryStats = ({
             </div>
             <div className="border-l border-purple-200 pl-6 flex-1">
               <p className="text-sm text-gray-600 mb-1">Cumulative</p>
-              <p className="text-base font-semibold text-purple-700">{formatCurrency(cumulativeJackpotPool)}</p>
+              <p className="text-base font-semibold text-purple-700">
+                {formatCurrency(cumulativeJackpotPool)}
+                {isFirstWeek && carryoverJackpot > 0 && (
+                  <span className="text-green-600 font-normal ml-1 text-xs">
+                    + {formatCurrency(carryoverJackpot)} prev. game
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         </div>

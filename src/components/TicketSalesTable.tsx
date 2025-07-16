@@ -234,6 +234,8 @@ export const TicketSalesTable = ({
           cumulativeOrganizationNet={cumulativeOrganizationNet}
           cumulativeCurrentJackpot={cumulativeCurrentJackpot}
           cumulativeJackpotPool={cumulativeJackpotPool}
+          carryoverJackpot={game.carryover_jackpot}
+          isFirstWeek={week.week_number === 1}
         />
         
         {/* Winner Information */}
