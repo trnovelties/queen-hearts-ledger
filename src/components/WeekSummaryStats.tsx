@@ -30,8 +30,22 @@ export const WeekSummaryStats = ({
   isFirstWeek = false,
   weeklyPayout = 0
 }: WeekSummaryStatsProps) => {
+  console.log('WeekSummaryStats Debug:', {
+    hasWinner,
+    weekTotalSales,
+    weeklyPayout,
+    cumulativeJackpotPool,
+    cumulativeCurrentJackpot,
+    carryoverJackpot
+  });
+  
   const currentEndingJackpot = hasWinner ? (weekTotalSales * 0.6) - weeklyPayout : (weekTotalSales * 0.6) + weeklyPayout;
   const cumulativeEndingJackpot = hasWinner ? cumulativeJackpotPool - weeklyPayout : cumulativeCurrentJackpot + (carryoverJackpot || 0);
+  
+  console.log('Calculated values:', {
+    currentEndingJackpot,
+    cumulativeEndingJackpot
+  });
   return (
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
