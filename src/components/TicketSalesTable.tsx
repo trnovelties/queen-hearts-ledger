@@ -236,6 +236,7 @@ export const TicketSalesTable = ({
           cumulativeJackpotPool={cumulativeJackpotPool}
           carryoverJackpot={game.carryover_jackpot}
           isFirstWeek={week.week_number === 1}
+          weeklyPayout={week.weekly_payout || 0}
         />
         
         {/* Winner Information */}
