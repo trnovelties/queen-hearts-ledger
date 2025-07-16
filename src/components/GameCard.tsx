@@ -139,7 +139,7 @@ export const GameCard = ({
                 }, 0))}
               </div>
               <div>
-                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency(game.total_jackpot_contributions || 0)}
+                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency((game.total_jackpot_contributions || 0) + (game.carryover_jackpot || 0))}
               </div>
               {game.end_date && (
                 <div>
