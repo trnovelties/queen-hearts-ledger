@@ -40,16 +40,9 @@ export const useDailyEntryOperations = () => {
       const organizationPercentage = game.organization_percentage;
       const jackpotPercentage = game.jackpot_percentage;
       
-      // Check if this is the first entry of the game to include carryover distribution
-      const isFirstGameEntry = week.week_number === 1 && dayIndex === 0;
-      const carryoverJackpot = game.carryover_jackpot || 0;
-      
-      // Distribute carryover proportionally on first entry only
-      const carryoverOrganizationPortion = isFirstGameEntry ? carryoverJackpot * (organizationPercentage / 100) : 0;
-      const carryoverJackpotPortion = isFirstGameEntry ? carryoverJackpot * (jackpotPercentage / 100) : 0;
-      
-      const organizationTotal = (amountCollected * (organizationPercentage / 100)) + carryoverOrganizationPortion;
-      const jackpotTotal = (amountCollected * (jackpotPercentage / 100)) + carryoverJackpotPortion;
+      // Calculate daily totals without carryover distribution
+      const organizationTotal = amountCollected * (organizationPercentage / 100);
+      const jackpotTotal = amountCollected * (jackpotPercentage / 100);
 
       // Get cumulative collected up to this date
       const { data: allGameSales, error: salesError } = await supabase
@@ -61,7 +54,7 @@ export const useDailyEntryOperations = () => {
 
       if (salesError) throw salesError;
 
-      let cumulativeCollected = isFirstGameEntry ? carryoverJackpot : 0;
+      let cumulativeCollected = 0;
       if (allGameSales) {
         for (const sale of allGameSales) {
           const saleDate = new Date(sale.date);
@@ -75,8 +68,8 @@ export const useDailyEntryOperations = () => {
       }
       cumulativeCollected += amountCollected;
 
-      // Calculate jackpot contributions total for display
-      const jackpotContributions = (game.carryover_jackpot || 0) + 
+      // Calculate jackpot contributions total for display (without carryover in daily calculations)
+      const jackpotContributions = 
         (allGameSales?.reduce((sum, sale) => sum + sale.jackpot_total, 0) || 0) + 
         jackpotTotal;
 
@@ -127,10 +120,9 @@ export const useDailyEntryOperations = () => {
                   ending_jackpot_total: tempEndingJackpot
                 }];
 
-            // Recalculate week totals including carryover for first week
+            // Recalculate week totals (carryover handled separately in cumulative calculations)
             const weekTotalTickets = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.tickets_sold, 0);
-            const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0) + 
-              (w.week_number === 1 ? carryoverJackpot : 0);
+            const weekTotalSales = updatedTicketSales.reduce((sum: number, entry: any) => sum + entry.amount_collected, 0);
             
             return {
               ...w,

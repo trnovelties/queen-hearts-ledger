@@ -54,7 +54,7 @@ export const useFinancialCalculations = () => {
           previousEndingJackpot = previousWeek.ending_jackpot;
         }
       } else {
-        // Week 1 starts with game's carryover jackpot
+        // Week 1 starts with game's carryover jackpot as base for jackpot pool
         const { data: gameData, error: gameError } = await supabase
           .from('games')
           .select('carryover_jackpot')
@@ -64,6 +64,7 @@ export const useFinancialCalculations = () => {
 
         if (gameError) throw gameError;
         previousEndingJackpot = gameData?.carryover_jackpot || 0;
+        console.log('Week 1 starting with carryover jackpot:', previousEndingJackpot);
       }
 
       // Get current week's jackpot contributions

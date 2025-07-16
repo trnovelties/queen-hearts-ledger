@@ -107,8 +107,13 @@ export const TicketSalesTable = ({
         
         cumulativeOrganizationNet += weekOrgTotal;
         cumulativeCurrentJackpot += weekJackpotTotal;
-        // For jackpot pool cumulative, just sum all jackpot contributions without deducting payouts
-        cumulativeJackpotPool += weekJackpotTotal;
+        
+        // For jackpot pool cumulative, add carryover to first week only
+        if (w.week_number === 1) {
+          cumulativeJackpotPool += weekJackpotTotal + (currentGame.carryover_jackpot || 0);
+        } else {
+          cumulativeJackpotPool += weekJackpotTotal;
+        }
         
         // Scenario 2: For Queen of Hearts, show cumulative before payout
         if (w.card_selected === 'Queen of Hearts') {
@@ -174,16 +179,16 @@ export const TicketSalesTable = ({
               previousEndingJackpot = Number(previousWeek.ending_jackpot);
               console.log('Found previous week ending jackpot:', previousEndingJackpot);
             } else {
-              // Fallback to 0 if previous week not found - carryover is already distributed through sales
-              console.log('No previous week ending jackpot found, starting from 0 (carryover distributed through sales)');
+              // Fallback to carryover for first week if no previous week data
+              console.log('No previous week ending jackpot found, using carryover for week 1');
               console.log('Previous week data:', previousWeek);
               console.log('Query error:', error);
-              previousEndingJackpot = 0;
+              previousEndingJackpot = week.week_number === 1 ? (game.carryover_jackpot || 0) : 0;
             }
           } else {
-            // Week 1 starts with 0 - carryover is already distributed through sales
-            previousEndingJackpot = 0;
-            console.log('Week 1, starting jackpot from 0 (carryover distributed through sales)');
+            // Week 1 starts with carryover jackpot
+            previousEndingJackpot = game.carryover_jackpot || 0;
+            console.log('Week 1, starting jackpot from carryover:', previousEndingJackpot);
           }
 
           // Add current week's jackpot contributions to get the current running total
