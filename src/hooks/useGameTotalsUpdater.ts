@@ -76,7 +76,7 @@ export const useGameTotalsUpdater = () => {
       const totalDonations = expenses?.filter(e => e.is_donation).reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
       
       // Calculate detailed financial breakdown
-      const totalJackpotContributions = gameTotalSales * (jackpotPercentage / 100);
+      const totalJackpotContributions = (gameTotalSales * (jackpotPercentage / 100)) + carryoverJackpot;
       
       // Total payouts equals total jackpot contributions (what's allocated for payouts)
       const totalPayouts = totalJackpotContributions;
