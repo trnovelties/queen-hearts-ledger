@@ -43,18 +43,21 @@ export const WeekSummaryStats = ({
     carryoverJackpot
   });
   
-  // For completed games in the final week, show 0 for current ending jackpot
-  const currentEndingJackpot = (isGameCompleted && isLastWeek) ? 0 : (hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal);
-  
-  // For cumulative ending jackpot:
-  // - If week has winner: subtract payout from cumulative contributions
-  // - If week doesn't have winner: show the live cumulative value (which includes previous payouts deducted)
+  // Calculate cumulative ending jackpot first
   const cumulativeEndingJackpot = hasWinner ? cumulativeCurrentJackpot - weeklyPayout : cumulativeCurrentJackpot;
+  
+  // For current ending jackpot, show 0 when:
+  // 1. Game is completed and it's the last week, OR
+  // 2. Cumulative ending jackpot is 0 or negative (Queen of Hearts scenarios)
+  const currentEndingJackpot = (isGameCompleted && isLastWeek) || cumulativeEndingJackpot <= 0 
+    ? 0 
+    : (hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal);
   
   console.log('Calculated values:', {
     currentEndingJackpot,
     cumulativeEndingJackpot
   });
+
   return (
     <div className="mt-4">
       {/* Single Row Layout with Grouped Cards */}
