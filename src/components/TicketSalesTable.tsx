@@ -249,6 +249,7 @@ export const TicketSalesTable = ({
           carryoverJackpot={game.carryover_jackpot}
           isFirstWeek={week.week_number === 1}
           weeklyPayout={week.weekly_payout || 0}
+          isGameCompleted={!!game.end_date}
         />
         
         {/* Winner Information */}
