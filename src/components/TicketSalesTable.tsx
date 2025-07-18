@@ -86,11 +86,6 @@ export const TicketSalesTable = ({
     const currentGame = games.find(g => g.id === game.id);
     if (!currentGame) return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0, cumulativeJackpotPool: 0 };
 
-    // Scenario 3: Game completion - both cumulative values should be 0
-    if (game.end_date) {
-      return { cumulativeOrganizationNet: 0, cumulativeCurrentJackpot: 0, cumulativeJackpotPool: 0 };
-    }
-
     // Get all weeks up to and including current week
     const weeksUpToCurrent = currentGame.weeks
       .filter((w: any) => w.week_number <= week.week_number)
@@ -150,9 +145,19 @@ export const TicketSalesTable = ({
   // Calculate displayed ending jackpot based on week completion status
   useEffect(() => {
     const calculateDisplayedEndingJackpot = async () => {
-      // Scenario 3: Game completion - current ending jackpot should be 0
+      // For completed games, calculate the final ending jackpot properly
       if (game.end_date) {
-        setDisplayedEndingJackpot(0);
+        // If this week has a winner, show the ending jackpot after payout
+        if (week.winner_name && week.weekly_payout) {
+          if (week.card_selected === 'Queen of Hearts') {
+            setDisplayedEndingJackpot(0); // Queen of Hearts clears the jackpot
+          } else {
+            setDisplayedEndingJackpot(weekJackpotTotal - week.weekly_payout);
+          }
+        } else {
+          // No winner, show the full week jackpot total
+          setDisplayedEndingJackpot(weekJackpotTotal);
+        }
         return;
       }
 
