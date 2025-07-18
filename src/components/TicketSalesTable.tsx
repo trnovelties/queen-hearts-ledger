@@ -128,7 +128,8 @@ export const TicketSalesTable = ({
         }
         
         // For completed weeks with winners (but not Queen of Hearts), deduct payout from cumulative
-        if (w.winner_name && w.weekly_payout && w.card_selected !== 'Queen of Hearts') {
+        // BUT only for weeks BEFORE the current week, not the current week itself
+        if (w.winner_name && w.weekly_payout && w.card_selected !== 'Queen of Hearts' && w.week_number < week.week_number) {
           cumulativeCurrentJackpot -= w.weekly_payout;
         }
       }
