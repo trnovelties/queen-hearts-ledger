@@ -106,7 +106,13 @@ export const TicketSalesTable = ({
         const weekJackpotTotal = w.ticket_sales.reduce((sum: number, entry: any) => sum + entry.jackpot_total, 0);
         
         cumulativeOrganizationNet += weekOrgTotal;
-        cumulativeCurrentJackpot += weekJackpotTotal;
+        
+        // For cumulative current jackpot, add carryover to first week only
+        if (w.week_number === 1) {
+          cumulativeCurrentJackpot += weekJackpotTotal + (currentGame.carryover_jackpot || 0);
+        } else {
+          cumulativeCurrentJackpot += weekJackpotTotal;
+        }
         
         // For jackpot pool cumulative, add carryover to first week only
         if (w.week_number === 1) {
