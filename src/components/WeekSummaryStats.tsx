@@ -40,6 +40,10 @@ export const WeekSummaryStats = ({
   });
   
   const currentEndingJackpot = hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal;
+  
+  // For cumulative ending jackpot:
+  // - If week has winner: subtract payout from cumulative contributions
+  // - If week doesn't have winner: show the live cumulative value (which includes previous payouts deducted)
   const cumulativeEndingJackpot = hasWinner ? cumulativeCurrentJackpot - weeklyPayout : cumulativeCurrentJackpot;
   
   console.log('Calculated values:', {

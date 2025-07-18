@@ -127,8 +127,10 @@ export const TicketSalesTable = ({
           return;
         }
         
-        // Note: Don't deduct weekly payouts from cumulativeCurrentJackpot here
-        // The payout deduction should only happen in the display calculation
+        // For completed weeks with winners (but not Queen of Hearts), deduct payout from cumulative
+        if (w.winner_name && w.weekly_payout && w.card_selected !== 'Queen of Hearts') {
+          cumulativeCurrentJackpot -= w.weekly_payout;
+        }
       }
     });
 
