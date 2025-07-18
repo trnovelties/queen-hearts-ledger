@@ -139,10 +139,23 @@ export const GameCard = ({
                 }, 0))}
               </div>
               <div>
-                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency(game.weeks.reduce((total: number, week: any) => {
-                  const weekJackpotTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.jackpot_total || 0), 0) || 0;
-                  return total + weekJackpotTotal;
-                }, 0) + (game.carryover_jackpot || 0))}
+                <span className="text-muted-foreground font-semibold">Jackpot Total:</span> {formatCurrency((() => {
+                  // Calculate cumulative ending jackpot (same logic as WeekSummaryStats)
+                  let cumulativeJackpot = game.carryover_jackpot || 0;
+                  
+                  // Add all jackpot contributions
+                  game.weeks.forEach((week: any) => {
+                    const weekJackpotTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.jackpot_total || 0), 0) || 0;
+                    cumulativeJackpot += weekJackpotTotal;
+                    
+                    // Deduct payouts for completed weeks (but not Queen of Hearts)
+                    if (week.winner_name && week.weekly_payout && week.card_selected !== 'Queen of Hearts') {
+                      cumulativeJackpot -= week.weekly_payout;
+                    }
+                  });
+                  
+                  return cumulativeJackpot;
+                })())}
               </div>
               {game.end_date && (
                 <div>
