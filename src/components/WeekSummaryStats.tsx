@@ -40,7 +40,7 @@ export const WeekSummaryStats = ({
   });
   
   const currentEndingJackpot = hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal;
-  const cumulativeEndingJackpot = hasWinner ? cumulativeCurrentJackpot + weekJackpotTotal - weeklyPayout : cumulativeCurrentJackpot + weekJackpotTotal;
+  const cumulativeEndingJackpot = hasWinner ? cumulativeCurrentJackpot - weeklyPayout : cumulativeCurrentJackpot;
   
   console.log('Calculated values:', {
     currentEndingJackpot,
