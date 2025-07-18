@@ -143,17 +143,29 @@ export const GameCard = ({
                   // Calculate cumulative ending jackpot (same logic as WeekSummaryStats)
                   let cumulativeJackpot = game.carryover_jackpot || 0;
                   
+                  console.log('GameCard Debug - Game:', game.name, 'Carryover:', cumulativeJackpot, 'Completed:', !!game.end_date);
+                  
                   // Add all jackpot contributions
-                  game.weeks.forEach((week: any) => {
+                  game.weeks.forEach((week: any, index: number) => {
                     const weekJackpotTotal = week.ticket_sales?.reduce((weekTotal: number, sale: any) => weekTotal + (sale.jackpot_total || 0), 0) || 0;
                     cumulativeJackpot += weekJackpotTotal;
+                    
+                    console.log(`Week ${index + 1}:`, {
+                      weekJackpotTotal,
+                      winner: week.winner_name,
+                      payout: week.weekly_payout,
+                      card: week.card_selected,
+                      cumulativeAfterContribution: cumulativeJackpot
+                    });
                     
                     // Deduct payouts for completed weeks (but not Queen of Hearts)
                     if (week.winner_name && week.weekly_payout && week.card_selected !== 'Queen of Hearts') {
                       cumulativeJackpot -= week.weekly_payout;
+                      console.log(`After payout deduction: ${cumulativeJackpot}`);
                     }
                   });
                   
+                  console.log('Final GameCard Jackpot Total:', cumulativeJackpot);
                   return cumulativeJackpot;
                 })())}
               </div>
