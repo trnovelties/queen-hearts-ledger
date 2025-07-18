@@ -13,6 +13,8 @@ interface WeekSummaryStatsProps {
   carryoverJackpot?: number;
   isFirstWeek?: boolean;
   weeklyPayout?: number;
+  isGameCompleted?: boolean;
+  isLastWeek?: boolean;
 }
 
 export const WeekSummaryStats = ({
@@ -28,7 +30,9 @@ export const WeekSummaryStats = ({
   cumulativeJackpotPool,
   carryoverJackpot = 0,
   isFirstWeek = false,
-  weeklyPayout = 0
+  weeklyPayout = 0,
+  isGameCompleted = false,
+  isLastWeek = false
 }: WeekSummaryStatsProps) => {
   console.log('WeekSummaryStats Debug:', {
     hasWinner,
@@ -39,7 +43,8 @@ export const WeekSummaryStats = ({
     carryoverJackpot
   });
   
-  const currentEndingJackpot = hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal;
+  // For completed games in the final week, show 0 for current ending jackpot
+  const currentEndingJackpot = (isGameCompleted && isLastWeek) ? 0 : (hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal);
   
   // For cumulative ending jackpot:
   // - If week has winner: subtract payout from cumulative contributions
