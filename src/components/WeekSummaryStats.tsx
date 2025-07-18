@@ -46,7 +46,8 @@ export const WeekSummaryStats = ({
   });
   
   // For completed games in the final week, show 0 for current ending jackpot
-  const currentEndingJackpot = (isGameCompleted && isLastWeek) ? 0 : (hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal);
+  // Also show 0 if hasWinner and it's a completed game (Queen of Hearts scenario)
+  const currentEndingJackpot = (isGameCompleted && (isLastWeek || hasWinner)) ? 0 : (hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal);
   
   // For cumulative ending jackpot:
   // - If week has winner: subtract payout from cumulative contributions
