@@ -40,7 +40,9 @@ export const WeekSummaryStats = ({
     weeklyPayout,
     cumulativeJackpotPool,
     cumulativeCurrentJackpot,
-    carryoverJackpot
+    carryoverJackpot,
+    isGameCompleted,
+    isLastWeek
   });
   
   // For completed games in the final week, show 0 for current ending jackpot
