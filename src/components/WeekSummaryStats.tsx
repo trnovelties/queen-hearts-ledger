@@ -39,8 +39,8 @@ export const WeekSummaryStats = ({
     carryoverJackpot
   });
   
-  const currentEndingJackpot = hasWinner ? (weekTotalSales * 0.6) - weeklyPayout : (weekTotalSales * 0.6) + weeklyPayout;
-  const cumulativeEndingJackpot = hasWinner ? cumulativeJackpotPool - weeklyPayout : cumulativeCurrentJackpot + (carryoverJackpot || 0);
+  const currentEndingJackpot = hasWinner ? weekJackpotTotal - weeklyPayout : weekJackpotTotal;
+  const cumulativeEndingJackpot = hasWinner ? cumulativeCurrentJackpot + weekJackpotTotal - weeklyPayout : cumulativeCurrentJackpot + weekJackpotTotal;
   
   console.log('Calculated values:', {
     currentEndingJackpot,
