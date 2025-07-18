@@ -127,10 +127,8 @@ export const TicketSalesTable = ({
           return;
         }
         
-        // Deduct weekly payout from running jackpot if there's a winner (but not Queen of Hearts)
-        if (w.winner_name && w.weekly_payout && w.card_selected !== 'Queen of Hearts') {
-          cumulativeCurrentJackpot -= w.weekly_payout;
-        }
+        // Note: Don't deduct weekly payouts from cumulativeCurrentJackpot here
+        // The payout deduction should only happen in the display calculation
       }
     });
 
