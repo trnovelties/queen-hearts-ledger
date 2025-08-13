@@ -175,7 +175,7 @@ export const WinnerInfoDisplay = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 text-sm">
         <div className="space-y-1">
           <div className="font-medium text-yellow-700">Winner Name</div>
           <div className="text-yellow-900 font-semibold">{week.winner_name}</div>
