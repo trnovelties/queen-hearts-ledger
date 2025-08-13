@@ -27,7 +27,8 @@ export const GameSummaryDisplay = ({
   const finalJackpotPayout = game.final_jackpot_payout || 0;
   const netJackpotContributions = game.net_available_for_final_winner || 0;
   const jackpotShortfall = game.jackpot_shortfall_covered || 0;
-  const totalPayouts = game.total_payouts || 0;
+  // Calculate total payouts as weekly distributions + final jackpot payout
+  const totalPayouts = weeklyPayoutsDistributed + finalJackpotPayout;
 
   // Use the database value directly
   const actualOrganizationNetProfit = game.actual_organization_net_profit || 0;
