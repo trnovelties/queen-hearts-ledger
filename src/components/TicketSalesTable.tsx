@@ -263,6 +263,7 @@ export const TicketSalesTable = ({
           onOpenPayoutSlip={onOpenPayoutSlip}
           onOpenWinnerForm={onOpenWinnerForm}
           gameId={game.id}
+          isGameArchived={!!game.end_date}
         />
       </div>
       

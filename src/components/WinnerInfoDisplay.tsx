@@ -11,6 +11,7 @@ interface WinnerInfoDisplayProps {
   onOpenPayoutSlip?: (winnerData: any) => void;
   onOpenWinnerForm?: (gameId: string, weekId: string) => void;
   gameId?: string;
+  isGameArchived?: boolean;
 }
 
 export const WinnerInfoDisplay = ({
@@ -19,7 +20,8 @@ export const WinnerInfoDisplay = ({
   formatCurrency,
   onOpenPayoutSlip,
   onOpenWinnerForm,
-  gameId
+  gameId,
+  isGameArchived = false
 }: WinnerInfoDisplayProps) => {
   if (!week.winner_name) return null;
 
@@ -141,7 +143,7 @@ export const WinnerInfoDisplay = ({
           🏆 Winner Information
         </h5>
         <div className="flex gap-2">
-          {onOpenWinnerForm && gameId && (
+          {onOpenWinnerForm && gameId && !isGameArchived && (
             <Button 
               onClick={handleEditWinner} 
               variant="outline" 
