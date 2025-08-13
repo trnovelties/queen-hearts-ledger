@@ -193,7 +193,7 @@ export const WinnerInfoDisplay = ({
           <div className="text-yellow-900 font-semibold">
             {week.card_selected === 'Queen of Hearts' && !game?.end_date ? 
               <span className="text-sm">please complete your game first.</span> : 
-              game?.end_date ? 
+              week.card_selected === 'Queen of Hearts' && game?.end_date ? 
                 'Check Game Details' : 
                 formatCurrency(week.weekly_payout)
             }
