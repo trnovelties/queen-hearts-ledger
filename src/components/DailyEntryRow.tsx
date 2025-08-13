@@ -1,7 +1,5 @@
 
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
 
 interface DailyEntryRowProps {
@@ -15,8 +13,6 @@ interface DailyEntryRowProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
-  onOpenExpenseModal?: (date: string, gameId: string) => void;
-  onOpenDonationModal?: (date: string, gameId: string) => void;
 }
 
 export const DailyEntryRow = ({
@@ -29,23 +25,13 @@ export const DailyEntryRow = ({
   onInputSubmit,
   currentGameId,
   games,
-  setGames,
-  onOpenExpenseModal,
-  onOpenDonationModal
+  setGames
 }: DailyEntryRowProps) => {
   const weekStartDate = new Date(week.start_date);
   const entryDate = new Date(weekStartDate);
   entryDate.setDate(entryDate.getDate() + dayIndex);
   
   const dateString = entryDate.toISOString().split('T')[0];
-
-  const handleQuickAdd = (value: string) => {
-    if (value === 'donation' && onOpenDonationModal && currentGameId) {
-      onOpenDonationModal(dateString, currentGameId);
-    } else if (value === 'expense' && onOpenExpenseModal && currentGameId) {
-      onOpenExpenseModal(dateString, currentGameId);
-    }
-  };
 
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
@@ -84,19 +70,6 @@ export const DailyEntryRow = ({
             className="w-28 h-9 text-center font-medium"
             placeholder="Enter tickets"
           />
-        </div>
-        
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">Quick Add</label>
-          <Select onValueChange={handleQuickAdd}>
-            <SelectTrigger className="w-24 h-9">
-              <SelectValue placeholder="+" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="donation">Donation</SelectItem>
-              <SelectItem value="expense">Expense</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
         
         <div className="flex flex-col gap-1">

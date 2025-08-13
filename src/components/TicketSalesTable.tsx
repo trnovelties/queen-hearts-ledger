@@ -8,6 +8,7 @@ import { WeekSummaryStats } from './WeekSummaryStats';
 import { WinnerInfoDisplay } from './WinnerInfoDisplay';
 import { DailyEntriesList } from './DailyEntriesList';
 import { WinnerSelectionSection } from './WinnerSelectionSection';
+import { ExpenseDonationCard } from './ExpenseDonationCard';
 
 interface TicketSalesTableProps {
   week: any;
@@ -273,9 +274,16 @@ export const TicketSalesTable = ({
         currentGameId={currentGameId}
         games={games}
         setGames={setGames}
-        onOpenExpenseModal={onOpenExpenseModal}
-        onOpenDonationModal={onOpenDonationModal}
       />
+
+      {/* Expense/Donation Card */}
+      <div className="pt-6">
+        <ExpenseDonationCard
+          gameId={game.id}
+          onOpenExpenseModal={onOpenExpenseModal!}
+          onOpenDonationModal={onOpenDonationModal!}
+        />
+      </div>
 
       {/* Winner Selection Section */}
       <WinnerSelectionSection
