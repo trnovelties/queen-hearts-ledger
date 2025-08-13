@@ -57,7 +57,7 @@ export const WinnerSelectionSection = ({
               'bg-gray-300 hover:bg-gray-400 text-gray-600'
             }`}
           >
-            {hasWinner ? 'View Winner Details' : 'Add Winner Details'}
+            {hasWinner ? 'Edit Winner Details' : 'Add Winner Details'}
           </Button>
           
           {/* NEW: Complete Your Game Button for Queen of Hearts */}
