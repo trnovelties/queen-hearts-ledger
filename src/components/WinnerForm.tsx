@@ -50,7 +50,7 @@ export function WinnerForm({
   const [formData, setFormData] = useState({
     winnerName: '',
     cardSelected: '',
-    slotChosen: '' as string | number,
+    slotChosen: '',
     winnerPresent: true,
     authorizedSignatureName: ''
   });
@@ -453,7 +453,7 @@ export function WinnerForm({
       setFormData({
         winnerName: '',
         cardSelected: '',
-        slotChosen: '' as string | number,
+        slotChosen: '',
         winnerPresent: true,
         authorizedSignatureName: ''
       });
@@ -527,13 +527,18 @@ export function WinnerForm({
 
               <div className="space-y-2">
                 <Label htmlFor="slotChosen">Slot Chosen</Label>
-                <Input
-                  id="slotChosen"
-                  type="number"
-                  value={formData.slotChosen}
-                  onChange={(e) => setFormData({ ...formData, slotChosen: e.target.value })}
-                  required
-                />
+                <Select value={formData.slotChosen} onValueChange={(value) => setFormData({ ...formData, slotChosen: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select slot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => (
+                      <SelectItem key={slot} value={slot.toString()}>
+                        {slot}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center space-x-2">
