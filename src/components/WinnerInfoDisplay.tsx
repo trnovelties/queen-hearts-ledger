@@ -76,7 +76,7 @@ export const WinnerInfoDisplay = ({
       const boxSize = 15;
       const cols = 6;
       const padding = 1; // Minimal padding
-      const rowSpacing = 18; // Row spacing
+      const rowSpacing = 22; // Increased vertical spacing
       const colSpacing = 32; // Breathable horizontal spacing - balanced
       
       // Calculate available space (A4: 210mm width, 297mm height)
