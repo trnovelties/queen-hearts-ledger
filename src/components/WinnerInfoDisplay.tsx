@@ -62,21 +62,21 @@ export const WinnerInfoDisplay = ({
       const weekNumber = week.week_number ? week.week_number.toString() : '1';
       doc.text(`Game ${gameNumber} - Week ${weekNumber}`, 105, 40, { align: 'center' });
       
-      // Date range
+      // Date range - closer to game/week info
       const startDate = week.start_date ? new Date(week.start_date).toLocaleDateString() : '';
       const endDate = week.end_date ? new Date(week.end_date).toLocaleDateString() : '';
-      doc.text(`${startDate} - ${endDate}`, 105, 55, { align: 'center' });
+      doc.text(`${startDate} - ${endDate}`, 105, 50, { align: 'center' });
       
       // Selected slot info in header
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 70, { align: 'center' });
+      doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 65, { align: 'center' });
       
-      // Grid parameters - smaller boxes, better spacing, centered
+      // Grid parameters - smaller boxes, more horizontal spacing, centered
       const boxSize = 15; // Smaller boxes
       const cols = 6;
-      const rowSpacing = 25; // Better gap between rows
-      const colSpacing = 25; // Better gap between columns
+      const rowSpacing = 25; // Gap between rows
+      const colSpacing = 30; // More horizontal gap between columns
       
       // Calculate grid dimensions to center it
       const gridWidth = (cols - 1) * colSpacing + boxSize;
