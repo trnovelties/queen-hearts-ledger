@@ -67,13 +67,21 @@ export const WinnerInfoDisplay = ({
       const endDate = week.end_date ? new Date(week.end_date).toLocaleDateString() : '';
       doc.text(`${startDate} - ${endDate}`, 105, 55, { align: 'center' });
       
-      // Grid parameters
-      const startX = 25;
-      const startY = 75;
-      const boxSize = 20;
+      // Selected slot info in header
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 70, { align: 'center' });
+      
+      // Grid parameters - smaller boxes, better spacing, centered
+      const boxSize = 15; // Smaller boxes
       const cols = 6;
-      const rowSpacing = 30;
-      const colSpacing = 30;
+      const rowSpacing = 25; // Better gap between rows
+      const colSpacing = 25; // Better gap between columns
+      
+      // Calculate grid dimensions to center it
+      const gridWidth = (cols - 1) * colSpacing + boxSize;
+      const startX = (210 - gridWidth) / 2; // Center horizontally (210 is A4 width in mm)
+      const startY = 85;
       
       // Draw 52 slots in grid
       for (let i = 1; i <= 52; i++) {
@@ -96,7 +104,7 @@ export const WinnerInfoDisplay = ({
           doc.setLineWidth(4);
           
           // X lines extending beyond the box
-          const extend = 5;
+          const extend = 4;
           doc.line(x - extend, y - extend, x + boxSize + extend, y + boxSize + extend);
           doc.line(x - extend, y + boxSize + extend, x + boxSize + extend, y - extend);
         }
@@ -104,17 +112,10 @@ export const WinnerInfoDisplay = ({
         // Add slot number to the right of the box
         doc.setDrawColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
+        doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
-        doc.text(i.toString().padStart(2, '0'), x + boxSize + 5, y + boxSize/2 + 2);
+        doc.text(i.toString().padStart(2, '0'), x + boxSize + 3, y + boxSize/2 + 2);
       }
-      
-      // Footer info
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 260, { align: 'center' });
-      doc.text(`Winner: ${week.winner_name}`, 105, 270, { align: 'center' });
-      doc.text(`Card: ${week.card_selected}`, 105, 280, { align: 'center' });
       
       // Save PDF
       doc.save(`slot-grid-game-${gameNumber}-week-${weekNumber}.pdf`);
