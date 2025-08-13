@@ -58,6 +58,7 @@ export function WinnerForm({
   const [cardDistributions, setCardDistributions] = useState<{ card: string; distribution: number }[]>([]);
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
+  const [availableCards, setAvailableCards] = useState<{ card: string; distribution: number }[]>([]);
 
   // Calculate total accumulated jackpot for this week
   const totalAccumulatedJackpot = (currentJackpotTotal || 0);
@@ -303,6 +304,58 @@ export function WinnerForm({
     loadGameConfiguration();
   }, [open, gameData, gameId]);
 
+  // Effect to filter available cards based on previous selections
+  useEffect(() => {
+    const filterAvailableCards = async () => {
+      if (!gameId || !weekId || cardDistributions.length === 0) return;
+
+      try {
+        // Get all previous winners in this game
+        const { data: previousWinners, error } = await supabase
+          .from('weeks')
+          .select('card_selected')
+          .eq('game_id', gameId)
+          .eq('user_id', user?.id)
+          .neq('id', weekId) // Exclude current week
+          .not('card_selected', 'is', null);
+
+        if (error) {
+          console.error('Error fetching previous winners:', error);
+          setAvailableCards(cardDistributions);
+          return;
+        }
+
+        const selectedCards = previousWinners?.map(w => w.card_selected) || [];
+        console.log('Previously selected cards:', selectedCards);
+
+        // Count joker selections (handle both "Joker" and "Joker Red")
+        const jokerSelections = selectedCards.filter(card => 
+          card === 'Joker' || card === 'Joker Red'
+        ).length;
+
+        // Filter out unavailable cards
+        const available = cardDistributions.filter(card => {
+          // Special handling for jokers - allow up to 2 selections
+          if (card.card === 'Joker' || card.card === 'Joker Red') {
+            return jokerSelections < 2;
+          }
+          
+          // For all other cards, exclude if already selected
+          return !selectedCards.includes(card.card);
+        });
+
+        console.log('Available cards:', available.map(c => c.card));
+        setAvailableCards(available);
+
+      } catch (error) {
+        console.error('Error filtering available cards:', error);
+        setAvailableCards(cardDistributions);
+      }
+    };
+
+    filterAvailableCards();
+  }, [cardDistributions, gameId, weekId, user?.id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -444,7 +497,7 @@ export function WinnerForm({
                 <Select 
                   onValueChange={(value) => {
                     setFormData({ ...formData, cardSelected: value });
-                    const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
+                    const distribution = availableCards.find(card => card.card === value)?.distribution || 0;
                     setSelectedDistribution(distribution);
                   }}
                 >
@@ -453,7 +506,7 @@ export function WinnerForm({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
-                    {cardDistributions.map((card, index) => (
+                    {availableCards.map((card, index) => (
                       <SelectItem key={index} value={card.card}>{card.card} - ${card.distribution}</SelectItem>
                     ))}
                   </SelectContent>
