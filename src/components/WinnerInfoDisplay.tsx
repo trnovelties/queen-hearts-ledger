@@ -190,7 +190,14 @@ export const WinnerInfoDisplay = ({
         </div>
         <div className="space-y-1">
           <div className="font-medium text-yellow-700">Distribution Amount</div>
-          <div className="text-yellow-900 font-semibold">{formatCurrency(week.weekly_payout)}</div>
+          <div className="text-yellow-900 font-semibold">
+            {week.card_selected === 'Queen of Hearts' && !game?.end_date ? 
+              'Please complete your game' : 
+              game?.end_date ? 
+                'Check Game Details' : 
+                formatCurrency(week.weekly_payout)
+            }
+          </div>
         </div>
         <div className="space-y-1">
           <div className="font-medium text-yellow-700">Winner Present</div>
