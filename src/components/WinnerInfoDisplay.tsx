@@ -72,12 +72,12 @@ export const WinnerInfoDisplay = ({
       doc.setFont('helvetica', 'bold');
       doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 65, { align: 'center' });
       
-      // Grid parameters - fit within PDF bounds with 25px padding
+      // Grid parameters - fit within PDF bounds with minimal padding
       const boxSize = 15;
       const cols = 6;
-      const padding = 25; // 25px padding on all sides
-      const rowSpacing = 18; // Reduced row spacing to fit height
-      const colSpacing = 25; // Reduced column spacing to fit width
+      const padding = 1; // Minimal padding
+      const rowSpacing = 18; // Row spacing
+      const colSpacing = 32; // Breathable horizontal spacing - balanced
       
       // Calculate available space (A4: 210mm width, 297mm height)
       const availableWidth = 210 - (padding * 2);
