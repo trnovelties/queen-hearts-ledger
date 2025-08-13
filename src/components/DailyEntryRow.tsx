@@ -13,7 +13,6 @@ interface DailyEntryRowProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
-  isGameArchived?: boolean;
 }
 
 export const DailyEntryRow = ({
@@ -26,8 +25,7 @@ export const DailyEntryRow = ({
   onInputSubmit,
   currentGameId,
   games,
-  setGames,
-  isGameArchived = false
+  setGames
 }: DailyEntryRowProps) => {
   const weekStartDate = new Date(week.start_date);
   const entryDate = new Date(weekStartDate);
@@ -58,20 +56,19 @@ export const DailyEntryRow = ({
             type="number"
             min="0"
             value={currentValue}
-            onChange={(e) => !isGameArchived && onInputChange(week.id, dayIndex, e.target.value)}
+            onChange={(e) => onInputChange(week.id, dayIndex, e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isGameArchived) {
+              if (e.key === 'Enter') {
                 e.currentTarget.blur(); // This will trigger onBlur, so we don't call onInputSubmit here
               }
             }}
             onBlur={(e) => {
-              if (!isGameArchived && e.target.value !== (existingEntry?.tickets_sold?.toString() || '')) {
+              if (e.target.value !== (existingEntry?.tickets_sold?.toString() || '')) {
                 onInputSubmit(week.id, dayIndex, e.target.value, currentGameId!, games, setGames);
               }
             }}
             className="w-28 h-9 text-center font-medium"
             placeholder="Enter tickets"
-            disabled={isGameArchived}
           />
         </div>
         

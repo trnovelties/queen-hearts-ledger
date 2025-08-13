@@ -9,7 +9,6 @@ interface WinnerSelectionSectionProps {
   onWinnerButtonClick: () => void;
   onCompleteGameClick?: () => void;
   needsGameCompletion?: boolean;
-  isGameArchived?: boolean;
 }
 
 export const WinnerSelectionSection = ({
@@ -18,8 +17,7 @@ export const WinnerSelectionSection = ({
   hasWinner,
   onWinnerButtonClick,
   onCompleteGameClick,
-  needsGameCompletion = false,
-  isGameArchived = false
+  needsGameCompletion = false
 }: WinnerSelectionSectionProps) => {
   return (
     <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg">
@@ -50,22 +48,20 @@ export const WinnerSelectionSection = ({
         </div>
         
         <div className="flex flex-col gap-2">
-          {/* Main Winner Button - Hidden for archived games */}
-          {!isGameArchived && (
-            <Button
-              onClick={onWinnerButtonClick}
-              className={`font-semibold px-6 py-2 ${
-                hasWinner ? 'bg-green-600 hover:bg-green-700 text-white' :
-                isWeekComplete ? 'bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]' :
-                'bg-gray-300 hover:bg-gray-400 text-gray-600'
-              }`}
-            >
-              {hasWinner ? 'Edit Winner Details' : 'Add Winner Details'}
-            </Button>
-          )}
+          {/* Main Winner Button */}
+          <Button
+            onClick={onWinnerButtonClick}
+            className={`font-semibold px-6 py-2 ${
+              hasWinner ? 'bg-green-600 hover:bg-green-700 text-white' :
+              isWeekComplete ? 'bg-[#A1E96C] hover:bg-[#A1E96C]/90 text-[#1F4E4A]' :
+              'bg-gray-300 hover:bg-gray-400 text-gray-600'
+            }`}
+          >
+            {hasWinner ? 'Edit Winner Details' : 'Add Winner Details'}
+          </Button>
           
-          {/* NEW: Complete Your Game Button for Queen of Hearts - Hidden for archived games */}
-          {needsGameCompletion && onCompleteGameClick && !isGameArchived && (
+          {/* NEW: Complete Your Game Button for Queen of Hearts */}
+          {needsGameCompletion && onCompleteGameClick && (
             <Button
               onClick={onCompleteGameClick}
               className="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-yellow-900 font-bold px-6 py-2 rounded shadow-lg border border-yellow-300"
