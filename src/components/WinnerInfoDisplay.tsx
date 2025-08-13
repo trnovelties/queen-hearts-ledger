@@ -146,7 +146,7 @@ export const WinnerInfoDisplay = ({
               onClick={handleEditWinner} 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
             >
               <Edit className="h-4 w-4" />
               Edit Winner Details
@@ -156,7 +156,7 @@ export const WinnerInfoDisplay = ({
             onClick={handlePrintSlotGrid} 
             variant="outline" 
             size="sm" 
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
           >
             <Printer className="h-4 w-4" />
             Print Selected Slot
@@ -166,7 +166,7 @@ export const WinnerInfoDisplay = ({
               onClick={handlePrintSlip} 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
             >
               <Printer className="h-4 w-4" />
               Print Distribution Slip
