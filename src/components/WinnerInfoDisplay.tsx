@@ -72,16 +72,23 @@ export const WinnerInfoDisplay = ({
       doc.setFont('helvetica', 'bold');
       doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 65, { align: 'center' });
       
-      // Grid parameters - center aligned with proper spacing
+      // Grid parameters - fit within PDF bounds with 25px padding
       const boxSize = 15;
       const cols = 6;
-      const rowSpacing = 25; // Gap between rows
-      const colSpacing = 40; // Increased horizontal gap between columns
+      const padding = 25; // 25px padding on all sides
+      const rowSpacing = 18; // Reduced row spacing to fit height
+      const colSpacing = 25; // Reduced column spacing to fit width
       
-      // Calculate grid dimensions to center it
+      // Calculate available space (A4: 210mm width, 297mm height)
+      const availableWidth = 210 - (padding * 2);
+      const availableHeight = 297 - (padding * 2) - 80; // Account for header space
+      
+      // Calculate grid dimensions to center it within available space
       const gridWidth = (cols - 1) * colSpacing + boxSize;
-      const startX = (210 - gridWidth) / 2; // Center horizontally (210 is A4 width in mm)
-      const startY = 85;
+      const gridHeight = Math.ceil(54 / cols - 1) * rowSpacing + boxSize;
+      
+      const startX = padding + (availableWidth - gridWidth) / 2;
+      const startY = 85; // Start after header content
       
       // Draw 54 slots in grid
       for (let i = 1; i <= 54; i++) {
