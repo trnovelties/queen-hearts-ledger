@@ -23,6 +23,34 @@ export const WinnerInfoDisplay = ({
 }: WinnerInfoDisplayProps) => {
   if (!week.winner_name) return null;
 
+  // Check if this is Queen of Hearts and game completion status
+  const isQueenOfHearts = week.card_selected === 'Queen of Hearts';
+  const isGameCompleted = game?.end_date != null;
+  
+  // If Queen of Hearts but game not completed, show completion message
+  if (isQueenOfHearts && !isGameCompleted) {
+    return (
+      <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg">
+        <div className="text-center">
+          <h5 className="text-lg font-semibold text-blue-800 mb-2">👑 Queen of Hearts Selected!</h5>
+          <p className="text-blue-700 font-medium">Please complete your game to finalize the jackpot distribution.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // If Queen of Hearts and game completed, show game details message
+  if (isQueenOfHearts && isGameCompleted) {
+    return (
+      <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg">
+        <div className="text-center">
+          <h5 className="text-lg font-semibold text-green-800 mb-2">✅ Game Completed</h5>
+          <p className="text-green-700 font-medium">Check Game Details for final jackpot distribution information.</p>
+        </div>
+      </div>
+    );
+  }
+
   const handlePrintSlip = () => {
     if (onOpenPayoutSlip) {
       const winnerData = {
