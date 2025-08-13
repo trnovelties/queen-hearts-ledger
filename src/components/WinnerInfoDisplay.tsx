@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import { toast } from "sonner";
 interface WinnerInfoDisplayProps {
   week: any;
+  game?: any;
   formatCurrency: (amount: number) => string;
   onOpenPayoutSlip?: (winnerData: any) => void;
   onOpenWinnerForm?: (gameId: string, weekId: string) => void;
@@ -11,6 +12,7 @@ interface WinnerInfoDisplayProps {
 }
 export const WinnerInfoDisplay = ({
   week,
+  game,
   formatCurrency,
   onOpenPayoutSlip,
   onOpenWinnerForm,
@@ -50,45 +52,61 @@ export const WinnerInfoDisplay = ({
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Game ## Week ##`, 105, 45, { align: 'center' });
-      doc.text(`${week.start_date} - ${week.end_date}`, 105, 60, { align: 'center' });
+      const gameNumber = game?.game_number || '1';
+      const weekNumber = week.week_number || '1';
+      doc.text(`Game ${gameNumber} Week ${weekNumber}`, 105, 45, { align: 'center' });
+      
+      const startDate = week.start_date ? new Date(week.start_date).toLocaleDateString() : '';
+      const endDate = week.end_date ? new Date(week.end_date).toLocaleDateString() : '';
+      doc.text(`${startDate} - ${endDate}`, 105, 60, { align: 'center' });
       
       // Grid setup
       const startX = 30;
       const startY = 80;
-      const cellWidth = 30;
-      const cellHeight = 20;
+      const cellSize = 25;
       const cols = 5;
-      const rows = Math.ceil(52 / cols);
+      const spacing = 5;
       
-      doc.setFontSize(10);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
       
       // Draw grid
       for (let i = 1; i <= 52; i++) {
         const row = Math.floor((i - 1) / cols);
         const col = (i - 1) % cols;
         
-        const x = startX + col * cellWidth;
-        const y = startY + row * cellHeight;
+        const x = startX + col * (cellSize + spacing);
+        const y = startY + row * (cellSize + spacing);
         
-        // Draw cell border
-        doc.rect(x, y, cellWidth, cellHeight);
+        // Draw cell border (box)
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.5);
+        doc.rect(x, y, cellSize, cellSize);
         
         // Check if this is the selected slot
         if (i === parseInt(week.slot_chosen)) {
-          // Draw green checkmark for selected slot
-          doc.setFillColor(0, 255, 0);
-          doc.text('✓', x + 5, y + 12);
-          doc.setFillColor(0, 0, 0);
+          // Draw large cross/X that exceeds the box
+          doc.setDrawColor(0, 200, 0); // Green color
+          doc.setLineWidth(3);
+          
+          // Draw X lines that extend beyond the box
+          const margin = 3;
+          doc.line(x - margin, y - margin, x + cellSize + margin, y + cellSize + margin);
+          doc.line(x - margin, y + cellSize + margin, x + cellSize + margin, y - margin);
+          
+          doc.setDrawColor(0); // Reset to black
+          doc.setLineWidth(0.5);
         }
         
-        // Draw slot number
+        // Draw slot number on the right side of the box
         const slotText = i.toString().padStart(2, '0');
-        doc.text(slotText, x + cellWidth - 15, y + 12);
+        doc.setFontSize(10);
+        doc.text(slotText, x + cellSize + 3, y + cellSize/2 + 2);
+        doc.setFontSize(8);
       }
       
       // Save the PDF
-      doc.save(`slot-grid-week-${week.week_number}.pdf`);
+      doc.save(`slot-grid-game-${gameNumber}-week-${weekNumber}.pdf`);
       toast.success('Slot grid PDF downloaded successfully!');
     } catch (error) {
       console.error('Error generating slot grid PDF:', error);
