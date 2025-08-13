@@ -158,7 +158,7 @@ export const WinnerInfoDisplay = ({
             size="sm" 
             className="flex items-center gap-2"
           >
-            <Grid className="h-4 w-4" />
+            <Printer className="h-4 w-4" />
             Print Selected Slot
           </Button>
           {onOpenPayoutSlip && (
