@@ -76,15 +76,15 @@ export const WinnerInfoDisplay = ({
       const boxSize = 15; // Smaller boxes
       const cols = 6;
       const rowSpacing = 25; // Gap between rows
-      const colSpacing = 35; // More horizontal gap between columns
+      const colSpacing = 30; // More horizontal gap between columns
       
       // Calculate grid dimensions to center it
       const gridWidth = (cols - 1) * colSpacing + boxSize;
       const startX = (210 - gridWidth) / 2; // Center horizontally (210 is A4 width in mm)
-      const startY = 80;
+      const startY = 85;
       
-      // Draw 54 slots in grid
-      for (let i = 1; i <= 54; i++) {
+      // Draw 52 slots in grid
+      for (let i = 1; i <= 52; i++) {
         const row = Math.floor((i - 1) / cols);
         const col = (i - 1) % cols;
         
@@ -109,12 +109,12 @@ export const WinnerInfoDisplay = ({
           doc.line(x - extend, y + boxSize + extend, x + boxSize + extend, y - extend);
         }
         
-        // Add slot number to the right of the box with larger font
+        // Add slot number to the right of the box
         doc.setDrawColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(20); // 2x larger font size
+        doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
-        doc.text(i.toString().padStart(2, '0'), x + boxSize + 5, y + boxSize/2 + 3);
+        doc.text(i.toString().padStart(2, '0'), x + boxSize + 3, y + boxSize/2 + 2);
       }
       
       // Save PDF
