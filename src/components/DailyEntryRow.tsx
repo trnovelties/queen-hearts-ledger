@@ -13,6 +13,7 @@ interface DailyEntryRowProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
+  isGameArchived?: boolean;
 }
 
 export const DailyEntryRow = ({
@@ -25,7 +26,8 @@ export const DailyEntryRow = ({
   onInputSubmit,
   currentGameId,
   games,
-  setGames
+  setGames,
+  isGameArchived = false
 }: DailyEntryRowProps) => {
   const weekStartDate = new Date(week.start_date);
   const entryDate = new Date(weekStartDate);
@@ -69,6 +71,7 @@ export const DailyEntryRow = ({
             }}
             className="w-28 h-9 text-center font-medium"
             placeholder="Enter tickets"
+            disabled={isGameArchived}
           />
         </div>
         

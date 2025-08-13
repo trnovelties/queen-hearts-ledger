@@ -10,6 +10,7 @@ interface DailyEntriesListProps {
   currentGameId: string | null;
   games: any[];
   setGames: (games: any[]) => void;
+  isGameArchived?: boolean;
 }
 
 export const DailyEntriesList = ({
@@ -20,7 +21,8 @@ export const DailyEntriesList = ({
   onInputSubmit,
   currentGameId,
   games,
-  setGames
+  setGames,
+  isGameArchived = false
 }: DailyEntriesListProps) => {
   return (
     <div className="pt-6">
@@ -57,6 +59,7 @@ export const DailyEntriesList = ({
               currentGameId={currentGameId}
               games={games}
               setGames={setGames}
+              isGameArchived={isGameArchived}
             />
           );
         })}

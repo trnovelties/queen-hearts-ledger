@@ -233,6 +233,7 @@ export const TicketSalesTable = ({
           week={week} 
           onToggleWeek={onToggleWeek}
           onDeleteWeek={onDeleteWeek}
+          isGameArchived={!!game.end_date}
         />
         
         {/* Week Summary Stats */}
@@ -275,6 +276,7 @@ export const TicketSalesTable = ({
         currentGameId={currentGameId}
         games={games}
         setGames={setGames}
+        isGameArchived={!!game.end_date}
       />
 
       {/* Expense/Donation Card */}
@@ -294,6 +296,7 @@ export const TicketSalesTable = ({
         onWinnerButtonClick={handleWinnerButtonClick}
         needsGameCompletion={needsGameCompletion ? needsGameCompletion(week) : false}
         onCompleteGameClick={onCompleteGameClick ? () => onCompleteGameClick(week) : undefined}
+        isGameArchived={!!game.end_date}
       />
     </div>
   );

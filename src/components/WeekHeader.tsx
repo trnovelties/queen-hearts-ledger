@@ -6,9 +6,10 @@ interface WeekHeaderProps {
   week: any;
   onToggleWeek: (weekId: string | null) => void;
   onDeleteWeek?: (weekId: string) => void;
+  isGameArchived?: boolean;
 }
 
-export const WeekHeader = ({ week, onToggleWeek, onDeleteWeek }: WeekHeaderProps) => {
+export const WeekHeader = ({ week, onToggleWeek, onDeleteWeek, isGameArchived = false }: WeekHeaderProps) => {
   return (
     <div className="flex justify-between items-start mb-4">
       <div>
@@ -18,7 +19,7 @@ export const WeekHeader = ({ week, onToggleWeek, onDeleteWeek }: WeekHeaderProps
         </p>
       </div>
       <div className="flex items-center gap-2">
-        {onDeleteWeek && (
+        {onDeleteWeek && !isGameArchived && (
           <button
             onClick={(e) => {
               e.stopPropagation();
