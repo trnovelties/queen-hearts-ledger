@@ -280,13 +280,15 @@ export const TicketSalesTable = ({
       />
 
       {/* Expense/Donation Card */}
-      <div className="pt-6">
-        <ExpenseDonationCard
-          gameId={game.id}
-          onOpenExpenseModal={onOpenExpenseModal!}
-          onOpenDonationModal={onOpenDonationModal!}
-        />
-      </div>
+      {!game.end_date && (
+        <div className="pt-6">
+          <ExpenseDonationCard
+            gameId={game.id}
+            onOpenExpenseModal={onOpenExpenseModal!}
+            onOpenDonationModal={onOpenDonationModal!}
+          />
+        </div>
+      )}
 
       {/* Winner Selection Section */}
       <WinnerSelectionSection
