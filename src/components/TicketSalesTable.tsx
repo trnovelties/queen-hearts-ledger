@@ -257,6 +257,7 @@ export const TicketSalesTable = ({
         {/* Winner Information */}
         <WinnerInfoDisplay 
           week={week} 
+          game={game}
           formatCurrency={formatCurrency}
           onOpenPayoutSlip={onOpenPayoutSlip}
           onOpenWinnerForm={onOpenWinnerForm}
