@@ -22,9 +22,14 @@ export function CardPayoutConfig() {
   const [configId, setConfigId] = useState<string | null>(null);
   const [configVersion, setConfigVersion] = useState<number>(1);
   
-  // Initialize with all standard 54 cards
+  // Initialize with all standard 54 cards in requested order
   const [cardDistributions, setCardDistributions] = useState<CardDistribution[]>([
+    // Special cards first
+    { card: "Queen of Hearts", distribution: "jackpot" },
+    { card: "Joker", distribution: 50 },
+    { card: "Joker Red", distribution: 50 },
     // Hearts
+    { card: "Ace of Hearts", distribution: 35 },
     { card: "2 of Hearts", distribution: 25 },
     { card: "3 of Hearts", distribution: 25 },
     { card: "4 of Hearts", distribution: 25 },
@@ -35,38 +40,9 @@ export function CardPayoutConfig() {
     { card: "9 of Hearts", distribution: 25 },
     { card: "10 of Hearts", distribution: 25 },
     { card: "Jack of Hearts", distribution: 30 },
-    { card: "Queen of Hearts", distribution: "jackpot" },
     { card: "King of Hearts", distribution: 30 },
-    { card: "Ace of Hearts", distribution: 35 },
-    // Diamonds
-    { card: "2 of Diamonds", distribution: 25 },
-    { card: "3 of Diamonds", distribution: 25 },
-    { card: "4 of Diamonds", distribution: 25 },
-    { card: "5 of Diamonds", distribution: 25 },
-    { card: "6 of Diamonds", distribution: 25 },
-    { card: "7 of Diamonds", distribution: 25 },
-    { card: "8 of Diamonds", distribution: 25 },
-    { card: "9 of Diamonds", distribution: 25 },
-    { card: "10 of Diamonds", distribution: 25 },
-    { card: "Jack of Diamonds", distribution: 30 },
-    { card: "Queen of Diamonds", distribution: 40 },
-    { card: "King of Diamonds", distribution: 30 },
-    { card: "Ace of Diamonds", distribution: 35 },
-    // Clubs
-    { card: "2 of Clubs", distribution: 25 },
-    { card: "3 of Clubs", distribution: 25 },
-    { card: "4 of Clubs", distribution: 25 },
-    { card: "5 of Clubs", distribution: 25 },
-    { card: "6 of Clubs", distribution: 25 },
-    { card: "7 of Clubs", distribution: 25 },
-    { card: "8 of Clubs", distribution: 25 },
-    { card: "9 of Clubs", distribution: 25 },
-    { card: "10 of Clubs", distribution: 25 },
-    { card: "Jack of Clubs", distribution: 30 },
-    { card: "Queen of Clubs", distribution: 40 },
-    { card: "King of Clubs", distribution: 30 },
-    { card: "Ace of Clubs", distribution: 35 },
     // Spades
+    { card: "Ace of Spades", distribution: 35 },
     { card: "2 of Spades", distribution: 25 },
     { card: "3 of Spades", distribution: 25 },
     { card: "4 of Spades", distribution: 25 },
@@ -79,9 +55,34 @@ export function CardPayoutConfig() {
     { card: "Jack of Spades", distribution: 30 },
     { card: "Queen of Spades", distribution: 40 },
     { card: "King of Spades", distribution: 30 },
-    { card: "Ace of Spades", distribution: 35 },
-    // Jokers
-    { card: "Joker", distribution: 50 },
+    // Diamonds
+    { card: "Ace of Diamonds", distribution: 35 },
+    { card: "2 of Diamonds", distribution: 25 },
+    { card: "3 of Diamonds", distribution: 25 },
+    { card: "4 of Diamonds", distribution: 25 },
+    { card: "5 of Diamonds", distribution: 25 },
+    { card: "6 of Diamonds", distribution: 25 },
+    { card: "7 of Diamonds", distribution: 25 },
+    { card: "8 of Diamonds", distribution: 25 },
+    { card: "9 of Diamonds", distribution: 25 },
+    { card: "10 of Diamonds", distribution: 25 },
+    { card: "Jack of Diamonds", distribution: 30 },
+    { card: "Queen of Diamonds", distribution: 40 },
+    { card: "King of Diamonds", distribution: 30 },
+    // Clubs
+    { card: "Ace of Clubs", distribution: 35 },
+    { card: "2 of Clubs", distribution: 25 },
+    { card: "3 of Clubs", distribution: 25 },
+    { card: "4 of Clubs", distribution: 25 },
+    { card: "5 of Clubs", distribution: 25 },
+    { card: "6 of Clubs", distribution: 25 },
+    { card: "7 of Clubs", distribution: 25 },
+    { card: "8 of Clubs", distribution: 25 },
+    { card: "9 of Clubs", distribution: 25 },
+    { card: "10 of Clubs", distribution: 25 },
+    { card: "Jack of Clubs", distribution: 30 },
+    { card: "Queen of Clubs", distribution: 40 },
+    { card: "King of Clubs", distribution: 30 },
   ]);
   
   useEffect(() => {
