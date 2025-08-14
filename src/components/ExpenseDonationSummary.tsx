@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FileDown } from "lucide-react";
 import { formatDateStringForDisplay } from "@/lib/dateUtils";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface GameSummary {
   id: string;
@@ -81,6 +84,125 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
     return allExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
+  const generateAllGamesPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("All Games Expense & Donation Summary", pageWidth / 2, 20, { align: 'center' });
+    
+    // Summary totals
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, 40);
+    doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, 50);
+    
+    // Table data
+    const allExpenses = getAllExpensesAcrossGames();
+    if (allExpenses.length > 0) {
+      const tableData = allExpenses.map(expense => [
+        expense.gameName,
+        formatDateStringForDisplay(expense.date),
+        expense.is_donation ? 'Donation' : 'Expense',
+        formatCurrency(expense.amount),
+        expense.memo || 'No memo'
+      ]);
+
+      (doc as any).autoTable({
+        head: [['Game', 'Date', 'Type', 'Amount', 'Memo']],
+        body: tableData,
+        startY: 65,
+        styles: {
+          fontSize: 10,
+          cellPadding: 3
+        },
+        headStyles: {
+          fillColor: [31, 78, 74],
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [247, 248, 252]
+        }
+      });
+    }
+    
+    doc.save("all-games-expense-donation-summary.pdf");
+  };
+
+  const generateGamePDF = (game: GameSummary) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(game.name, pageWidth / 2, 20, { align: 'center' });
+    
+    // Dates
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    const dateText = `Start: ${formatDateStringForDisplay(game.start_date)}${game.end_date ? ` | End: ${formatDateStringForDisplay(game.end_date)}` : ''}`;
+    doc.text(dateText, pageWidth / 2, 30, { align: 'center' });
+    
+    // Summary
+    doc.text(`Game Expenses: ${formatCurrency(game.total_expenses)}`, 20, 50);
+    doc.text(`Game Donations: ${formatCurrency(game.total_donations)}`, 20, 60);
+    
+    let currentY = 75;
+    
+    // Group expenses by week
+    const expensesByWeek = getExpensesByWeek(game);
+    Object.entries(expensesByWeek).forEach(([weekKey, expenses]) => {
+      // Week header
+      doc.setFont("helvetica", "bold");
+      doc.text(weekKey, 20, currentY);
+      currentY += 10;
+      
+      // Week table
+      const weekTableData = expenses.map((expense: any) => [
+        formatDateStringForDisplay(expense.date),
+        expense.is_donation ? 'Donation' : 'Expense',
+        formatCurrency(expense.amount),
+        expense.memo || 'No memo'
+      ]);
+
+      (doc as any).autoTable({
+        head: [['Date', 'Type', 'Amount', 'Memo']],
+        body: weekTableData,
+        startY: currentY,
+        styles: {
+          fontSize: 9,
+          cellPadding: 2
+        },
+        headStyles: {
+          fillColor: [31, 78, 74],
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [247, 248, 252]
+        }
+      });
+      
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+      
+      // Week summary
+      const weekExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+      const weekDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+      
+      doc.setFont("helvetica", "normal");
+      doc.text(`${weekKey} Expenses: ${formatCurrency(weekExpenses)}`, 20, currentY);
+      doc.text(`${weekKey} Donations: ${formatCurrency(weekDonations)}`, 20, currentY + 8);
+      currentY += 25;
+    });
+    
+    const fileName = `${game.name.toLowerCase().replace(/\s+/g, '-')}-expense-donation-summary.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
       <CardHeader>
@@ -132,17 +254,31 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
           <Collapsible className="space-y-2">
             <CollapsibleTrigger asChild>
               <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-lg font-bold text-[#1F4E4A]">All Games Expense & Donation Details</h4>
-                      <p className="text-sm text-[#132E2C]/60">
-                        {getAllExpensesAcrossGames().length} total transactions across all games
-                      </p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
-                  </div>
-                </CardContent>
+                 <CardContent className="p-4">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <h4 className="text-lg font-bold text-[#1F4E4A]">All Games Expense & Donation Details</h4>
+                       <p className="text-sm text-[#132E2C]/60">
+                         {getAllExpensesAcrossGames().length} total transactions across all games
+                       </p>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <Button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           generateAllGamesPDF();
+                         }}
+                         variant="outline"
+                         size="sm"
+                         className="border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5"
+                       >
+                         <FileDown className="h-4 w-4 mr-2" />
+                         Download PDF
+                       </Button>
+                       <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
+                     </div>
+                   </div>
+                 </CardContent>
               </Card>
             </CollapsibleTrigger>
             
@@ -194,33 +330,48 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
               <Collapsible key={game.id} className="space-y-2">
                 <CollapsibleTrigger asChild>
                   <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-bold text-[#1F4E4A]">{game.name}</h3>
-                            <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
-                          </div>
-                          <div className="text-sm text-[#132E2C]/60">
-                            <span>Start: {formatDateStringForDisplay(game.start_date)}</span>
-                            {game.end_date && (
-                              <span> | End: {formatDateStringForDisplay(game.end_date)}</span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-center w-full sm:w-auto">
-                          <div>
-                            <div className="text-xs text-[#132E2C]/60">Game Expenses</div>
-                            <div className="font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-[#132E2C]/60">Game Donations</div>
-                            <div className="font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
+                     <CardContent className="p-4">
+                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                         <div className="space-y-2">
+                           <div className="flex items-center gap-2">
+                             <h3 className="text-lg font-bold text-[#1F4E4A]">{game.name}</h3>
+                             <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
+                           </div>
+                           <div className="text-sm text-[#132E2C]/60">
+                             <span>Start: {formatDateStringForDisplay(game.start_date)}</span>
+                             {game.end_date && (
+                               <span> | End: {formatDateStringForDisplay(game.end_date)}</span>
+                             )}
+                           </div>
+                         </div>
+                         
+                         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                           <div className="grid grid-cols-2 gap-4 text-center">
+                             <div>
+                               <div className="text-xs text-[#132E2C]/60">Game Expenses</div>
+                               <div className="font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
+                             </div>
+                             <div>
+                               <div className="text-xs text-[#132E2C]/60">Game Donations</div>
+                               <div className="font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
+                             </div>
+                           </div>
+                           
+                           <Button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               generateGamePDF(game);
+                             }}
+                             variant="outline"
+                             size="sm"
+                             className="border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5"
+                           >
+                             <FileDown className="h-4 w-4 mr-2" />
+                             PDF
+                           </Button>
+                         </div>
+                       </div>
+                     </CardContent>
                   </Card>
                 </CollapsibleTrigger>
                 
