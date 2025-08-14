@@ -166,6 +166,17 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
         
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="donationDate" className="col-span-1">Date</Label>
+            <Input
+              id="donationDate"
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="col-span-3"
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="donationAmount" className="col-span-1">Amount ($)</Label>
             <Input
               id="donationAmount"
