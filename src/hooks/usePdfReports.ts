@@ -204,74 +204,86 @@ export const usePdfReports = () => {
         yPosition += 8;
       };
 
-      // Professional Document Header with proper 10mm top margin
+      // Professional Document Header with proper 10mm top margin and centered alignment
       doc.setLineWidth(1.5);
       doc.setDrawColor(0, 0, 0);
-      doc.rect(margin, margin, contentWidth, 30);
+      doc.rect(margin, margin, contentWidth, 35);
       
+      // Create centered header text block
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
+      doc.setFontSize(18);
       doc.setTextColor(0, 0, 0);
-      doc.text('QUEEN OF HEARTS', pageWidth / 2, margin + 12, { align: 'center' });
+      doc.text('QUEEN OF HEARTS', pageWidth / 2, margin + 10, { align: 'center' });
+      
+      doc.setFontSize(14);
       doc.text('COMPREHENSIVE GAME REPORT', pageWidth / 2, margin + 20, { align: 'center' });
       
-      doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
-      doc.text(safeString(gameData.name), pageWidth / 2, margin + 28, { align: 'center' });
+      doc.text(safeString(gameData.name), pageWidth / 2, margin + 30, { align: 'center' });
       
-      yPosition = margin + 40;
+      yPosition = margin + 45;
 
       // Report Information Box with better structure
       doc.setLineWidth(0.5);
       doc.setDrawColor(100, 100, 100);
       doc.setFillColor(250, 250, 250);
-      doc.rect(margin, yPosition, contentWidth, 20, 'FD');
+      doc.rect(margin, yPosition, contentWidth, 18, 'FD');
       
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
-      doc.text(`Report Generated: ${formatDateStringForDisplay(getTodayDateString())}`, margin + 4, yPosition + 6);
-      doc.text(`Status: ${gameData.end_date ? 'COMPLETED' : 'IN PROGRESS'}`, margin + 4, yPosition + 12);
-      doc.text(`Game Duration: ${formatDateStringForDisplay(gameData.start_date)} - ${gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'Ongoing'}`, margin + 4, yPosition + 18);
+      doc.text(`Report Generated: ${formatDateStringForDisplay(getTodayDateString())}`, margin + 4, yPosition + 5);
+      doc.text(`Status: ${gameData.end_date ? 'COMPLETED' : 'IN PROGRESS'}`, margin + 4, yPosition + 10);
+      doc.text(`Game Duration: ${formatDateStringForDisplay(gameData.start_date)} - ${gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'Ongoing'}`, margin + 4, yPosition + 15);
       
-      doc.text(`Total Weeks: ${gameData.weeks?.length || 0}`, pageWidth - margin - 4, yPosition + 6, { align: 'right' });
-      doc.text(`Game #${safeString(gameData.game_number)}`, pageWidth - margin - 4, yPosition + 12, { align: 'right' });
-      doc.text(`Game Type: Queen of Hearts`, pageWidth - margin - 4, yPosition + 18, { align: 'right' });
+      doc.text(`Total Weeks: ${gameData.weeks?.length || 0}`, pageWidth - margin - 4, yPosition + 5, { align: 'right' });
+      doc.text(`Game #${safeString(gameData.game_number)}`, pageWidth - margin - 4, yPosition + 10, { align: 'right' });
       
-      yPosition += 30;
+      yPosition += 25;
 
       // GAME CONFIGURATION
       addSectionHeader('GAME CONFIGURATION');
       
-      // Create configuration grid with better layout
+      // Create configuration grid with professional layout
       doc.setFillColor(248, 248, 248);
-      doc.rect(margin, yPosition, contentWidth, 60, 'F');
+      doc.rect(margin, yPosition, contentWidth, 50, 'F');
       doc.setLineWidth(0.5);
-      doc.rect(margin, yPosition, contentWidth, 60);
-      yPosition += 5;
+      doc.rect(margin, yPosition, contentWidth, 50);
       
-      const configRows = [
-        ['Game Number:', safeString(gameData.game_number), 'Start Date:', formatDateStringForDisplay(gameData.start_date)],
-        ['End Date:', gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'In Progress', 'Ticket Price:', formatCurrency(gameData.ticket_price)],
-        ['Organization Share:', `${gameData.organization_percentage || 40}%`, 'Jackpot Share:', `${gameData.jackpot_percentage || 60}%`],
-        ['Starting Carryover:', formatCurrency(gameData.carryover_jackpot), 'Minimum Jackpot:', formatCurrency(gameData.minimum_starting_jackpot)],
-        ['Total Weeks:', safeString(gameData.weeks?.length), 'Game Status:', gameData.end_date ? 'Completed' : 'Active']
-      ];
-      
-      doc.setFont("helvetica", "normal");
+      // Configuration data in two columns with proper spacing
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
       
-      configRows.forEach((row, index) => {
-        const rowY = yPosition + (index * 10);
-        doc.setFont("helvetica", "bold");
-        doc.text(row[0], margin + 4, rowY + 3);
-        doc.text(row[2], margin + 100, rowY + 3);
-        doc.setFont("helvetica", "normal");
-        doc.text(row[1], margin + 4, rowY + 8);
-        doc.text(row[3], margin + 100, rowY + 8);
-      });
+      // Left column labels
+      doc.text('Game Number:', margin + 4, yPosition + 8);
+      doc.text('End Date:', margin + 4, yPosition + 18);
+      doc.text('Organization Share:', margin + 4, yPosition + 28);
+      doc.text('Starting Carryover:', margin + 4, yPosition + 38);
+      doc.text('Total Weeks:', margin + 4, yPosition + 48);
       
-      yPosition += 70;
+      // Right column labels  
+      doc.text('Start Date:', margin + 100, yPosition + 8);
+      doc.text('Ticket Price:', margin + 100, yPosition + 18);
+      doc.text('Jackpot Share:', margin + 100, yPosition + 28);
+      doc.text('Minimum Jackpot:', margin + 100, yPosition + 38);
+      doc.text('Game Status:', margin + 100, yPosition + 48);
+      
+      // Values
+      doc.setFont("helvetica", "normal");
+      doc.text(safeString(gameData.game_number), margin + 35, yPosition + 8);
+      doc.text(gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'In Progress', margin + 25, yPosition + 18);
+      doc.text(`${gameData.organization_percentage || 40}%`, margin + 50, yPosition + 28);
+      doc.text(formatCurrency(gameData.carryover_jackpot), margin + 45, yPosition + 38);
+      doc.text(safeString(gameData.weeks?.length), margin + 30, yPosition + 48);
+      
+      doc.text(formatDateStringForDisplay(gameData.start_date), margin + 130, yPosition + 8);
+      doc.text(formatCurrency(gameData.ticket_price), margin + 130, yPosition + 18);
+      doc.text(`${gameData.jackpot_percentage || 60}%`, margin + 130, yPosition + 28);
+      doc.text(formatCurrency(gameData.minimum_starting_jackpot), margin + 145, yPosition + 38);
+      doc.text(gameData.end_date ? 'Completed' : 'Active', margin + 130, yPosition + 48);
+      
+      yPosition += 60;
 
       // FINANCIAL SUMMARY - Calculate from actual data
       addSectionHeader('FINANCIAL SUMMARY');
