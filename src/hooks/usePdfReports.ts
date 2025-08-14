@@ -114,6 +114,13 @@ export const usePdfReports = () => {
         yPosition += maxLines * 6 + 2;
       };
 
+      // Helper function to add footer line
+      const addFooterLine = () => {
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(150, 150, 150);
+        doc.line(margin, pageHeight - margin - 15, pageWidth - margin, pageHeight - margin - 15);
+      };
+
       // Helper function to create responsive tables with proper overflow handling
       const createTable = (headers: string[], rows: string[][], colWidths: number[], title?: string) => {
         if (title) {
@@ -442,6 +449,13 @@ export const usePdfReports = () => {
         yPosition += 20;
       }
 
+      // Start Page 3 for DAILY TICKET SALES BREAKDOWN
+      if (doc.getNumberOfPages() < 3) {
+        doc.addPage();
+        yPosition = 30; // 30px gap from top
+        addFooterLine(); // Add footer line to previous page
+      }
+      
       // DAILY TICKET SALES BREAKDOWN
       const weeksWithSales = gameData.weeks?.filter((week: any) => week.ticket_sales && week.ticket_sales.length > 0) || [];
       
@@ -452,7 +466,13 @@ export const usePdfReports = () => {
           .sort((a: any, b: any) => (a.week_number || 0) - (b.week_number || 0))
           .slice(0, 5) // Limit to first 5 weeks to prevent PDF from being too long
           .forEach((week: any) => {
-            checkNewPage(40);
+            // Check if we need more space for the complete week table (estimate 80px for header + table)
+            const estimatedWeekHeight = 80;
+            if (yPosition + estimatedWeekHeight > pageHeight - margin - 30) {
+              addFooterLine();
+              doc.addPage();
+              yPosition = 30; // 30px gap from top
+            }
             
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
@@ -490,14 +510,15 @@ export const usePdfReports = () => {
       if (winners.length > 0) {
         addSectionHeader('WINNERS DIRECTORY');
         
-        const winnerHeaders = ['Week', 'Winner Name', 'Card', 'Payout', 'Date', 'Present'];
-        const winnerColWidths = [20, 45, 30, 30, 30, 20];
+        const winnerHeaders = ['Week', 'Winner Name', 'Slot', 'Card', 'Payout', 'Date', 'Present'];
+        const winnerColWidths = [16, 40, 16, 26, 26, 26, 16];
         
         const winnerRows = winners
           .sort((a: any, b: any) => (a.week_number || 0) - (b.week_number || 0))
           .map((week: any) => [
             safeString(week.week_number),
             safeString(week.winner_name),
+            safeString(week.slot_chosen, 'N/A'),
             safeString(week.card_selected),
             formatCurrency(week.weekly_payout),
             formatDateStringShort(week.end_date),
