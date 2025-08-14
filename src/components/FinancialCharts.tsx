@@ -265,24 +265,16 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                 />
                 <Legend />
                 <Bar 
-                  dataKey="Revenue" 
+                  dataKey="NetProfit" 
                   fill={chartColors.secondary} 
                   radius={[4, 4, 0, 0]}
-                  name="Revenue"
+                  name="Income (Net Profit)"
                 />
                 <Bar 
                   dataKey="Distributions" 
                   fill={chartColors.primary} 
                   radius={[4, 4, 0, 0]}
-                  name="Distributions"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="NetProfit" 
-                  stroke={chartColors.profit} 
-                  strokeWidth={1.5}
-                  dot={{ fill: chartColors.profit, r: 4 }}
-                  name="Net Profit"
+                  name="Expense (Distribution)"
                 />
               </ComposedChart>
             </ResponsiveContainer>
