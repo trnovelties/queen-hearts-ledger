@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Plus, FileDown, Settings, Clock } from "lucide-react";
+import { ChevronDown, Plus, FileDown, Settings, Clock, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
@@ -183,6 +183,79 @@ export default function IncomeExpense() {
     }));
     validateGame(ticketSales, expenses, payouts);
   };
+
+  const downloadWeeklyPerformancePDF = async (game: GameSummary) => {
+    try {
+      const jsPDF = (await import('jspdf')).default;
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF();
+      
+      // Header information
+      const startDate = formatDateStringForDisplay(game.start_date);
+      const endDate = game.end_date ? formatDateStringForDisplay(game.end_date) : 'Ongoing';
+      const numberOfWeeks = game.weeks.length;
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Weekly Performance Report', 20, 20);
+      
+      // Game information
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Game: ${game.name}`, 20, 35);
+      doc.text(`Period: ${startDate} - ${endDate}`, 20, 45);
+      doc.text(`Number of Weeks: ${numberOfWeeks}`, 20, 55);
+      
+      // Prepare table data
+      const tableHeaders = ['Week', 'Period', 'Tickets Sold', 'Sales', 'Winner', 'Slot', 'Card', 'Distribution', 'Present'];
+      
+      const tableData = game.weeks.map((week: any) => {
+        const weekTicketSales = game.ticket_sales.filter((sale: any) => sale.week_id === week.id);
+        const weeklyTicketsFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
+        const weeklySalesFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+        
+        return [
+          `Week ${week.week_number}`,
+          `${formatDateStringForDisplay(week.start_date)} - ${formatDateStringForDisplay(week.end_date)}`,
+          (weeklyTicketsFromSales || week.weekly_tickets_sold || 0).toLocaleString(),
+          formatCurrency(weeklySalesFromSales || week.weekly_sales || 0),
+          week.winner_name || 'No winner',
+          week.slot_chosen ? `#${week.slot_chosen}` : '-',
+          week.card_selected || '-',
+          formatCurrency(week.weekly_payout),
+          week.winner_present !== null ? (week.winner_present ? 'Yes' : 'No') : '-'
+        ];
+      });
+      
+      // Add table
+      autoTable(doc, {
+        head: [tableHeaders],
+        body: tableData,
+        startY: 70,
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [31, 78, 74], // #1F4E4A
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [247, 248, 252] // #F7F8FC
+        }
+      });
+      
+      // Save the PDF
+      doc.save(`${game.name}_Weekly_Performance.pdf`);
+      toast.success('Weekly performance report downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Error generating PDF report');
+    }
+  };
   return <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-[#F7F8FC] min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -295,7 +368,18 @@ export default function IncomeExpense() {
 
                  {/* Weekly Performance Table */}
                  {game.weeks.length > 0 && <div className="bg-white rounded-lg shadow-sm p-4">
-                     <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">Weekly Performance</h4>
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-sm font-semibold text-[#132E2C]">Weekly Performance</h4>
+                        <Button
+                          onClick={() => downloadWeeklyPerformancePDF(game)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 px-3 border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Download PDF
+                        </Button>
+                      </div>
                      <div className="overflow-x-auto">
                        <table className="w-full text-sm">
                           <thead>
