@@ -256,9 +256,7 @@ export default function IncomeExpense() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 text-center w-full sm:w-auto">
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Total Sales</div>
-                          <div className="font-bold text-[#1F4E4A]">{(game.total_sales * 100).toFixed(0)}¢</div>
-                          <div className="text-xs text-[#132E2C]/60 mt-1">Tickets Sold</div>
-                          <div className="font-medium text-[#132E2C]">{Math.round(game.total_sales / (game.ticket_price || 2)).toLocaleString()}</div>
+                          <div className="font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Jackpot Contributions</div>
