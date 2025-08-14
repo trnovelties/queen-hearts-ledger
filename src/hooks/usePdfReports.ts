@@ -328,11 +328,10 @@ export const usePdfReports = () => {
       // Calculate organization net profit from actual game data
       const organizationNetProfit = gameData.organization_net_profit || 0;
       
-      // Calculate next game contribution (ending jackpot total from last week)
-      const lastWeek = gameData.weeks?.sort((a: any, b: any) => (b.week_number || 0) - (a.week_number || 0))[0];
-      const nextGameContribution = lastWeek?.ending_jackpot || gameData.carryover_jackpot || 0;
+      // Calculate next game contribution from the database field
+      const nextGameContribution = gameData.jackpot_contribution_to_next_game || 0;
       
-      // Adjust total distributions to show actual game payout (minus next game contribution)
+      // Calculate actual game distributions (total distributions minus next game contribution)
       const actualGameDistributions = totalDistributions - nextGameContribution;
       
       // Financial Summary Box with proper fit-content height
@@ -359,7 +358,7 @@ export const usePdfReports = () => {
         ['Total Expenses:', formatCurrency(totalExpenses)],
         ['Total Donations:', formatCurrency(totalDonations)],
         ['Organization Net Profit:', formatCurrency(organizationNetProfit)],
-        ['Carryover to Next Game:', formatCurrency(nextGameContribution)]
+        ['Next game Contribution:', formatCurrency(nextGameContribution)]
       ];
       
       financialItems.forEach(([label, value], index) => {
