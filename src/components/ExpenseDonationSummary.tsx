@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, FileDown } from "lucide-react";
 import { formatDateStringForDisplay } from "@/lib/dateUtils";
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface GameSummary {
   id: string;
@@ -111,7 +111,7 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
           expense.memo || 'No memo'
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           head: [['Game', 'Date', 'Type', 'Amount', 'Memo']],
           body: tableData,
           startY: 65,
@@ -179,7 +179,7 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
             expense.memo || 'No memo'
           ]);
 
-          (doc as any).autoTable({
+          autoTable(doc, {
             head: [['Date', 'Type', 'Amount', 'Memo']],
             body: weekTableData,
             startY: currentY,
@@ -197,7 +197,9 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
             }
           });
           
-          currentY = (doc as any).lastAutoTable.finalY + 15;
+          // Get the finalY from the last table
+          const lastTable = (doc as any).lastAutoTable;
+          currentY = lastTable ? lastTable.finalY + 15 : currentY + 50;
           
           // Week summary
           const weekExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
