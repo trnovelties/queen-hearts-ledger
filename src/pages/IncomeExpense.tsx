@@ -298,38 +298,53 @@ export default function IncomeExpense() {
                      <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">Weekly Performance</h4>
                      <div className="overflow-x-auto">
                        <table className="w-full text-sm">
-                         <thead>
-                           <tr className="border-b border-[#1F4E4A]/20">
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Week</th>
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Period</th>
-                             <th className="text-center p-2 font-semibold text-[#132E2C]">Tickets Sold</th>
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Sales</th>
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Winner</th>
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Card</th>
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Distribution</th>
-                             <th className="text-left p-2 font-semibold text-[#132E2C]">Present</th>
-                           </tr>
-                         </thead>
-                         <tbody>
-                           {game.weeks.map((week: any) => <tr key={week.id} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
-                               <td className="p-2 font-medium text-[#1F4E4A]">Week {week.week_number}</td>
-                               <td className="p-2 text-sm">{formatDateStringForDisplay(week.start_date)} - {formatDateStringForDisplay(week.end_date)}</td>
-                               <td className="p-2 text-center font-medium">{week.weekly_tickets_sold?.toLocaleString() || 0}</td>
-                               <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(week.weekly_sales)}</td>
-                               <td className="p-2 font-medium">{week.winner_name || <span className="text-[#132E2C]/50">No winner</span>}</td>
-                               <td className="p-2">
-                                 {week.card_selected ? <span className={`px-2 py-1 rounded text-xs font-medium ${week.card_selected === "Queen of Hearts" ? "bg-[#A1E96C]/20 text-[#132E2C]" : "bg-gray-100 text-gray-800"}`}>
-                                     {week.card_selected}
-                                   </span> : <span className="text-[#132E2C]/50">-</span>}
-                               </td>
-                               <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(week.weekly_payout)}</td>
-                               <td className="p-2">
-                                 {week.winner_present !== null ? <span className={`px-2 py-1 rounded text-xs font-medium ${week.winner_present ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                                     {week.winner_present ? 'Yes' : 'No'}
-                                   </span> : <span className="text-[#132E2C]/50">-</span>}
-                               </td>
-                             </tr>)}
-                         </tbody>
+                          <thead>
+                            <tr className="border-b border-[#1F4E4A]/20">
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Week</th>
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Period</th>
+                              <th className="text-center p-2 font-semibold text-[#132E2C]">Tickets Sold</th>
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Sales</th>
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Winner</th>
+                              <th className="text-center p-2 font-semibold text-[#132E2C]">Slot</th>
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Card</th>
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Distribution</th>
+                              <th className="text-left p-2 font-semibold text-[#132E2C]">Present</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {game.weeks.map((week: any) => {
+                              // Calculate week totals from ticket sales for this week
+                              const weekTicketSales = game.ticket_sales.filter((sale: any) => sale.week_id === week.id);
+                              const weeklyTicketsFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
+                              const weeklySalesFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+                              
+                              return (
+                                <tr key={week.id} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
+                                  <td className="p-2 font-medium text-[#1F4E4A]">Week {week.week_number}</td>
+                                  <td className="p-2 text-sm">{formatDateStringForDisplay(week.start_date)} - {formatDateStringForDisplay(week.end_date)}</td>
+                                  <td className="p-2 text-center font-medium">{weeklyTicketsFromSales.toLocaleString() || week.weekly_tickets_sold?.toLocaleString() || 0}</td>
+                                  <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(weeklySalesFromSales || week.weekly_sales || 0)}</td>
+                                  <td className="p-2 font-medium">{week.winner_name || <span className="text-[#132E2C]/50">No winner</span>}</td>
+                                  <td className="p-2 text-center font-medium">
+                                    {week.slot_chosen ? <span className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-medium">
+                                        #{week.slot_chosen}
+                                      </span> : <span className="text-[#132E2C]/50">-</span>}
+                                  </td>
+                                  <td className="p-2">
+                                    {week.card_selected ? <span className={`px-2 py-1 rounded text-xs font-medium ${week.card_selected === "Queen of Hearts" ? "bg-[#A1E96C]/20 text-[#132E2C]" : "bg-gray-100 text-gray-800"}`}>
+                                        {week.card_selected}
+                                      </span> : <span className="text-[#132E2C]/50">-</span>}
+                                  </td>
+                                  <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(week.weekly_payout)}</td>
+                                  <td className="p-2">
+                                    {week.winner_present !== null ? <span className={`px-2 py-1 rounded text-xs font-medium ${week.winner_present ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                        {week.winner_present ? 'Yes' : 'No'}
+                                      </span> : <span className="text-[#132E2C]/50">-</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
                        </table>
                      </div>
                    </div>}
