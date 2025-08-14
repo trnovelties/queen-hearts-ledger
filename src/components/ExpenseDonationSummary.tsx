@@ -298,8 +298,8 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
               </Card>
             </CollapsibleTrigger>
             
-            <CollapsibleContent className="space-y-4 p-4 bg-[#F7F8FC] rounded-lg">
-              <div className="bg-white rounded-lg shadow-sm p-4">
+              <CollapsibleContent className="space-y-4 p-4 bg-green-50 rounded-lg">
+                <div className="bg-white rounded-lg shadow-sm p-4">
                 {getAllExpensesAcrossGames().length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
