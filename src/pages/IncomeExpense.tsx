@@ -126,8 +126,8 @@ export default function IncomeExpense() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 
@@ -257,6 +257,9 @@ export default function IncomeExpense() {
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Total Sales</div>
                           <div className="font-bold text-[#1F4E4A]">{formatCurrency(game.total_sales)}</div>
+                          <div className="text-xs text-[#132E2C]/60 mt-1">
+                            {game.ticket_sales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0).toLocaleString()} tickets sold
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Jackpot Contributions</div>
