@@ -270,7 +270,7 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
           // All Games - Overall Details
           <Collapsible className="space-y-2">
             <CollapsibleTrigger asChild>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20">
+               <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20 bg-green-50">
                  <CardContent className="p-4">
                    <div className="flex items-center justify-between">
                      <div>
