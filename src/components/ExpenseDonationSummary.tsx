@@ -85,122 +85,137 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
   };
 
   const generateAllGamesPDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    
-    // Title
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("All Games Expense & Donation Summary", pageWidth / 2, 20, { align: 'center' });
-    
-    // Summary totals
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, 40);
-    doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, 50);
-    
-    // Table data
-    const allExpenses = getAllExpensesAcrossGames();
-    if (allExpenses.length > 0) {
-      const tableData = allExpenses.map(expense => [
-        expense.gameName,
-        formatDateStringForDisplay(expense.date),
-        expense.is_donation ? 'Donation' : 'Expense',
-        formatCurrency(expense.amount),
-        expense.memo || 'No memo'
-      ]);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("All Games Expense & Donation Summary", pageWidth / 2, 20, { align: 'center' });
+      
+      // Summary totals
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, 40);
+      doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, 50);
+      
+      // Table data
+      const allExpenses = getAllExpensesAcrossGames();
+      if (allExpenses.length > 0) {
+        const tableData = allExpenses.map(expense => [
+          expense.gameName,
+          formatDateStringForDisplay(expense.date),
+          expense.is_donation ? 'Donation' : 'Expense',
+          formatCurrency(expense.amount),
+          expense.memo || 'No memo'
+        ]);
 
-      (doc as any).autoTable({
-        head: [['Game', 'Date', 'Type', 'Amount', 'Memo']],
-        body: tableData,
-        startY: 65,
-        styles: {
-          fontSize: 10,
-          cellPadding: 3
-        },
-        headStyles: {
-          fillColor: [31, 78, 74],
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: [247, 248, 252]
-        }
-      });
+        (doc as any).autoTable({
+          head: [['Game', 'Date', 'Type', 'Amount', 'Memo']],
+          body: tableData,
+          startY: 65,
+          styles: {
+            fontSize: 10,
+            cellPadding: 3
+          },
+          headStyles: {
+            fillColor: [31, 78, 74],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: {
+            fillColor: [247, 248, 252]
+          }
+        });
+      }
+      
+      doc.save("all-games-expense-donation-summary.pdf");
+      console.log("PDF generated successfully");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
     }
-    
-    doc.save("all-games-expense-donation-summary.pdf");
   };
 
   const generateGamePDF = (game: GameSummary) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    
-    // Title
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text(game.name, pageWidth / 2, 20, { align: 'center' });
-    
-    // Dates
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    const dateText = `Start: ${formatDateStringForDisplay(game.start_date)}${game.end_date ? ` | End: ${formatDateStringForDisplay(game.end_date)}` : ''}`;
-    doc.text(dateText, pageWidth / 2, 30, { align: 'center' });
-    
-    // Summary
-    doc.text(`Game Expenses: ${formatCurrency(game.total_expenses)}`, 20, 50);
-    doc.text(`Game Donations: ${formatCurrency(game.total_donations)}`, 20, 60);
-    
-    let currentY = 75;
-    
-    // Group expenses by week
-    const expensesByWeek = getExpensesByWeek(game);
-    Object.entries(expensesByWeek).forEach(([weekKey, expenses]) => {
-      // Week header
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      
+      // Title
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text(weekKey, 20, currentY);
-      currentY += 10;
+      doc.text(game.name, pageWidth / 2, 20, { align: 'center' });
       
-      // Week table
-      const weekTableData = expenses.map((expense: any) => [
-        formatDateStringForDisplay(expense.date),
-        expense.is_donation ? 'Donation' : 'Expense',
-        formatCurrency(expense.amount),
-        expense.memo || 'No memo'
-      ]);
-
-      (doc as any).autoTable({
-        head: [['Date', 'Type', 'Amount', 'Memo']],
-        body: weekTableData,
-        startY: currentY,
-        styles: {
-          fontSize: 9,
-          cellPadding: 2
-        },
-        headStyles: {
-          fillColor: [31, 78, 74],
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: [247, 248, 252]
-        }
-      });
-      
-      currentY = (doc as any).lastAutoTable.finalY + 15;
-      
-      // Week summary
-      const weekExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
-      const weekDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
-      
+      // Dates
+      doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text(`${weekKey} Expenses: ${formatCurrency(weekExpenses)}`, 20, currentY);
-      doc.text(`${weekKey} Donations: ${formatCurrency(weekDonations)}`, 20, currentY + 8);
-      currentY += 25;
-    });
-    
-    const fileName = `${game.name.toLowerCase().replace(/\s+/g, '-')}-expense-donation-summary.pdf`;
-    doc.save(fileName);
+      const dateText = `Start: ${formatDateStringForDisplay(game.start_date)}${game.end_date ? ` | End: ${formatDateStringForDisplay(game.end_date)}` : ''}`;
+      doc.text(dateText, pageWidth / 2, 30, { align: 'center' });
+      
+      // Summary
+      doc.text(`Game Expenses: ${formatCurrency(game.total_expenses)}`, 20, 50);
+      doc.text(`Game Donations: ${formatCurrency(game.total_donations)}`, 20, 60);
+      
+      let currentY = 75;
+      
+      // Group expenses by week
+      const expensesByWeek = getExpensesByWeek(game);
+      
+      if (Object.keys(expensesByWeek).length === 0) {
+        doc.text("No expenses or donations recorded for this game", 20, currentY);
+      } else {
+        Object.entries(expensesByWeek).forEach(([weekKey, expenses]) => {
+          // Week header
+          doc.setFont("helvetica", "bold");
+          doc.text(weekKey, 20, currentY);
+          currentY += 10;
+          
+          // Week table
+          const weekTableData = expenses.map((expense: any) => [
+            formatDateStringForDisplay(expense.date),
+            expense.is_donation ? 'Donation' : 'Expense',
+            formatCurrency(expense.amount),
+            expense.memo || 'No memo'
+          ]);
+
+          (doc as any).autoTable({
+            head: [['Date', 'Type', 'Amount', 'Memo']],
+            body: weekTableData,
+            startY: currentY,
+            styles: {
+              fontSize: 9,
+              cellPadding: 2
+            },
+            headStyles: {
+              fillColor: [31, 78, 74],
+              textColor: 255,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+              fillColor: [247, 248, 252]
+            }
+          });
+          
+          currentY = (doc as any).lastAutoTable.finalY + 15;
+          
+          // Week summary
+          const weekExpenses = expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+          const weekDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+          
+          doc.setFont("helvetica", "normal");
+          doc.text(`${weekKey} Expenses: ${formatCurrency(weekExpenses)}`, 20, currentY);
+          doc.text(`${weekKey} Donations: ${formatCurrency(weekDonations)}`, 20, currentY + 8);
+          currentY += 25;
+        });
+      }
+      
+      const fileName = `${game.name.toLowerCase().replace(/\s+/g, '-')}-expense-donation-summary.pdf`;
+      doc.save(fileName);
+      console.log(`PDF generated successfully: ${fileName}`);
+    } catch (error) {
+      console.error("Error generating game PDF:", error);
+    }
   };
 
   return (
@@ -263,18 +278,17 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
                        </p>
                      </div>
                      <div className="flex items-center gap-2">
-                       <Button
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           generateAllGamesPDF();
-                         }}
-                         variant="outline"
-                         size="sm"
-                         className="border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5"
-                       >
-                         <FileDown className="h-4 w-4 mr-2" />
-                         Download PDF
-                       </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            generateAllGamesPDF();
+                          }}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white border-green-600 hover:border-green-700 transition-all duration-200 ease-in-out transform hover:scale-105 pl-4 pr-4 py-2"
+                        >
+                          <FileDown className="h-4 w-4 mr-2" />
+                          Download PDF
+                        </Button>
                        <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
                      </div>
                    </div>
@@ -357,18 +371,17 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
                              </div>
                            </div>
                            
-                           <Button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               generateGamePDF(game);
-                             }}
-                             variant="outline"
-                             size="sm"
-                             className="border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5"
-                           >
-                             <FileDown className="h-4 w-4 mr-2" />
-                             PDF
-                           </Button>
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                generateGamePDF(game);
+                              }}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white border-green-600 hover:border-green-700 transition-all duration-200 ease-in-out transform hover:scale-105 pl-4 pr-4 py-2"
+                            >
+                              <FileDown className="h-4 w-4 mr-2" />
+                              PDF
+                            </Button>
                          </div>
                        </div>
                      </CardContent>
