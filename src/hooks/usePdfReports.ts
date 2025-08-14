@@ -380,17 +380,34 @@ export const usePdfReports = () => {
         
         const weekRows = gameData.weeks
           .sort((a: any, b: any) => (a.week_number || 0) - (b.week_number || 0))
-          .map((week: any) => [
-            safeString(week.week_number),
-            `${formatDateStringShort(week.start_date)} - ${formatDateStringShort(week.end_date)}`,
-            safeString(week.weekly_tickets_sold || 0),
-            formatCurrency(week.weekly_sales || 0),
-            safeString(week.winner_name, 'No Winner'),
-            safeString(week.slot_chosen, 'N/A'),
-            safeString(week.card_selected, 'N/A'),
-            formatCurrency(week.weekly_payout || 0),
-            week.winner_present !== null ? (week.winner_present ? 'Yes' : 'No') : 'N/A'
-          ]);
+          .map((week: any) => {
+            // Calculate week totals from ticket_sales data
+            let weekTickets = 0;
+            let weekSales = 0;
+            
+            if (week.ticket_sales && week.ticket_sales.length > 0) {
+              week.ticket_sales.forEach((sale: any) => {
+                weekTickets += sale.tickets_sold || 0;
+                weekSales += sale.amount_collected || 0;
+              });
+            } else {
+              // Fallback to week totals if ticket_sales not available
+              weekTickets = week.weekly_tickets_sold || 0;
+              weekSales = week.weekly_sales || 0;
+            }
+            
+            return [
+              safeString(week.week_number),
+              `${formatDateStringShort(week.start_date)} - ${formatDateStringShort(week.end_date)}`,
+              safeString(weekTickets),
+              formatCurrency(weekSales),
+              safeString(week.winner_name, 'No Winner'),
+              safeString(week.slot_chosen, 'N/A'),
+              safeString(week.card_selected, 'N/A'),
+              formatCurrency(week.weekly_payout || 0),
+              week.winner_present !== null ? (week.winner_present ? 'Yes' : 'No') : 'N/A'
+            ];
+          });
         
         createTable(weekHeaders, weekRows, weekColWidths, 'Weekly Performance Summary');
         
