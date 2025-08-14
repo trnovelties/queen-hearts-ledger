@@ -600,49 +600,9 @@ export const usePdfReports = () => {
         yPosition += 20;
       }
 
-      // COMPREHENSIVE GAME STATISTICS
-      addSectionHeader('COMPREHENSIVE GAME STATISTICS');
-      
-      // Calculate comprehensive statistics
-      const avgTicketsPerWeek = gameData.weeks?.length > 0 ? Math.round(totalTicketsSold / gameData.weeks.length) : 0;
-      const avgSalesPerWeek = gameData.weeks?.length > 0 ? totalSalesRevenue / gameData.weeks.length : 0;
-      const profitMargin = totalSalesRevenue > 0 ? ((organizationNetProfit / totalSalesRevenue) * 100).toFixed(1) : '0.0';
-      const payoutRatio = totalSalesRevenue > 0 ? ((totalDistributions / totalSalesRevenue) * 100).toFixed(1) : '0.0';
-      
-      const gameStartDate = new Date(gameData.start_date);
-      const gameEndDate = gameData.end_date ? new Date(gameData.end_date) : new Date();
-      const gameDurationDays = Math.ceil((gameEndDate.getTime() - gameStartDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Statistics Grid
-      doc.setFillColor(250, 250, 250);
-      doc.rect(margin, yPosition, contentWidth, 50, 'F');
-      doc.setLineWidth(0.8);
-      doc.rect(margin, yPosition, contentWidth, 50);
-      yPosition += 8;
-      
-      const statsData = [
-        ['Game Performance Metrics:', ''],
-        ['Average Tickets per Week:', `${avgTicketsPerWeek} tickets`],
-        ['Average Sales per Week:', formatCurrency(avgSalesPerWeek)],
-        ['Organization Profit Margin:', `${profitMargin}%`],
-        ['Winner Payout Ratio:', `${payoutRatio}%`],
-        ['Game Duration:', `${gameDurationDays} days (${gameData.weeks?.length || 0} weeks)`],
-        ['Game Status:', gameData.end_date ? 'COMPLETED' : 'ACTIVE'],
-        ['Completion Rate:', gameData.end_date ? '100%' : `${Math.round(((gameData.weeks?.length || 0) / 54) * 100)}%`]
-      ];
-      
-      statsData.forEach(([label, value], index) => {
-        if (index === 0) {
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(11);
-          doc.text(label, margin + 4, yPosition);
-          yPosition += 8;
-        } else {
-          addDataRow(label, value, false, 4);
-        }
-      });
-      
-      yPosition += 10;
+      // Add space before footer to prevent content overlap
+      yPosition += 30;
+
 
       // Professional Footer with 10mm bottom margin
       const pageCount = (doc as any).internal.getNumberOfPages();
