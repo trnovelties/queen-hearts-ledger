@@ -449,12 +449,10 @@ export const usePdfReports = () => {
         yPosition += 20;
       }
 
-      // Start Page 3 for DAILY TICKET SALES BREAKDOWN
-      if (doc.getNumberOfPages() < 3) {
-        doc.addPage();
-        yPosition = 30; // 30px gap from top
-        addFooterLine(); // Add footer line to previous page
-      }
+      // Force new page for DAILY TICKET SALES BREAKDOWN to avoid title cutting
+      addFooterLine();
+      doc.addPage();
+      yPosition = 30; // 30px gap from top
       
       // DAILY TICKET SALES BREAKDOWN
       const weeksWithSales = gameData.weeks?.filter((week: any) => week.ticket_sales && week.ticket_sales.length > 0) || [];
@@ -600,8 +598,8 @@ export const usePdfReports = () => {
         yPosition += 20;
       }
 
-      // Add space before footer to prevent content overlap
-      yPosition += 30;
+      // Add significant space before footer to prevent content overlap
+      yPosition += 60;
 
 
       // Professional Footer with 10mm bottom margin
