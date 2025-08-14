@@ -132,7 +132,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                 )}
               </div>
               <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${colors.text} font-inter truncate`}>
-                {typeof value === 'number' ? formatCurrency(value) : value}
+                {typeof value === 'number' ? `$${value.toFixed(2)}` : value}
               </p>
               {subtitle && (
                 <p className="text-xs sm:text-sm text-[#132E2C]/60 font-medium">{subtitle}</p>
