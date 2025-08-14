@@ -16,6 +16,7 @@ import { DetailedFinancialTable } from "@/components/DetailedFinancialTable";
 import { ExpenseModal } from "@/components/ExpenseModal";
 import { DonationModal } from "@/components/DonationModal";
 import { CalculationAuditModal } from "@/components/CalculationAuditModal";
+import { ExpenseDonationSummary } from "@/components/ExpenseDonationSummary";
 import { useCalculationValidation } from "@/hooks/useCalculationValidation";
 import { formatDateStringForDisplay } from "@/lib/dateUtils";
 import { useAuth } from "@/context/AuthContext";
@@ -254,6 +255,12 @@ export default function IncomeExpense() {
         games={games} 
         reportType="game"
         selectedGame="all"
+      />
+
+      {/* Expense-Donation Summary */}
+      <ExpenseDonationSummary 
+        games={games} 
+        formatCurrency={formatCurrency}
       />
 
       {/* Games List */}
