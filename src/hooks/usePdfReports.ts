@@ -578,19 +578,19 @@ export const usePdfReports = () => {
         const donationTotal = gameData.expenses.reduce((sum: number, exp: any) => sum + (exp.is_donation ? (exp.amount || 0) : 0), 0);
         
         doc.setFillColor(248, 248, 248);
-        doc.rect(margin, yPosition, contentWidth, 25, 'F');
+        doc.rect(margin, yPosition, contentWidth, 35, 'F');
         doc.setLineWidth(0.5);
-        doc.rect(margin, yPosition, contentWidth, 25);
+        doc.rect(margin, yPosition, contentWidth, 35);
         
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.text('Summary:', margin + 4, yPosition + 7);
+        doc.text('Summary:', margin + 6, yPosition + 8);
         doc.setFont("helvetica", "normal");
-        doc.text(`Total Donations: ${formatCurrency(donationTotal)}`, margin + 4, yPosition + 14);
-        doc.text(`Total Expenses: ${formatCurrency(expenseTotal)}`, margin + 4, yPosition + 21);
-        doc.text(`Combined Total: ${formatCurrency(expenseTotal + donationTotal)}`, margin + 4, yPosition + 28, { align: 'left' });
+        doc.text(`Total Donations: ${formatCurrency(donationTotal)}`, margin + 6, yPosition + 16);
+        doc.text(`Total Expenses: ${formatCurrency(expenseTotal)}`, margin + 6, yPosition + 24);
+        doc.text(`Combined Total: ${formatCurrency(expenseTotal + donationTotal)}`, margin + 6, yPosition + 32, { align: 'left' });
         
-        yPosition += 30;
+        yPosition += 40;
       } else {
         addSectionHeader('EXPENSES & DONATIONS');
         doc.setFont("helvetica", "italic");
