@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,13 @@ export function DonationModal({ open, onOpenChange, gameId, gameName, defaultDat
   
   const [selectedDate, setSelectedDate] = useState<string>(defaultDate || getTodayDateString());
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update selectedDate when defaultDate prop changes
+  useEffect(() => {
+    if (defaultDate) {
+      setSelectedDate(defaultDate);
+    }
+  }, [defaultDate]);
 
   const handleAddDonation = async () => {
     if (!donationData.amount || parseFloat(donationData.amount) <= 0) {
