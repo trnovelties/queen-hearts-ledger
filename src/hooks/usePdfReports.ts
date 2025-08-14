@@ -375,38 +375,46 @@ export const usePdfReports = () => {
       addSectionHeader('DETAILED WEEKLY PERFORMANCE');
       
       if (gameData.weeks && gameData.weeks.length > 0) {
-        const weekHeaders = ['Week', 'Period', 'Tickets', 'Sales', 'Winner', 'Card', 'Payout', 'Present'];
-        const weekColWidths = [18, 45, 20, 25, 35, 30, 25, 18];
+        const weekHeaders = ['Week', 'Period', 'Tickets', 'Sales', 'Winner', 'Slot', 'Card', 'Payout', 'Present'];
+        const weekColWidths = [16, 42, 18, 23, 32, 18, 28, 23, 16];
         
         const weekRows = gameData.weeks
           .sort((a: any, b: any) => (a.week_number || 0) - (b.week_number || 0))
           .map((week: any) => [
             safeString(week.week_number),
             `${formatDateStringShort(week.start_date)} - ${formatDateStringShort(week.end_date)}`,
-            safeString(week.weekly_tickets_sold),
-            formatCurrency(week.weekly_sales),
+            safeString(week.weekly_tickets_sold || 0),
+            formatCurrency(week.weekly_sales || 0),
             safeString(week.winner_name, 'No Winner'),
+            safeString(week.slot_chosen, 'N/A'),
             safeString(week.card_selected, 'N/A'),
-            formatCurrency(week.weekly_payout),
+            formatCurrency(week.weekly_payout || 0),
             week.winner_present !== null ? (week.winner_present ? 'Yes' : 'No') : 'N/A'
           ]);
         
         createTable(weekHeaders, weekRows, weekColWidths, 'Weekly Performance Summary');
+        
+        // Ensure we have enough space for the Performance Totals section
+        checkNewPage(60);
         
         // Add weekly totals summary
         const weeklyTotalsHeaders = ['Total Weeks', 'Total Tickets', 'Total Sales', 'Total Payouts', 'Avg. per Week'];
         const avgTicketsPerWeek = gameData.weeks.length > 0 ? Math.round(totalTicketsSold / gameData.weeks.length) : 0;
         const avgSalesPerWeek = gameData.weeks.length > 0 ? totalSalesRevenue / gameData.weeks.length : 0;
         
+        // Calculate actual payouts (total payouts minus next game contribution)
+        const actualTotalPayouts = totalDistributions - nextGameContribution;
+        const payoutDisplay = `${formatCurrency(totalDistributions)} - ${formatCurrency(nextGameContribution)} = ${formatCurrency(actualTotalPayouts)}`;
+        
         const weeklyTotalsRows = [[
           safeString(gameData.weeks.length),
           totalTicketsSold.toLocaleString(),
           formatCurrency(totalSalesRevenue),
-          formatCurrency(totalDistributions),
+          payoutDisplay,
           `${avgTicketsPerWeek} tickets / ${formatCurrency(avgSalesPerWeek)}`
         ]];
         
-        const weeklyTotalsColWidths = [35, 35, 35, 35, 60];
+        const weeklyTotalsColWidths = [25, 25, 25, 60, 65];
         createTable(weeklyTotalsHeaders, weeklyTotalsRows, weeklyTotalsColWidths, 'Performance Totals');
         
       } else {
