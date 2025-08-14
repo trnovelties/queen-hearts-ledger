@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ComposedChart, 
   Line, 
@@ -39,11 +39,15 @@ interface FinancialChartsProps {
 }
 
 export function FinancialCharts({ games, reportType, selectedGame }: FinancialChartsProps) {
-  const [selectedJackpotGame, setSelectedJackpotGame] = useState<string>(() => {
-    // Always default to "Game 1" if it exists, otherwise first game
-    const game1 = games.find(game => game.name === "Game 1");
-    return game1?.id || games[0]?.id || "";
-  });
+  const [selectedJackpotGame, setSelectedJackpotGame] = useState<string>("");
+  
+  // Update selectedJackpotGame when games data is available
+  useEffect(() => {
+    if (games.length > 0 && !selectedJackpotGame) {
+      const game1 = games.find(game => game.name === "Game 1");
+      setSelectedJackpotGame(game1?.id || games[0]?.id || "");
+    }
+  }, [games, selectedJackpotGame]);
   
   const [selectedMetric, setSelectedMetric] = useState<"income" | "expense">("expense");
   
