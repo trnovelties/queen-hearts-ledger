@@ -50,15 +50,13 @@ interface SummaryData {
 
 interface Filters {
   gameNumber: string;
-  timePeriod: "7D" | "30D" | "365D" | "all";
 }
 
 export default function IncomeExpense() {
   const [games, setGames] = useState<GameSummary[]>([]);
-  const [filteredGames, setFilteredGames] = useState<GameSummary[]>([]);
+  const [filteredGamesForOverview, setFilteredGamesForOverview] = useState<GameSummary[]>([]);
   const [filters, setFilters] = useState<Filters>({
     gameNumber: "all",
-    timePeriod: "all",
   });
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
@@ -73,7 +71,7 @@ export default function IncomeExpense() {
   }, []);
 
   useEffect(() => {
-    applyFilters();
+    applyFiltersForOverview();
   }, [games, filters]);
 
   const fetchGames = async () => {
@@ -122,36 +120,14 @@ export default function IncomeExpense() {
     }
   };
 
-  const applyFilters = () => {
+  const applyFiltersForOverview = () => {
     let filtered = [...games];
 
     if (filters.gameNumber !== "all") {
       filtered = filtered.filter((game) => game.id === filters.gameNumber);
     }
 
-    // Apply time period filter
-    if (filters.timePeriod !== "all") {
-      const currentDate = new Date();
-      let cutoffDate: Date;
-      
-      switch (filters.timePeriod) {
-        case "7D":
-          cutoffDate = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case "30D":
-          cutoffDate = new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case "365D":
-          cutoffDate = new Date(currentDate.getTime() - 365 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          cutoffDate = new Date(0);
-      }
-      
-      filtered = filtered.filter((game) => new Date(game.start_date) >= cutoffDate);
-    }
-
-    setFilteredGames(filtered);
+    setFilteredGamesForOverview(filtered);
   };
 
   const handleExportPDF = () => {
@@ -167,25 +143,44 @@ export default function IncomeExpense() {
     }).format(amount);
   };
 
-  const summary: SummaryData = {
-    totalTicketsSold: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.tickets_sold, 0), 0),
-    totalSales: filteredGames.reduce((sum, game) => sum + game.total_sales, 0),
-    totalDistributions: filteredGames.reduce((sum, game) => sum + game.total_payouts, 0),
-    totalExpenses: filteredGames.reduce((sum, game) => sum + game.total_expenses, 0),
-    totalDonations: filteredGames.reduce((sum, game) => sum + game.total_donations, 0),
-    organizationTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.organization_total, 0), 0),
-    jackpotTotalPortion: filteredGames.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.jackpot_total, 0), 0),
-    organizationNetProfit: filteredGames.reduce((sum, game) => sum + game.organization_net_profit, 0),
-    totalActualOrganizationNetProfit: filteredGames.reduce((sum, game) => sum + (game.actual_organization_net_profit || 0), 0),
-    totalJackpotContributions: filteredGames.reduce((sum, game) => sum + (game.total_jackpot_contributions || 0), 0),
-    totalContributionsToNextGame: filteredGames.reduce((sum, game) => sum + (game.jackpot_contribution_to_next_game || 0), 0),
-    totalWeeklyPayoutsDistributed: filteredGames.reduce((sum, game) => sum + (game.weekly_payouts_distributed || 0), 0),
-    totalNetAvailableForFinalWinner: filteredGames.reduce((sum, game) => sum + (game.net_available_for_final_winner || 0), 0),
-    filteredGames: filteredGames
+  // Summary for filtered overview section only
+  const summaryForOverview: SummaryData = {
+    totalTicketsSold: filteredGamesForOverview.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.tickets_sold, 0), 0),
+    totalSales: filteredGamesForOverview.reduce((sum, game) => sum + game.total_sales, 0),
+    totalDistributions: filteredGamesForOverview.reduce((sum, game) => sum + game.total_payouts, 0),
+    totalExpenses: filteredGamesForOverview.reduce((sum, game) => sum + game.total_expenses, 0),
+    totalDonations: filteredGamesForOverview.reduce((sum, game) => sum + game.total_donations, 0),
+    organizationTotalPortion: filteredGamesForOverview.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.organization_total, 0), 0),
+    jackpotTotalPortion: filteredGamesForOverview.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.jackpot_total, 0), 0),
+    organizationNetProfit: filteredGamesForOverview.reduce((sum, game) => sum + game.organization_net_profit, 0),
+    totalActualOrganizationNetProfit: filteredGamesForOverview.reduce((sum, game) => sum + (game.actual_organization_net_profit || 0), 0),
+    totalJackpotContributions: filteredGamesForOverview.reduce((sum, game) => sum + (game.total_jackpot_contributions || 0), 0),
+    totalContributionsToNextGame: filteredGamesForOverview.reduce((sum, game) => sum + (game.jackpot_contribution_to_next_game || 0), 0),
+    totalWeeklyPayoutsDistributed: filteredGamesForOverview.reduce((sum, game) => sum + (game.weekly_payouts_distributed || 0), 0),
+    totalNetAvailableForFinalWinner: filteredGamesForOverview.reduce((sum, game) => sum + (game.net_available_for_final_winner || 0), 0),
+    filteredGames: filteredGamesForOverview
+  };
+
+  // Summary for all games (unfiltered) for charts and details
+  const summaryForAll: SummaryData = {
+    totalTicketsSold: games.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.tickets_sold, 0), 0),
+    totalSales: games.reduce((sum, game) => sum + game.total_sales, 0),
+    totalDistributions: games.reduce((sum, game) => sum + game.total_payouts, 0),
+    totalExpenses: games.reduce((sum, game) => sum + game.total_expenses, 0),
+    totalDonations: games.reduce((sum, game) => sum + game.total_donations, 0),
+    organizationTotalPortion: games.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.organization_total, 0), 0),
+    jackpotTotalPortion: games.reduce((sum, game) => sum + game.ticket_sales.reduce((weekSum: number, ticketSale: any) => weekSum + ticketSale.jackpot_total, 0), 0),
+    organizationNetProfit: games.reduce((sum, game) => sum + game.organization_net_profit, 0),
+    totalActualOrganizationNetProfit: games.reduce((sum, game) => sum + (game.actual_organization_net_profit || 0), 0),
+    totalJackpotContributions: games.reduce((sum, game) => sum + (game.total_jackpot_contributions || 0), 0),
+    totalContributionsToNextGame: games.reduce((sum, game) => sum + (game.jackpot_contribution_to_next_game || 0), 0),
+    totalWeeklyPayoutsDistributed: games.reduce((sum, game) => sum + (game.weekly_payouts_distributed || 0), 0),
+    totalNetAvailableForFinalWinner: games.reduce((sum, game) => sum + (game.net_available_for_final_winner || 0), 0),
+    filteredGames: games
   };
 
   const validateGameTotals = (gameId: string) => {
-    const game = filteredGames.find(g => g.id === gameId);
+    const game = games.find(g => g.id === gameId);
     if (!game) return;
 
     const ticketSales = game.ticket_sales.map(sale => ({
@@ -222,9 +217,9 @@ export default function IncomeExpense() {
           <CardTitle className="text-[#1F4E4A] font-inter">Filters</CardTitle>
           <CardDescription>Customize your financial view</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="gameNumber" className="text-sm font-semibold text-[#132E2C]">Game Number</Label>
+            <Label htmlFor="gameNumber" className="text-sm font-semibold text-[#132E2C]">Game Number (affects Financial Overview only)</Label>
             <Select value={filters.gameNumber} onValueChange={(value) => setFilters({ ...filters, gameNumber: value })}>
               <SelectTrigger className="bg-white">
                 <SelectValue placeholder="All Games" />
@@ -239,35 +234,20 @@ export default function IncomeExpense() {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="timePeriod" className="text-sm font-semibold text-[#132E2C]">Time Period</Label>
-            <Select value={filters.timePeriod} onValueChange={(value) => setFilters({ ...filters, timePeriod: value as "7D" | "30D" | "365D" | "all" })}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="All Time" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="7D">Last 7 Days</SelectItem>
-                <SelectItem value="30D">Last 30 Days</SelectItem>
-                <SelectItem value="365D">Last 365 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </CardContent>
       </Card>
 
-      {/* Financial Overview */}
+      {/* Financial Overview - Filtered */}
       <FinancialOverview 
-        summary={summary} 
+        summary={summaryForOverview} 
         formatCurrency={formatCurrency}
       />
 
-      {/* Charts */}
+      {/* Charts - All Games */}
       <FinancialCharts 
-        games={filteredGames} 
+        games={games} 
         reportType="game"
-        selectedGame={filters.gameNumber}
+        selectedGame="all"
       />
 
       {/* Games List */}
@@ -277,7 +257,7 @@ export default function IncomeExpense() {
           <CardDescription>Detailed breakdown by game and week</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {filteredGames.map((game) => (
+          {games.map((game) => (
             <Collapsible key={game.id} className="space-y-2">
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20">
@@ -436,9 +416,9 @@ export default function IncomeExpense() {
             </Collapsible>
           ))}
           
-          {filteredGames.length === 0 && (
+          {games.length === 0 && (
             <div className="text-center py-8 text-[#132E2C]/60">
-              No games found matching the current filters.
+              No games found.
             </div>
           )}
         </CardContent>
