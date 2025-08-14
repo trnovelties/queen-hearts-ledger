@@ -355,7 +355,7 @@ export const usePdfReports = () => {
       const financialItems = [
         ['Total Tickets Sold:', `${totalTicketsSold.toLocaleString()} tickets`],
         ['Total Sales Revenue:', formatCurrency(totalSalesRevenue)],
-        ['Total Winner Distributions:', formatCurrency(actualGameDistributions)],
+        ['Total Winner Distributions:', `${formatCurrency(actualGameDistributions)} [From Game ${gameData.game_number}]`],
         ['Total Expenses:', formatCurrency(totalExpenses)],
         ['Total Donations:', formatCurrency(totalDonations)],
         ['Organization Net Profit:', formatCurrency(organizationNetProfit)],
