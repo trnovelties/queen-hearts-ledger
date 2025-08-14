@@ -129,45 +129,64 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
         {/* Content based on selection */}
         {selectedGame === "all" ? (
           // All Games - Overall Details
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h4 className="text-sm font-semibold mb-3 text-[#132E2C]">All Games Expense & Donation Details</h4>
-            {getAllExpensesAcrossGames().length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[#1F4E4A]/20">
-                      <th className="text-left p-2 font-semibold text-[#132E2C]">Game</th>
-                      <th className="text-left p-2 font-semibold text-[#132E2C]">Date</th>
-                      <th className="text-left p-2 font-semibold text-[#132E2C]">Type</th>
-                      <th className="text-left p-2 font-semibold text-[#132E2C]">Amount</th>
-                      <th className="text-left p-2 font-semibold text-[#132E2C]">Memo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getAllExpensesAcrossGames().map((expense: any) => (
-                      <tr key={`${expense.gameId}-${expense.id}`} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
-                        <td className="p-2 font-medium text-[#1F4E4A]">{expense.gameName}</td>
-                        <td className="p-2 text-[#132E2C]">{formatDateStringForDisplay(expense.date)}</td>
-                        <td className="p-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            expense.is_donation ? 
-                            "bg-purple-100 text-purple-800" : 
-                            "bg-red-100 text-red-800"
-                          }`}>
-                            {expense.is_donation ? 'Donation' : 'Expense'}
-                          </span>
-                        </td>
-                        <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(expense.amount)}</td>
-                        <td className="p-2 text-[#132E2C]/80">{expense.memo || 'No memo'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <Collapsible className="space-y-2">
+            <CollapsibleTrigger asChild>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow border-[#1F4E4A]/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-lg font-bold text-[#1F4E4A]">All Games Expense & Donation Details</h4>
+                      <p className="text-sm text-[#132E2C]/60">
+                        {getAllExpensesAcrossGames().length} total transactions across all games
+                      </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-[#132E2C]/60" />
+                  </div>
+                </CardContent>
+              </Card>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="space-y-4 p-4 bg-[#F7F8FC] rounded-lg">
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                {getAllExpensesAcrossGames().length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#1F4E4A]/20">
+                          <th className="text-left p-2 font-semibold text-[#132E2C]">Game</th>
+                          <th className="text-left p-2 font-semibold text-[#132E2C]">Date</th>
+                          <th className="text-left p-2 font-semibold text-[#132E2C]">Type</th>
+                          <th className="text-left p-2 font-semibold text-[#132E2C]">Amount</th>
+                          <th className="text-left p-2 font-semibold text-[#132E2C]">Memo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getAllExpensesAcrossGames().map((expense: any) => (
+                          <tr key={`${expense.gameId}-${expense.id}`} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
+                            <td className="p-2 font-medium text-[#1F4E4A]">{expense.gameName}</td>
+                            <td className="p-2 text-[#132E2C]">{formatDateStringForDisplay(expense.date)}</td>
+                            <td className="p-2">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                expense.is_donation ? 
+                                "bg-purple-100 text-purple-800" : 
+                                "bg-red-100 text-red-800"
+                              }`}>
+                                {expense.is_donation ? 'Donation' : 'Expense'}
+                              </span>
+                            </td>
+                            <td className="p-2 font-medium text-[#1F4E4A]">{formatCurrency(expense.amount)}</td>
+                            <td className="p-2 text-[#132E2C]/80">{expense.memo || 'No memo'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-[#132E2C]/60 text-center">No expenses or donations recorded across all games</p>
+                )}
               </div>
-            ) : (
-              <p className="text-[#132E2C]/60 text-center">No expenses or donations recorded across all games</p>
-            )}
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         ) : (
           // Individual Game Breakdown
           <div className="space-y-4">
