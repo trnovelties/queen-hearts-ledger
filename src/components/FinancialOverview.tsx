@@ -227,7 +227,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Jackpot Contributions</span>
                 </div>
-                <span className="font-bold text-orange-600 text-sm sm:text-lg">{formatCurrency(summary.totalJackpotContributions)}</span>
+                <span className="font-bold text-orange-600 text-sm sm:text-lg">${summary.totalJackpotContributions.toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#F7F8FC] rounded-lg border">
@@ -235,7 +235,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Weekly Total</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalWeeklyPayoutsDistributed)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">${summary.totalWeeklyPayoutsDistributed.toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#A1E96C]/10 rounded-lg border border-[#A1E96C]/30">
@@ -243,7 +243,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <Target className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Winner Received</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalNetAvailableForFinalWinner)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">${summary.totalNetAvailableForFinalWinner.toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#F7F8FC] rounded-lg border">
@@ -251,7 +251,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Next Game Contribution</span>
                 </div>
-                <span className="font-bold text-blue-600 text-sm sm:text-lg">{formatCurrency(summary.totalContributionsToNextGame)}</span>
+                <span className="font-bold text-blue-600 text-sm sm:text-lg">${summary.totalContributionsToNextGame.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -273,7 +273,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Org. Share</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">${summary.organizationTotalPortion.toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
@@ -281,7 +281,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <HeartHandshake className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Donations ({donationRatio.toFixed(1)}%)</span>
                 </div>
-                <span className="font-bold text-purple-600 text-sm sm:text-lg">{formatCurrency(summary.totalDonations)}</span>
+                <span className="font-bold text-purple-600 text-sm sm:text-lg">${summary.totalDonations.toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
@@ -289,7 +289,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 flex-shrink-0" />
                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Expenses ({expenseRatio.toFixed(1)}%)</span>
                 </div>
-                <span className="font-bold text-red-600 text-sm sm:text-lg">{formatCurrency(summary.totalExpenses)}</span>
+                <span className="font-bold text-red-600 text-sm sm:text-lg">${summary.totalExpenses.toFixed(2)}</span>
               </div>
               
               <div className="flex justify-between items-center p-3 sm:p-4 bg-[#A1E96C]/20 rounded-lg border-2 border-[#A1E96C]/50">
@@ -297,7 +297,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-[#1F4E4A] flex-shrink-0" />
                   <span className="font-bold text-[#132E2C] text-sm sm:text-base">Net Profit</span>
                 </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-xl">{formatCurrency(summary.organizationNetProfit)}</span>
+                <span className="font-bold text-[#1F4E4A] text-sm sm:text-xl">${summary.organizationNetProfit.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
