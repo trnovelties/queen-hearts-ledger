@@ -250,38 +250,38 @@ export const usePdfReports = () => {
       doc.setLineWidth(0.5);
       doc.rect(margin, yPosition, contentWidth, 50);
       
-      // Configuration data in two columns with proper spacing
+      // Configuration data in proper sequence with consistent spacing
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
       
-      // Left column labels
+      // Left column labels with consistent spacing
       doc.text('Game Number:', margin + 4, yPosition + 8);
-      doc.text('End Date:', margin + 4, yPosition + 18);
-      doc.text('Organization Share:', margin + 4, yPosition + 28);
-      doc.text('Starting Carryover:', margin + 4, yPosition + 38);
-      doc.text('Total Weeks:', margin + 4, yPosition + 48);
+      doc.text('Start Date:', margin + 4, yPosition + 18);
+      doc.text('End Date:', margin + 4, yPosition + 28);
+      doc.text('Total Weeks:', margin + 4, yPosition + 38);
+      doc.text('Ticket Price:', margin + 4, yPosition + 48);
       
-      // Right column labels  
-      doc.text('Start Date:', margin + 100, yPosition + 8);
-      doc.text('Ticket Price:', margin + 100, yPosition + 18);
-      doc.text('Jackpot Share:', margin + 100, yPosition + 28);
+      // Right column labels with consistent spacing
+      doc.text('Organization Share:', margin + 100, yPosition + 8);
+      doc.text('Jackpot Share:', margin + 100, yPosition + 18);
+      doc.text('Starting Carryover:', margin + 100, yPosition + 28);
       doc.text('Minimum Jackpot:', margin + 100, yPosition + 38);
       doc.text('Game Status:', margin + 100, yPosition + 48);
       
-      // Values
+      // Values with proper alignment (reduced spacing between labels and values)
       doc.setFont("helvetica", "normal");
-      doc.text(safeString(gameData.game_number), margin + 35, yPosition + 8);
-      doc.text(gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'In Progress', margin + 25, yPosition + 18);
-      doc.text(`${gameData.organization_percentage || 40}%`, margin + 50, yPosition + 28);
-      doc.text(formatCurrency(gameData.carryover_jackpot), margin + 45, yPosition + 38);
-      doc.text(safeString(gameData.weeks?.length), margin + 30, yPosition + 48);
+      doc.text(safeString(gameData.game_number), margin + 28, yPosition + 8);
+      doc.text(formatDateStringForDisplay(gameData.start_date), margin + 24, yPosition + 18);
+      doc.text(gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'In Progress', margin + 21, yPosition + 28);
+      doc.text(safeString(gameData.weeks?.length), margin + 26, yPosition + 38);
+      doc.text(formatCurrency(gameData.ticket_price), margin + 24, yPosition + 48);
       
-      doc.text(formatDateStringForDisplay(gameData.start_date), margin + 130, yPosition + 8);
-      doc.text(formatCurrency(gameData.ticket_price), margin + 130, yPosition + 18);
-      doc.text(`${gameData.jackpot_percentage || 60}%`, margin + 130, yPosition + 28);
-      doc.text(formatCurrency(gameData.minimum_starting_jackpot), margin + 145, yPosition + 38);
-      doc.text(gameData.end_date ? 'Completed' : 'Active', margin + 130, yPosition + 48);
+      doc.text(`${gameData.organization_percentage || 40}%`, margin + 140, yPosition + 8);
+      doc.text(`${gameData.jackpot_percentage || 60}%`, margin + 127, yPosition + 18);
+      doc.text(formatCurrency(gameData.carryover_jackpot), margin + 137, yPosition + 28);
+      doc.text(formatCurrency(gameData.minimum_starting_jackpot), margin + 133, yPosition + 38);
+      doc.text(gameData.end_date ? 'Completed' : 'Active', margin + 125, yPosition + 48);
       
       yPosition += 60;
 
