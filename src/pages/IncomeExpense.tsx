@@ -260,8 +260,7 @@ export default function IncomeExpense() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#1F4E4A] font-inter">Income vs. Expense</h1>
-          <p className="text-[#132E2C]/60 mt-1">Comprehensive financial analysis and reporting</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1F4E4A] font-inter">Comprehensive financial analysis and reporting</h1>
         </div>
       </div>
 
