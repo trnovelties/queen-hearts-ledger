@@ -530,7 +530,18 @@ export const usePdfReports = () => {
         // Jackpot Winner Special Section
         const jackpotWinner = winners.find((week: any) => week.card_selected === 'Queen of Hearts');
         if (jackpotWinner) {
-          checkNewPage(35);
+          // Move to next page
+          addFooterLine();
+          doc.addPage();
+          yPosition = 30; // 30px gap from top
+          
+          // Add centered header
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(14);
+          doc.setTextColor(0, 0, 0);
+          doc.text('JACKPOT WINNER', pageWidth / 2, yPosition, { align: 'center' });
+          yPosition += 20;
+          
           doc.setFillColor(240, 240, 240);
           doc.rect(margin, yPosition, contentWidth, 30, 'F');
           doc.setLineWidth(1.2);
@@ -540,7 +551,7 @@ export const usePdfReports = () => {
           doc.setFont("helvetica", "bold");
           doc.setFontSize(14);
           doc.setTextColor(200, 0, 0);
-          doc.text('🏆 JACKPOT WINNER ALERT 🏆', pageWidth / 2, yPosition + 10, { align: 'center' });
+          doc.text('🏆 CONGRATULATIONS! 🏆', pageWidth / 2, yPosition + 10, { align: 'center' });
           
           doc.setFont("helvetica", "bold");
           doc.setFontSize(11);
@@ -586,17 +597,17 @@ export const usePdfReports = () => {
         const donationTotal = gameData.expenses.reduce((sum: number, exp: any) => sum + (exp.is_donation ? (exp.amount || 0) : 0), 0);
         
         doc.setFillColor(248, 248, 248);
-        doc.rect(margin, yPosition, contentWidth, 20, 'F');
+        doc.rect(margin, yPosition, contentWidth, 25, 'F');
         doc.setLineWidth(0.5);
-        doc.rect(margin, yPosition, contentWidth, 20);
+        doc.rect(margin, yPosition, contentWidth, 25);
         
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.text('Summary:', margin + 4, yPosition + 7);
         doc.setFont("helvetica", "normal");
-        doc.text(`Total Expenses: ${formatCurrency(expenseTotal)}`, margin + 4, yPosition + 14);
-        doc.text(`Total Donations: ${formatCurrency(donationTotal)}`, pageWidth - margin - 4, yPosition + 7, { align: 'right' });
-        doc.text(`Combined Total: ${formatCurrency(expenseTotal + donationTotal)}`, pageWidth - margin - 4, yPosition + 14, { align: 'right' });
+        doc.text(`Total Donations: ${formatCurrency(donationTotal)}`, margin + 4, yPosition + 14);
+        doc.text(`Total Expenses: ${formatCurrency(expenseTotal)}`, margin + 4, yPosition + 21);
+        doc.text(`Combined Total: ${formatCurrency(expenseTotal + donationTotal)}`, margin + 4, yPosition + 28, { align: 'left' });
         
         yPosition += 30;
       } else {
