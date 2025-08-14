@@ -210,42 +210,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
       </div>
 
       {/* Detailed Financial Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Revenue Analysis */}
-        <Card className="bg-gradient-to-br from-[#A1E96C]/10 to-[#A1E96C]/5 border-[#A1E96C]/30 border-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-[#1F4E4A] font-inter flex items-center gap-3">
-              <Banknote className="h-5 w-5 sm:h-6 sm:w-6" />
-              Revenue Analysis
-            </CardTitle>
-            <CardDescription>Total income and ticket sales performance</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Total Organization Amount</span>
-                </div>
-                <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.organizationTotalPortion)}</span>
-              </div>
-              
-               <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Organization Revenue</span>
-                 </div>
-                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(summary.totalActualOrganizationNetProfit)}</span>
-               </div>
-               
-                 <div className="flex justify-between items-center p-3 sm:p-4 bg-white/80 rounded-lg border">
-                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                   <span className="font-semibold text-[#132E2C] text-sm sm:text-base">Avg Net per Game</span>
-                 </div>
-                 <span className="font-bold text-[#1F4E4A] text-sm sm:text-lg">{formatCurrency(avgGameNet)}</span>
-               </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Distribution Analysis */}
         <Card className="bg-white border-[#1F4E4A]/20 border-2">
           <CardHeader className="pb-4">
