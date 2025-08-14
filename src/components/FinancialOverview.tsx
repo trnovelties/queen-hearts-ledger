@@ -171,6 +171,13 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           subtitle={`Avg. ${formatCurrency(avgTicketPrice)} per ticket`}
         />
         <KPICard
+          title="Ticket Sales"
+          value={summary.totalSales}
+          icon={Banknote}
+          colorScheme="blue"
+          subtitle="Total revenue from ticket sales"
+        />
+        <KPICard
           title="Organization Net"
           value={summary.organizationNetProfit}
           icon={DollarSign}
@@ -183,13 +190,6 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
           icon={Trophy}
           colorScheme="orange"
           subtitle="Total jackpot contributions"
-        />
-        <KPICard
-          title="Total Contributions"
-          value={summary.totalContributionsToNextGame}
-          icon={Target}
-          colorScheme="purple"
-          subtitle="Contributions to next games"
         />
         <KPICard
           title="Total Expenses"
