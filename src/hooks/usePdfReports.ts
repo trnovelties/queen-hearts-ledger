@@ -244,58 +244,74 @@ export const usePdfReports = () => {
       // GAME CONFIGURATION
       addSectionHeader('GAME CONFIGURATION');
       
-      // Create configuration grid with professional layout
+      // Configuration box with proper padding and structure
+      const configBoxHeight = 65;
       doc.setFillColor(248, 248, 248);
-      doc.rect(margin, yPosition, contentWidth, 50, 'F');
+      doc.rect(margin, yPosition, contentWidth, configBoxHeight, 'F');
       doc.setLineWidth(0.5);
-      doc.rect(margin, yPosition, contentWidth, 50);
+      doc.rect(margin, yPosition, contentWidth, configBoxHeight);
       
-      // Configuration data in proper sequence with consistent spacing
+      // Configuration data with proper structure and spacing
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
       
-      // Left column labels with consistent spacing
-      doc.text('Game Number:', margin + 4, yPosition + 8);
-      doc.text('Start Date:', margin + 4, yPosition + 18);
-      doc.text('End Date:', margin + 4, yPosition + 28);
-      doc.text('Total Weeks:', margin + 4, yPosition + 38);
-      doc.text('Ticket Price:', margin + 4, yPosition + 48);
+      const leftColX = margin + 10;
+      const rightColX = margin + 110;
+      const valueOffsetLeft = 40;
+      const valueOffsetRight = 50;
+      const startY = yPosition + 12;
+      const lineSpacing = 10;
       
-      // Right column labels with consistent spacing
-      doc.text('Organization Share:', margin + 100, yPosition + 8);
-      doc.text('Jackpot Share:', margin + 100, yPosition + 18);
-      doc.text('Starting Carryover:', margin + 100, yPosition + 28);
-      doc.text('Minimum Jackpot:', margin + 100, yPosition + 38);
-      doc.text('Game Status:', margin + 100, yPosition + 48);
+      // Left column with proper alignment and spacing
+      doc.text('Game Number:', leftColX, startY);
+      doc.text('Start Date:', leftColX, startY + lineSpacing);
+      doc.text('End Date:', leftColX, startY + (lineSpacing * 2));
+      doc.text('Total Weeks:', leftColX, startY + (lineSpacing * 3));
+      doc.text('Ticket Price:', leftColX, startY + (lineSpacing * 4));
       
-      // Values with proper alignment (reduced spacing between labels and values)
+      // Right column with proper alignment and spacing
+      doc.text('Organization Share:', rightColX, startY);
+      doc.text('Jackpot Share:', rightColX, startY + lineSpacing);
+      doc.text('Starting Carryover:', rightColX, startY + (lineSpacing * 2));
+      doc.text('Minimum Jackpot:', rightColX, startY + (lineSpacing * 3));
+      doc.text('Game Status:', rightColX, startY + (lineSpacing * 4));
+      
+      // Values with consistent alignment
       doc.setFont("helvetica", "normal");
-      doc.text(safeString(gameData.game_number), margin + 28, yPosition + 8);
-      doc.text(formatDateStringForDisplay(gameData.start_date), margin + 24, yPosition + 18);
-      doc.text(gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'In Progress', margin + 21, yPosition + 28);
-      doc.text(safeString(gameData.weeks?.length), margin + 26, yPosition + 38);
-      doc.text(formatCurrency(gameData.ticket_price), margin + 24, yPosition + 48);
+      doc.text(safeString(gameData.game_number), leftColX + valueOffsetLeft, startY);
+      doc.text(formatDateStringForDisplay(gameData.start_date), leftColX + valueOffsetLeft, startY + lineSpacing);
+      doc.text(gameData.end_date ? formatDateStringForDisplay(gameData.end_date) : 'In Progress', leftColX + valueOffsetLeft, startY + (lineSpacing * 2));
+      doc.text(safeString(gameData.weeks?.length), leftColX + valueOffsetLeft, startY + (lineSpacing * 3));
+      doc.text(formatCurrency(gameData.ticket_price), leftColX + valueOffsetLeft, startY + (lineSpacing * 4));
       
-      doc.text(`${gameData.organization_percentage || 40}%`, margin + 140, yPosition + 8);
-      doc.text(`${gameData.jackpot_percentage || 60}%`, margin + 127, yPosition + 18);
-      doc.text(formatCurrency(gameData.carryover_jackpot), margin + 137, yPosition + 28);
-      doc.text(formatCurrency(gameData.minimum_starting_jackpot), margin + 133, yPosition + 38);
-      doc.text(gameData.end_date ? 'Completed' : 'Active', margin + 125, yPosition + 48);
+      doc.text(`${gameData.organization_percentage || 40}%`, rightColX + valueOffsetRight, startY);
+      doc.text(`${gameData.jackpot_percentage || 60}%`, rightColX + valueOffsetRight, startY + lineSpacing);
+      doc.text(formatCurrency(gameData.carryover_jackpot), rightColX + valueOffsetRight, startY + (lineSpacing * 2));
+      doc.text(formatCurrency(gameData.minimum_starting_jackpot), rightColX + valueOffsetRight, startY + (lineSpacing * 3));
+      doc.text(gameData.end_date ? 'Completed' : 'Active', rightColX + valueOffsetRight, startY + (lineSpacing * 4));
       
-      yPosition += 60;
+      yPosition += configBoxHeight + 10;
 
       // FINANCIAL SUMMARY - Calculate from actual data
       addSectionHeader('FINANCIAL SUMMARY');
       
-      // Calculate accurate totals from fetched data
-      const totalTicketsSold = gameData.weeks?.reduce((sum: number, week: any) => {
-        return sum + (week.weekly_tickets_sold || 0);
-      }, 0) || 0;
+      // Calculate accurate totals from all ticket sales data
+      let totalTicketsSold = 0;
+      let totalSalesRevenue = 0;
       
-      const totalSalesRevenue = gameData.weeks?.reduce((sum: number, week: any) => {
-        return sum + (week.weekly_sales || 0);
-      }, 0) || 0;
+      gameData.weeks?.forEach((week: any) => {
+        if (week.ticket_sales && week.ticket_sales.length > 0) {
+          week.ticket_sales.forEach((sale: any) => {
+            totalTicketsSold += sale.tickets_sold || 0;
+            totalSalesRevenue += sale.amount_collected || 0;
+          });
+        } else {
+          // Fallback to week totals if ticket_sales not available
+          totalTicketsSold += week.weekly_tickets_sold || 0;
+          totalSalesRevenue += week.weekly_sales || 0;
+        }
+      });
       
       const totalDistributions = gameData.weeks?.reduce((sum: number, week: any) => {
         return sum + (week.weekly_payout || 0);
@@ -309,33 +325,52 @@ export const usePdfReports = () => {
         return sum + (expense.is_donation ? (expense.amount || 0) : 0);
       }, 0) || 0;
       
-      // Use actual database values or calculate
-      const organizationNetProfit = gameData.actual_organization_net_profit || gameData.organization_net_profit || 0;
-      const nextGameContribution = gameData.jackpot_contribution_to_next_game || 0;
+      // Calculate organization net profit from actual game data
+      const organizationNetProfit = gameData.organization_net_profit || 0;
       
-      // Financial Summary Box with professional layout
+      // Calculate next game contribution (ending jackpot total from last week)
+      const lastWeek = gameData.weeks?.sort((a: any, b: any) => (b.week_number || 0) - (a.week_number || 0))[0];
+      const nextGameContribution = lastWeek?.ending_jackpot || gameData.carryover_jackpot || 0;
+      
+      // Adjust total distributions to show actual game payout (minus next game contribution)
+      const actualGameDistributions = totalDistributions - nextGameContribution;
+      
+      // Financial Summary Box with proper fit-content height
+      const financialBoxHeight = 65;
       doc.setFillColor(245, 245, 245);
-      doc.rect(margin, yPosition, contentWidth, 55, 'F');
+      doc.rect(margin, yPosition, contentWidth, financialBoxHeight, 'F');
       doc.setLineWidth(0.8);
-      doc.rect(margin, yPosition, contentWidth, 55);
-      yPosition += 8;
+      doc.rect(margin, yPosition, contentWidth, financialBoxHeight);
       
-      const financialData = [
+      // Financial data with proper padding
+      const financialStartY = yPosition + 8;
+      const financialLeftX = margin + 8;
+      const financialValueX = margin + 120;
+      const financialLineSpacing = 8;
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      
+      const financialItems = [
         ['Total Tickets Sold:', `${totalTicketsSold.toLocaleString()} tickets`],
         ['Total Sales Revenue:', formatCurrency(totalSalesRevenue)],
-        ['Total Winner Distributions:', formatCurrency(totalDistributions)],
+        ['Total Winner Distributions:', formatCurrency(actualGameDistributions)],
         ['Total Expenses:', formatCurrency(totalExpenses)],
         ['Total Donations:', formatCurrency(totalDonations)],
         ['Organization Net Profit:', formatCurrency(organizationNetProfit)],
         ['Carryover to Next Game:', formatCurrency(nextGameContribution)]
       ];
       
-      financialData.forEach(([label, value], index) => {
-        const isProfit = label.includes('Net Profit');
-        addDataRow(label, value, isProfit);
+      financialItems.forEach(([label, value], index) => {
+        const yPos = financialStartY + (index * financialLineSpacing);
+        doc.setFont("helvetica", "bold");
+        doc.text(label, financialLeftX, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(value, financialValueX, yPos);
       });
       
-      yPosition += 15;
+      yPosition += financialBoxHeight + 10;
 
       // DETAILED WEEKLY PERFORMANCE
       addSectionHeader('DETAILED WEEKLY PERFORMANCE');
