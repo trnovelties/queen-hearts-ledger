@@ -221,10 +221,10 @@ export default function IncomeExpense() {
           <div className="space-y-2">
             <Label htmlFor="gameNumber" className="text-sm font-semibold text-[#132E2C]">Game Number (affects Financial Overview only)</Label>
             <Select value={filters.gameNumber} onValueChange={(value) => setFilters({ ...filters, gameNumber: value })}>
-              <SelectTrigger className="bg-white">
+              <SelectTrigger className="bg-white border-[#1F4E4A]/20">
                 <SelectValue placeholder="All Games" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white border-[#1F4E4A]/20 z-50">
                 <SelectItem value="all">All Games</SelectItem>
                 {games.map((game) => (
                   <SelectItem key={game.id} value={game.id}>
@@ -233,6 +233,12 @@ export default function IncomeExpense() {
                 ))}
               </SelectContent>
             </Select>
+            {games.length === 0 && (
+              <p className="text-xs text-[#132E2C]/60">Loading games...</p>
+            )}
+            {games.length > 0 && (
+              <p className="text-xs text-[#132E2C]/60">{games.length} games available</p>
+            )}
           </div>
         </CardContent>
       </Card>
