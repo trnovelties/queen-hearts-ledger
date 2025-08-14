@@ -540,15 +540,9 @@ export const usePdfReports = () => {
           doc.setDrawColor(200, 0, 0);
           doc.rect(margin, yPosition, contentWidth, 30);
           
-          // Calculate jackpot value: Total jackpot - weekly payout - next game contribution
-          const totalJackpot = gameData.weeks?.reduce((sum: number, week: any) => {
-            if (week.ticket_sales && week.ticket_sales.length > 0) {
-              return sum + week.ticket_sales.reduce((weekSum: number, sale: any) => weekSum + (sale.jackpot_total || 0), 0);
-            }
-            return sum;
-          }, gameData.carryover_jackpot || 0) || 0;
-          
-          const actualJackpotPayout = totalJackpot - (jackpotWinner.weekly_payout || 0) - (gameData.jackpot_contribution_to_next_game || 0);
+          // Calculate jackpot value: ending_jackpot + weekly_payout - next game contribution
+          // This gives us the actual jackpot amount available for the winner
+          const actualJackpotPayout = (jackpotWinner.ending_jackpot || 0) + (jackpotWinner.weekly_payout || 0) - (gameData.jackpot_contribution_to_next_game || 0);
           
           doc.setFont("helvetica", "bold");
           doc.setFontSize(11);
