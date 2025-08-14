@@ -283,15 +283,15 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                   <Line 
                     type="monotone" 
                     dataKey="NetProfit" 
-                    stroke={chartColors.secondary} 
+                    stroke="#1F4E4A" 
                     strokeWidth={3}
-                    dot={{ fill: chartColors.secondary, r: 5 }}
+                    dot={{ fill: "#1F4E4A", r: 5 }}
                     name="Income (Net Profit)"
                   />
                 ) : (
                   <Bar 
                     dataKey="Distributions" 
-                    fill={chartColors.primary} 
+                    fill="#1F4E4A" 
                     radius={[4, 4, 0, 0]}
                     name="Expense (Distribution)"
                   />
