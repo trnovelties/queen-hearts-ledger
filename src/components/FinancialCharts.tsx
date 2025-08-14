@@ -45,6 +45,8 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
     return game1?.id || games[0]?.id || "";
   });
   
+  const [selectedMetric, setSelectedMetric] = useState<"income" | "expense">("income");
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -222,17 +224,26 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
     <div className="space-y-6">
       {/* Game Comparison Chart */}
       <Card className="bg-white border-[#1F4E4A]/10">
-        <CardHeader>
-          <CardTitle className="text-[#1F4E4A] font-inter">
-            {reportType === "weekly" ? "Weekly Performance" : 
-             reportType === "game" ? "Game Comparison" : 
-             "Overall Performance"}
-          </CardTitle>
-          <CardDescription>
-            {reportType === "weekly" ? "Week-by-week revenue and profitability analysis" :
-             reportType === "game" ? "Comparative analysis across all games" :
-             "Cumulative financial performance overview"}
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div>
+            <CardTitle className="text-[#1F4E4A] font-inter">
+              {reportType === "weekly" ? "Weekly Performance" : 
+               reportType === "game" ? "Game Comparison" : 
+               "Overall Performance"}
+            </CardTitle>
+            <CardDescription>
+              {selectedMetric === "income" ? "Income (Net Profit) analysis" : "Expense (Distribution) analysis"}
+            </CardDescription>
+          </div>
+          <Select value={selectedMetric} onValueChange={(value) => setSelectedMetric(value as "income" | "expense")}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Select metric" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="expense">Expense</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
@@ -264,18 +275,21 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                   }}
                 />
                 <Legend />
-                <Bar 
-                  dataKey="NetProfit" 
-                  fill={chartColors.secondary} 
-                  radius={[4, 4, 0, 0]}
-                  name="Income (Net Profit)"
-                />
-                <Bar 
-                  dataKey="Distributions" 
-                  fill={chartColors.primary} 
-                  radius={[4, 4, 0, 0]}
-                  name="Expense (Distribution)"
-                />
+                {selectedMetric === "income" ? (
+                  <Bar 
+                    dataKey="NetProfit" 
+                    fill={chartColors.secondary} 
+                    radius={[4, 4, 0, 0]}
+                    name="Income (Net Profit)"
+                  />
+                ) : (
+                  <Bar 
+                    dataKey="Distributions" 
+                    fill={chartColors.primary} 
+                    radius={[4, 4, 0, 0]}
+                    name="Expense (Distribution)"
+                  />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
