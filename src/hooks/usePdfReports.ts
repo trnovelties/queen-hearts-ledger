@@ -464,7 +464,6 @@ export const usePdfReports = () => {
         
         weeksWithSales
           .sort((a: any, b: any) => (a.week_number || 0) - (b.week_number || 0))
-          .slice(0, 5) // Limit to first 5 weeks to prevent PDF from being too long
           .forEach((week: any) => {
             // Check if we need more space for the complete week table (estimate 80px for header + table)
             const estimatedWeekHeight = 80;
@@ -496,13 +495,6 @@ export const usePdfReports = () => {
             createTable(dailyHeaders, dailyRows, dailyColWidths);
           });
         
-        if (weeksWithSales.length > 5) {
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(9);
-          doc.setTextColor(100, 100, 100);
-          doc.text(`Note: Showing first 5 weeks only. Total weeks with sales data: ${weeksWithSales.length}`, margin + 4, yPosition);
-          yPosition += 15;
-        }
       }
 
       // WINNERS DIRECTORY
@@ -548,30 +540,25 @@ export const usePdfReports = () => {
           doc.setDrawColor(200, 0, 0);
           doc.rect(margin, yPosition, contentWidth, 30);
           
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(14);
-          doc.setTextColor(200, 0, 0);
-          doc.text('🏆 CONGRATULATIONS! 🏆', pageWidth / 2, yPosition + 10, { align: 'center' });
+          // Calculate jackpot value: Total jackpot - weekly payout - next game contribution
+          const totalJackpot = gameData.weeks?.reduce((sum: number, week: any) => {
+            if (week.ticket_sales && week.ticket_sales.length > 0) {
+              return sum + week.ticket_sales.reduce((weekSum: number, sale: any) => weekSum + (sale.jackpot_total || 0), 0);
+            }
+            return sum;
+          }, gameData.carryover_jackpot || 0) || 0;
+          
+          const actualJackpotPayout = totalJackpot - (jackpotWinner.weekly_payout || 0) - (gameData.jackpot_contribution_to_next_game || 0);
           
           doc.setFont("helvetica", "bold");
           doc.setFontSize(11);
           doc.setTextColor(0, 0, 0);
           doc.text(`Winner: ${jackpotWinner.winner_name}`, margin + 5, yPosition + 18);
           doc.text(`Week: ${jackpotWinner.week_number}`, margin + 5, yPosition + 25);
-          doc.text(`Jackpot: ${formatCurrency(jackpotWinner.weekly_payout)}`, pageWidth - margin - 5, yPosition + 18, { align: 'right' });
+          doc.text(`Jackpot: ${formatCurrency(actualJackpotPayout)}`, pageWidth - margin - 5, yPosition + 18, { align: 'right' });
           doc.text(`Date: ${formatDateStringShort(jackpotWinner.end_date)}`, pageWidth - margin - 5, yPosition + 25, { align: 'right' });
           yPosition += 40;
         }
-        
-        // Winners Statistics
-        const totalWinnerPayouts = winners.reduce((sum: number, week: any) => sum + (week.weekly_payout || 0), 0);
-        const avgWinnerPayout = winners.length > 0 ? totalWinnerPayouts / winners.length : 0;
-        
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(80, 80, 80);
-        doc.text(`Total Winners: ${winners.length} | Average Payout: ${formatCurrency(avgWinnerPayout)} | Total Distributed: ${formatCurrency(totalWinnerPayouts)}`, margin + 4, yPosition);
-        yPosition += 15;
       }
 
       // EXPENSES & DONATIONS
