@@ -45,7 +45,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
     return game1?.id || games[0]?.id || "";
   });
   
-  const [selectedMetric, setSelectedMetric] = useState<"income" | "expense">("income");
+  const [selectedMetric, setSelectedMetric] = useState<"income" | "expense">("expense");
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -276,10 +276,12 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                 />
                 <Legend />
                 {selectedMetric === "income" ? (
-                  <Bar 
+                  <Line 
+                    type="monotone" 
                     dataKey="NetProfit" 
-                    fill={chartColors.secondary} 
-                    radius={[4, 4, 0, 0]}
+                    stroke={chartColors.secondary} 
+                    strokeWidth={3}
+                    dot={{ fill: chartColors.secondary, r: 5 }}
                     name="Income (Net Profit)"
                   />
                 ) : (
