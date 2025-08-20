@@ -165,35 +165,35 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <KPICard
           title="Tickets Sold"
-          value={summary.totalTicketsSold.toLocaleString()}
+          value={summary.totalTicketsSold.toLocaleString('en-US')}
           icon={Users}
           colorScheme="blue"
           subtitle={`Avg. ${formatCurrency(avgTicketPrice)} per ticket`}
         />
         <KPICard
           title="Ticket Sales"
-          value={summary.totalSales}
+          value={formatCurrency(summary.totalSales)}
           icon={Banknote}
           colorScheme="blue"
           subtitle="Total revenue from ticket sales"
         />
         <KPICard
           title="Organization Net"
-          value={summary.organizationNetProfit}
+          value={formatCurrency(summary.organizationNetProfit)}
           icon={DollarSign}
           colorScheme="green"
           subtitle={`Avg. ${formatCurrency(avgGameNet)} per game`}
         />
         <KPICard
           title="Jackpot Total"
-          value={summary.totalJackpotContributions}
+          value={formatCurrency(summary.totalJackpotContributions)}
           icon={Trophy}
           colorScheme="orange"
           subtitle="Total jackpot contributions"
         />
         <KPICard
           title="Total Expenses"
-          value={summary.totalExpenses}
+          value={formatCurrency(summary.totalExpenses)}
           icon={Receipt}
           colorScheme="red"
           percentage={expenseRatio}
@@ -201,7 +201,7 @@ export function FinancialOverview({ summary, formatCurrency }: FinancialOverview
         />
         <KPICard
           title="Total Donations"
-          value={summary.totalDonations}
+          value={formatCurrency(summary.totalDonations)}
           icon={HeartHandshake}
           colorScheme="purple"
           percentage={donationRatio}
