@@ -124,8 +124,16 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
       // Summary totals
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, 45);
-      doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, 55);
+      let yPosition = 45;
+      
+      if (expenseType !== "donations") {
+        doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, yPosition);
+        yPosition += 10;
+      }
+      
+      if (expenseType !== "expenses") {
+        doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, yPosition);
+      }
       
       // Table data
       const allExpenses = getAllExpensesAcrossGames();
@@ -195,8 +203,16 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
       const filteredDonations = game.expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
       
       // Summary
-      doc.text(`Game Expenses: ${formatCurrency(filteredExpenses)}`, 20, 55);
-      doc.text(`Game Donations: ${formatCurrency(filteredDonations)}`, 20, 65);
+      let yPosition = 55;
+      
+      if (expenseType !== "donations") {
+        doc.text(`Game Expenses: ${formatCurrency(filteredExpenses)}`, 20, yPosition);
+        yPosition += 10;
+      }
+      
+      if (expenseType !== "expenses") {
+        doc.text(`Game Donations: ${formatCurrency(filteredDonations)}`, 20, yPosition);
+      }
       
       let currentY = 80;
       
@@ -247,9 +263,18 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
           const weekDonations = expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
           
           doc.setFont("helvetica", "normal");
-          doc.text(`${weekKey} Expenses: ${formatCurrency(weekExpenses)}`, 20, currentY);
-          doc.text(`${weekKey} Donations: ${formatCurrency(weekDonations)}`, 20, currentY + 8);
-          currentY += 25;
+          
+          if (expenseType !== "donations") {
+            doc.text(`${weekKey} Expenses: ${formatCurrency(weekExpenses)}`, 20, currentY);
+            currentY += 8;
+          }
+          
+          if (expenseType !== "expenses") {
+            doc.text(`${weekKey} Donations: ${formatCurrency(weekDonations)}`, 20, currentY);
+            currentY += 8;
+          }
+          
+          currentY += 17;
         });
       }
       
