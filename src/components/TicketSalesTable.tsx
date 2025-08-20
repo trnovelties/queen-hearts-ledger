@@ -262,7 +262,6 @@ export const TicketSalesTable = ({
           formatCurrency={formatCurrency}
           onOpenPayoutSlip={onOpenPayoutSlip}
           onOpenWinnerForm={onOpenWinnerForm}
-          onCompleteGame={onCompleteGameClick}
           gameId={game.id}
           isGameArchived={!!game.end_date}
         />

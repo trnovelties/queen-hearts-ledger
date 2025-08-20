@@ -11,7 +11,6 @@ interface WinnerInfoDisplayProps {
   formatCurrency: (amount: number) => string;
   onOpenPayoutSlip?: (winnerData: any) => void;
   onOpenWinnerForm?: (gameId: string, weekId: string) => void;
-  onCompleteGame?: (week: any, game: any) => void;
   gameId?: string;
   isGameArchived?: boolean;
 }
@@ -22,7 +21,6 @@ export const WinnerInfoDisplay = ({
   formatCurrency,
   onOpenPayoutSlip,
   onOpenWinnerForm,
-  onCompleteGame,
   gameId,
   isGameArchived = false
 }: WinnerInfoDisplayProps) => {
@@ -131,31 +129,15 @@ export const WinnerInfoDisplay = ({
             <DialogTitle className="text-center">Game Completion Required</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
-            <div className="text-yellow-600 text-6xl">🎯</div>
-            <div className="text-center space-y-4">
-              <p className="font-semibold">To print winner details, follow these steps:</p>
-              <div className="text-left space-y-2 bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <span className="bg-yellow-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
-                  <span>Complete your game first</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-yellow-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
-                  <span>After completion, visit archived games and print winner details</span>
-                </div>
-              </div>
-            </div>
+            <div className="text-yellow-600 text-6xl">⚠️</div>
+            <p className="text-center text-muted-foreground">
+              Please complete your game first to see winner distribution amount
+            </p>
             <Button 
-              onClick={() => {
-                if (onCompleteGame && week && game) {
-                  onCompleteGame(week, game);
-                  setShowGameCompletionModal(false);
-                }
-              }}
-              className="w-full bg-yellow-600 hover:bg-yellow-700"
-              disabled={!onCompleteGame}
+              onClick={() => setShowGameCompletionModal(false)}
+              className="w-full"
             >
-              Complete Your Game
+              Got it
             </Button>
           </div>
         </DialogContent>
