@@ -1,7 +1,9 @@
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Printer, Edit } from 'lucide-react';
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface WinnerInfoDisplayProps {
   week: any;
@@ -22,9 +24,17 @@ export const WinnerInfoDisplay = ({
   gameId,
   isGameArchived = false
 }: WinnerInfoDisplayProps) => {
+  const [showGameCompletionModal, setShowGameCompletionModal] = useState(false);
+  
   if (!week.winner_name) return null;
 
   const handlePrintSlip = () => {
+    // Check if it's Queen of Hearts and game isn't completed yet
+    if (week.card_selected === 'Queen of Hearts' && !game?.end_date) {
+      setShowGameCompletionModal(true);
+      return;
+    }
+    
     if (onOpenPayoutSlip) {
       const winnerData = {
         winnerName: week.winner_name,
@@ -111,6 +121,27 @@ export const WinnerInfoDisplay = ({
           </div>
         </div>
       </div>
+      
+      {/* Game Completion Required Modal */}
+      <Dialog open={showGameCompletionModal} onOpenChange={setShowGameCompletionModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Game Completion Required</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="text-yellow-600 text-6xl">⚠️</div>
+            <p className="text-center text-muted-foreground">
+              Please complete your game first to see winner distribution amount
+            </p>
+            <Button 
+              onClick={() => setShowGameCompletionModal(false)}
+              className="w-full"
+            >
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
