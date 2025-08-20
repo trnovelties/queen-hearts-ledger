@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Download, Plus, Grid, Printer } from "lucide-react";
+import { Download, Plus, Grid, Printer, CheckCircle } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
@@ -126,6 +126,23 @@ export const WeekManagement = ({
            !game.end_date;
   };
 
+  // Check if game needs completion (has Queen of Hearts winner but not completed)
+  const needsGameCompletionButton = () => {
+    return game.weeks.some((week: any) => 
+      week.winner_name && 
+      week.card_selected === 'Queen of Hearts' && 
+      !game.end_date
+    );
+  };
+
+  const getQueenOfHeartsWeek = () => {
+    return game.weeks.find((week: any) => 
+      week.winner_name && 
+      week.card_selected === 'Queen of Hearts' && 
+      !game.end_date
+    );
+  };
+
   // Check if game is completed
   const isGameCompleted = game.end_date !== null && game.end_date !== undefined;
 
@@ -174,6 +191,21 @@ export const WeekManagement = ({
           >
             <Download className="h-4 w-4" /> Export Game PDF
           </Button>
+          {needsGameCompletionButton() && (
+            <Button
+              onClick={() => {
+                const queenWeek = getQueenOfHeartsWeek();
+                if (queenWeek) {
+                  handleCompleteGame(queenWeek, game);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-yellow-600 text-white border-yellow-600 hover:bg-yellow-700 hover:border-yellow-700"
+            >
+              <CheckCircle className="h-4 w-4" /> Complete Your Game
+            </Button>
+          )}
           {isGameCompleted && getQueenOfHeartsWinner() && (
             <Button
               onClick={handlePrintWinnerSlip}
