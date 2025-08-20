@@ -332,8 +332,18 @@ export const usePdfReports = () => {
         return sum + (expense.is_donation ? (expense.amount || 0) : 0);
       }, 0) || 0;
       
-      // Calculate organization net profit from actual game data
-      const organizationNetProfit = gameData.organization_net_profit || 0;
+      // Calculate organization total from ticket sales
+      const organizationTotal = gameData.weeks?.reduce((sum: number, week: any) => {
+        if (week.ticket_sales && week.ticket_sales.length > 0) {
+          return sum + week.ticket_sales.reduce((weekSum: number, sale: any) => {
+            return weekSum + (sale.organization_total || 0);
+          }, 0);
+        }
+        return sum;
+      }, 0) || 0;
+      
+      // Calculate organization net profit: Organization Total - Expenses
+      const organizationNetProfit = organizationTotal - totalExpenses;
       
       // Calculate next game contribution from the database field
       const nextGameContribution = gameData.jackpot_contribution_to_next_game || 0;
@@ -383,7 +393,7 @@ export const usePdfReports = () => {
       
       if (gameData.weeks && gameData.weeks.length > 0) {
         const weekHeaders = ['Week', 'Period', 'Tickets', 'Sales', 'Winner', 'Slot', 'Card', 'Payout', 'Present'];
-        const weekColWidths = [16, 42, 18, 23, 32, 18, 28, 23, 16];
+        const weekColWidths = [16, 42, 18, 23, 32, 18, 28, 23, 22];
         
         const weekRows = gameData.weeks
           .sort((a: any, b: any) => (a.week_number || 0) - (b.week_number || 0))
