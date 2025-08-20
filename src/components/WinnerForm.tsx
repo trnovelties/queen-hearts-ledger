@@ -497,7 +497,7 @@ export function WinnerForm({
                 <Select 
                   onValueChange={(value) => {
                     setFormData({ ...formData, cardSelected: value });
-                    const distribution = availableCards.find(card => card.card === value)?.distribution || 0;
+                    const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
                     setSelectedDistribution(distribution);
                   }}
                 >
@@ -506,9 +506,19 @@ export function WinnerForm({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
-                    {availableCards.map((card, index) => (
-                      <SelectItem key={index} value={card.card}>{card.card} - ${card.distribution}</SelectItem>
-                    ))}
+                    {cardDistributions.map((card, index) => {
+                      const isAvailable = availableCards.some(available => available.card === card.card);
+                      return (
+                        <SelectItem 
+                          key={index} 
+                          value={card.card} 
+                          disabled={!isAvailable}
+                          className={!isAvailable ? "opacity-50" : ""}
+                        >
+                          {card.card} - ${card.distribution}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
