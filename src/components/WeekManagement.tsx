@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Download, Plus, Grid } from "lucide-react";
+import { Download, Plus, Grid, Printer } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
@@ -129,6 +129,36 @@ export const WeekManagement = ({
   // Check if game is completed
   const isGameCompleted = game.end_date !== null && game.end_date !== undefined;
 
+  // Get the Queen of Hearts winner data for completed games
+  const getQueenOfHeartsWinner = () => {
+    if (!isGameCompleted) return null;
+    
+    const queenWeek = game.weeks.find((week: any) => 
+      week.card_selected === 'Queen of Hearts' && week.winner_name
+    );
+    
+    if (!queenWeek) return null;
+    
+    return {
+      winnerName: queenWeek.winner_name,
+      slotChosen: queenWeek.slot_chosen,
+      cardSelected: queenWeek.card_selected,
+      payoutAmount: game.jackpot_contribution || queenWeek.weekly_payout,
+      winnerPresent: queenWeek.winner_present,
+      weekNumber: queenWeek.week_number,
+      weekStartDate: queenWeek.start_date,
+      weekEndDate: queenWeek.end_date,
+      authorizedSignatureName: queenWeek.authorized_signature_name || 'Finance Manager'
+    };
+  };
+
+  const handlePrintWinnerSlip = () => {
+    const winnerData = getQueenOfHeartsWinner();
+    if (winnerData) {
+      handleOpenPayoutSlip(winnerData, game);
+    }
+  };
+
   return (
     <div className="p-4 border-t">
       <div className="flex justify-between items-center mb-4">
@@ -144,6 +174,16 @@ export const WeekManagement = ({
           >
             <Download className="h-4 w-4" /> Export Game PDF
           </Button>
+          {isGameCompleted && getQueenOfHeartsWinner() && (
+            <Button
+              onClick={handlePrintWinnerSlip}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
+            >
+              <Printer className="h-4 w-4" /> Print Winner Slip
+            </Button>
+          )}
           <Button
             onClick={() => onOpenSlotGrid(game)}
             variant="outline"
