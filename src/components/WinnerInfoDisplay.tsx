@@ -131,7 +131,7 @@ export const WinnerInfoDisplay = ({
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="text-yellow-600 text-6xl">⚠️</div>
             <p className="text-center text-muted-foreground">
-              Please complete your game first to see winner distribution amount
+              Please complete your game first to print winner distribution amount from archived game.
             </p>
             <Button 
               onClick={() => setShowGameCompletionModal(false)}
