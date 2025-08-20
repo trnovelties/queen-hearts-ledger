@@ -59,6 +59,7 @@ export function WinnerForm({
   const [selectedDistribution, setSelectedDistribution] = useState(0);
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
   const [availableCards, setAvailableCards] = useState<{ card: string; distribution: number }[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<number[]>([]);
 
   // Calculate total accumulated jackpot for this week
   const totalAccumulatedJackpot = (currentJackpotTotal || 0);
@@ -356,6 +357,46 @@ export function WinnerForm({
     filterAvailableCards();
   }, [cardDistributions, gameId, weekId, user?.id]);
 
+  // Effect to filter available slots based on previous selections
+  useEffect(() => {
+    const filterAvailableSlots = async () => {
+      if (!gameId || !weekId) return;
+
+      try {
+        // Get all previous winners in this game
+        const { data: previousWinners, error } = await supabase
+          .from('weeks')
+          .select('slot_chosen')
+          .eq('game_id', gameId)
+          .eq('user_id', user?.id)
+          .neq('id', weekId) // Exclude current week
+          .not('slot_chosen', 'is', null);
+
+        if (error) {
+          console.error('Error fetching previous winners slots:', error);
+          setAvailableSlots(Array.from({ length: 52 }, (_, i) => i + 1));
+          return;
+        }
+
+        const selectedSlots = previousWinners?.map(w => w.slot_chosen) || [];
+        console.log('Previously selected slots:', selectedSlots);
+
+        // Filter out unavailable slots
+        const allSlots = Array.from({ length: 52 }, (_, i) => i + 1);
+        const available = allSlots.filter(slot => !selectedSlots.includes(slot));
+
+        console.log('Available slots:', available);
+        setAvailableSlots(available);
+
+      } catch (error) {
+        console.error('Error filtering available slots:', error);
+        setAvailableSlots(Array.from({ length: 52 }, (_, i) => i + 1));
+      }
+    };
+
+    filterAvailableSlots();
+  }, [gameId, weekId, user?.id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -542,11 +583,19 @@ export function WinnerForm({
                     <SelectValue placeholder="Select slot" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => (
-                      <SelectItem key={slot} value={slot.toString()}>
-                        {slot}
-                      </SelectItem>
-                    ))}
+                    {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => {
+                      const isAvailable = availableSlots.includes(slot);
+                      return (
+                        <SelectItem 
+                          key={slot} 
+                          value={slot.toString()}
+                          disabled={!isAvailable}
+                          className={!isAvailable ? "opacity-50" : ""}
+                        >
+                          {slot}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
