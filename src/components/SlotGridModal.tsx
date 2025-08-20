@@ -1,5 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { X } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import { toast } from "sonner";
 
 interface SlotGridModalProps {
   open: boolean;
@@ -16,15 +19,94 @@ export const SlotGridModal = ({
   selectedSlots,
   currentWeekNumber
 }: SlotGridModalProps) => {
+  
+  const handleDownloadPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Queen of Hearts Available Slots', 105, 30, { align: 'center' });
+      
+      // Game and Week info
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'normal');
+      const gameNumber = game?.game_number ? game.game_number.toString().padStart(2, '0') : '01';
+      const weekNumber = currentWeekNumber || 1;
+      doc.text(`Game ${gameNumber} - Current Week ${weekNumber}`, 105, 50, { align: 'center' });
+      
+      // Grid parameters - 9 columns to match the modal
+      const boxSize = 15;
+      const cols = 9;
+      const padding = 20;
+      const rowSpacing = 20;
+      const colSpacing = 20;
+      
+      // Calculate grid dimensions to center it
+      const gridWidth = (cols - 1) * colSpacing + boxSize;
+      const startX = (210 - gridWidth) / 2; // Center in A4 width
+      const startY = 70; // Start after header
+      
+      // Draw 54 slots in 9-column grid
+      for (let i = 1; i <= 54; i++) {
+        const row = Math.floor((i - 1) / cols);
+        const col = (i - 1) % cols;
+        
+        const x = startX + col * colSpacing;
+        const y = startY + row * rowSpacing;
+        
+        // Draw the box
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.rect(x, y, boxSize, boxSize);
+        
+        // Add slot number
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(i.toString(), x + boxSize/2, y + boxSize/2 + 2, { align: 'center' });
+        
+        // Check if this slot is selected
+        if (selectedSlots.includes(i)) {
+          // Draw green X
+          doc.setDrawColor(0, 180, 50);
+          doc.setLineWidth(2);
+          doc.line(x + 2, y + 2, x + boxSize - 2, y + boxSize - 2);
+          doc.line(x + 2, y + boxSize - 2, x + boxSize - 2, y + 2);
+        }
+      }
+      
+      // Save PDF
+      doc.save(`slot-grid-game-${gameNumber}-week-${weekNumber}.pdf`);
+      toast.success('Slot grid PDF downloaded successfully!');
+      
+    } catch (error) {
+      console.error('Error generating slot grid PDF:', error);
+      toast.error('Failed to generate slot grid PDF');
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader className="space-y-4 text-center">
-          <DialogTitle className="text-4xl font-bold text-black">
+          <DialogTitle className="text-4xl font-bold text-black text-center">
             Queen of Hearts Available Slots
           </DialogTitle>
-          <div className="text-2xl font-medium text-black">
+          <div className="text-2xl font-medium text-black text-center">
             Game {game?.game_number?.toString().padStart(2, '0') || '01'} - Current Week {currentWeekNumber || 1}
+          </div>
+          <div className="flex justify-center pt-2">
+            <Button 
+              onClick={handleDownloadPDF}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
           </div>
         </DialogHeader>
         
