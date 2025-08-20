@@ -27,22 +27,39 @@ interface ExpenseDonationSummaryProps {
 
 export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonationSummaryProps) {
   const [selectedGame, setSelectedGame] = useState<string>("all");
+  const [expenseType, setExpenseType] = useState<string>("both");
 
   const getFilteredData = () => {
-    if (selectedGame === "all") {
-      return games;
-    }
-    return games.filter(game => game.id === selectedGame);
+    let filtered = selectedGame === "all" ? games : games.filter(game => game.id === selectedGame);
+    
+    // Apply expense type filter to expenses within each game
+    return filtered.map(game => ({
+      ...game,
+      expenses: game.expenses.filter(expense => {
+        if (expenseType === "both") return true;
+        if (expenseType === "expenses") return !expense.is_donation;
+        if (expenseType === "donations") return expense.is_donation;
+        return true;
+      })
+    }));
   };
 
   const filteredGames = getFilteredData();
 
   const getTotalExpenses = () => {
-    return filteredGames.reduce((sum, game) => sum + game.total_expenses, 0);
+    if (expenseType === "donations") return 0;
+    return filteredGames.reduce((sum, game) => {
+      const expenses = game.expenses.filter(expense => !expense.is_donation);
+      return sum + expenses.reduce((expSum, exp) => expSum + exp.amount, 0);
+    }, 0);
   };
 
   const getTotalDonations = () => {
-    return filteredGames.reduce((sum, game) => sum + game.total_donations, 0);
+    if (expenseType === "expenses") return 0;
+    return filteredGames.reduce((sum, game) => {
+      const donations = game.expenses.filter(expense => expense.is_donation);
+      return sum + donations.reduce((donSum, don) => donSum + don.amount, 0);
+    }, 0);
   };
 
   const getExpensesByWeek = (game: GameSummary) => {
@@ -72,7 +89,7 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
 
   const getAllExpensesAcrossGames = () => {
     const allExpenses: any[] = [];
-    games.forEach(game => {
+    filteredGames.forEach(game => {
       game.expenses.forEach(expense => {
         allExpenses.push({
           ...expense,
@@ -89,16 +106,26 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
+      // Dynamic title based on filters
+      const gameFilter = selectedGame === "all" ? "All Games" : filteredGames[0]?.name || "Selected Game";
+      const typeFilter = expenseType === "both" ? "Expense & Donation" : 
+                        expenseType === "expenses" ? "Expense Only" : "Donation Only";
+      
       // Title
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text("All Games Expense & Donation Summary", pageWidth / 2, 20, { align: 'center' });
+      doc.text(`${gameFilter} ${typeFilter} Summary`, pageWidth / 2, 20, { align: 'center' });
+      
+      // Filter info
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Filter: ${gameFilter} | Type: ${typeFilter}`, pageWidth / 2, 30, { align: 'center' });
       
       // Summary totals
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, 40);
-      doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, 50);
+      doc.text(`Total Expenses: ${formatCurrency(getTotalExpenses())}`, 20, 45);
+      doc.text(`Total Donations: ${formatCurrency(getTotalDonations())}`, 20, 55);
       
       // Table data
       const allExpenses = getAllExpensesAcrossGames();
@@ -114,7 +141,7 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
         autoTable(doc, {
           head: [['Game', 'Date', 'Type', 'Amount', 'Memo']],
           body: tableData,
-          startY: 65,
+          startY: 70,
           styles: {
             fontSize: 10,
             cellPadding: 3
@@ -130,7 +157,8 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
         });
       }
       
-      doc.save("all-games-expense-donation-summary.pdf");
+      const fileName = `${gameFilter.toLowerCase().replace(/\s+/g, '-')}-${typeFilter.toLowerCase().replace(/\s+/g, '-')}-summary.pdf`;
+      doc.save(fileName);
       console.log("PDF generated successfully");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -142,22 +170,35 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       
+      // Dynamic title based on filter
+      const typeFilter = expenseType === "both" ? "Expense & Donation" : 
+                        expenseType === "expenses" ? "Expense Only" : "Donation Only";
+      
       // Title
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text(game.name, pageWidth / 2, 20, { align: 'center' });
+      doc.text(`${game.name} ${typeFilter} Summary`, pageWidth / 2, 20, { align: 'center' });
+      
+      // Filter info
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Filter: ${typeFilter}`, pageWidth / 2, 30, { align: 'center' });
       
       // Dates
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       const dateText = `Start: ${formatDateStringForDisplay(game.start_date)}${game.end_date ? ` | End: ${formatDateStringForDisplay(game.end_date)}` : ''}`;
-      doc.text(dateText, pageWidth / 2, 30, { align: 'center' });
+      doc.text(dateText, pageWidth / 2, 40, { align: 'center' });
+      
+      // Calculate filtered totals
+      const filteredExpenses = game.expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0);
+      const filteredDonations = game.expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0);
       
       // Summary
-      doc.text(`Game Expenses: ${formatCurrency(game.total_expenses)}`, 20, 50);
-      doc.text(`Game Donations: ${formatCurrency(game.total_donations)}`, 20, 60);
+      doc.text(`Game Expenses: ${formatCurrency(filteredExpenses)}`, 20, 55);
+      doc.text(`Game Donations: ${formatCurrency(filteredDonations)}`, 20, 65);
       
-      let currentY = 75;
+      let currentY = 80;
       
       // Group expenses by week
       const expensesByWeek = getExpensesByWeek(game);
@@ -212,7 +253,7 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
         });
       }
       
-      const fileName = `${game.name.toLowerCase().replace(/\s+/g, '-')}-expense-donation-summary.pdf`;
+      const fileName = `${game.name.toLowerCase().replace(/\s+/g, '-')}-${typeFilter.toLowerCase().replace(/\s+/g, '-')}-summary.pdf`;
       doc.save(fileName);
       console.log(`PDF generated successfully: ${fileName}`);
     } catch (error) {
@@ -227,22 +268,40 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
         <CardDescription>Detailed breakdown of expenses and donations by game and week</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Game Filter */}
-        <div className="space-y-2">
-          <Label htmlFor="expenseGameFilter" className="text-sm font-semibold text-[#132E2C]">Filter by Game</Label>
-          <Select value={selectedGame} onValueChange={setSelectedGame}>
-            <SelectTrigger className="bg-white border-[#1F4E4A]/20">
-              <SelectValue placeholder="All Games" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-[#1F4E4A]/20 z-50">
-              <SelectItem value="all">All Games</SelectItem>
-              {games.map((game) => (
-                <SelectItem key={game.id} value={game.id}>
-                  {game.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Game Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="expenseGameFilter" className="text-sm font-semibold text-[#132E2C]">Filter by Game</Label>
+            <Select value={selectedGame} onValueChange={setSelectedGame}>
+              <SelectTrigger className="bg-white border-[#1F4E4A]/20">
+                <SelectValue placeholder="All Games" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-[#1F4E4A]/20 z-50">
+                <SelectItem value="all">All Games</SelectItem>
+                {games.map((game) => (
+                  <SelectItem key={game.id} value={game.id}>
+                    {game.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Expense Type Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="expenseTypeFilter" className="text-sm font-semibold text-[#132E2C]">Filter by Type</Label>
+            <Select value={expenseType} onValueChange={setExpenseType}>
+              <SelectTrigger className="bg-white border-[#1F4E4A]/20">
+                <SelectValue placeholder="Both Expenses & Donations" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-[#1F4E4A]/20 z-50">
+                <SelectItem value="both">Expenses & Donations</SelectItem>
+                <SelectItem value="expenses">Expenses Only</SelectItem>
+                <SelectItem value="donations">Donations Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -362,16 +421,20 @@ export function ExpenseDonationSummary({ games, formatCurrency }: ExpenseDonatio
                          </div>
                          
                          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-8">
-                           <div className="grid grid-cols-2 gap-4 text-center">
-                             <div>
-                               <div className="text-xs text-[#132E2C]/60">Game Expenses</div>
-                               <div className="font-bold text-red-600">{formatCurrency(game.total_expenses)}</div>
-                             </div>
-                             <div>
-                               <div className="text-xs text-[#132E2C]/60">Game Donations</div>
-                               <div className="font-bold text-purple-600">{formatCurrency(game.total_donations)}</div>
-                             </div>
-                           </div>
+                            <div className="grid grid-cols-2 gap-4 text-center">
+                              <div>
+                                <div className="text-xs text-[#132E2C]/60">Game Expenses</div>
+                                <div className="font-bold text-red-600">
+                                  {formatCurrency(game.expenses.filter(e => !e.is_donation).reduce((sum, e) => sum + e.amount, 0))}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-[#132E2C]/60">Game Donations</div>
+                                <div className="font-bold text-purple-600">
+                                  {formatCurrency(game.expenses.filter(e => e.is_donation).reduce((sum, e) => sum + e.amount, 0))}
+                                </div>
+                              </div>
+                            </div>
                            
                             <Button
                               onClick={(e) => {
