@@ -37,8 +37,8 @@ export const SlotGridModal = ({
       doc.text(`Game ${gameNumber} - Current Week ${weekNumber}`, 105, 28, { align: 'center' });
       
       // Grid parameters - NO GAPS, boxes touching like modal
-      const boxWidth = 20; // Larger boxes
-      const boxHeight = 20; // Larger boxes  
+      const boxWidth = 20; // Keep width same
+      const boxHeight = 30; // Increased height 1.5x (20 * 1.5 = 30)
       const cols = 9;
       const gap = 0; // NO GAP - boxes touch each other
       
