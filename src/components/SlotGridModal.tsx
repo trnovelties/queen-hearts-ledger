@@ -24,56 +24,59 @@ export const SlotGridModal = ({
     try {
       const doc = new jsPDF();
       
-      // Header
-      doc.setFontSize(24);
+      // Header with reduced spacing
+      doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('Queen of Hearts Available Slots', 105, 30, { align: 'center' });
+      doc.text('Queen of Hearts Available Slots', 105, 25, { align: 'center' });
       
-      // Game and Week info
-      doc.setFontSize(16);
+      // Game and Week info - closer to title
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
       const gameNumber = game?.game_number ? game.game_number.toString().padStart(2, '0') : '01';
       const weekNumber = currentWeekNumber || 1;
-      doc.text(`Game ${gameNumber} - Current Week ${weekNumber}`, 105, 50, { align: 'center' });
+      doc.text(`Game ${gameNumber} - Current Week ${weekNumber}`, 105, 35, { align: 'center' });
       
-      // Grid parameters - 9 columns to match the modal
-      const boxSize = 15;
+      // Grid parameters to match modal exactly (9 columns, 70x90 boxes)
+      const boxWidth = 12; // Scaled down for PDF
+      const boxHeight = 15; // Scaled down for PDF
       const cols = 9;
-      const padding = 20;
-      const rowSpacing = 20;
-      const colSpacing = 20;
+      const horizontalSpacing = 2; // Tight spacing like modal
+      const verticalSpacing = 2; // Tight spacing like modal
       
-      // Calculate grid dimensions to center it
-      const gridWidth = (cols - 1) * colSpacing + boxSize;
-      const startX = (210 - gridWidth) / 2; // Center in A4 width
-      const startY = 70; // Start after header
+      // Calculate total grid width and center it
+      const totalGridWidth = (cols * boxWidth) + ((cols - 1) * horizontalSpacing);
+      const startX = (210 - totalGridWidth) / 2; // Center in A4 width
+      const startY = 50; // Start after header
       
-      // Draw 54 slots in 9-column grid
+      // Draw 54 slots in 9-column grid exactly like modal
       for (let i = 1; i <= 54; i++) {
         const row = Math.floor((i - 1) / cols);
         const col = (i - 1) % cols;
         
-        const x = startX + col * colSpacing;
-        const y = startY + row * rowSpacing;
+        const x = startX + (col * (boxWidth + horizontalSpacing));
+        const y = startY + (row * (boxHeight + verticalSpacing));
         
-        // Draw the box
+        // Draw the box border (black, 1px like modal)
         doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.5);
-        doc.rect(x, y, boxSize, boxSize);
+        doc.rect(x, y, boxWidth, boxHeight);
         
-        // Add slot number
+        // Add slot number in center
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
+        doc.setFontSize(8);
         doc.setTextColor(0, 0, 0);
-        doc.text(i.toString(), x + boxSize/2, y + boxSize/2 + 2, { align: 'center' });
+        doc.text(i.toString(), x + boxWidth/2, y + boxHeight/2 + 1, { align: 'center' });
         
-        // Check if this slot is selected
+        // Check if this slot is selected - draw green X exactly like modal
         if (selectedSlots.includes(i)) {
-          // Draw green X
-          doc.setDrawColor(0, 180, 50);
-          doc.setLineWidth(2);
-          doc.line(x + 2, y + 2, x + boxSize - 2, y + boxSize - 2);
-          doc.line(x + 2, y + boxSize - 2, x + boxSize - 2, y + 2);
+          // Green X overlay that fills most of the box
+          doc.setDrawColor(0, 189, 44); // Match the green color from modal
+          doc.setLineWidth(1.5);
+          
+          // X lines with small margin from edges
+          const margin = 1;
+          doc.line(x + margin, y + margin, x + boxWidth - margin, y + boxHeight - margin);
+          doc.line(x + margin, y + boxHeight - margin, x + boxWidth - margin, y + margin);
         }
       }
       
