@@ -38,7 +38,7 @@ export const SlotGridModal = ({
       
       // Grid parameters - NO GAPS, boxes touching like modal
       const boxWidth = 20; // Keep width same
-      const boxHeight = 30; // Increased height 1.5x (20 * 1.5 = 30)
+      const boxHeight = 26; // Increased height 1.3x (20 * 1.3 = 26)
       const cols = 9;
       const gap = 0; // NO GAP - boxes touch each other
       
@@ -64,9 +64,9 @@ export const SlotGridModal = ({
         
         // Add slot number - LARGER and centered
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(14); // Much larger font
+        doc.setFontSize(16); // Increased from 14 to 16
         doc.setTextColor(0, 0, 0);
-        doc.text(i.toString(), x + boxWidth/2, y + boxHeight/2 + 2, { align: 'center' });
+        doc.text(i.toString(), x + boxWidth/2, y + boxHeight/2 + 3, { align: 'center' });
         
         // Check if this slot is selected - draw green X exactly like modal
         if (selectedSlots.includes(i)) {
