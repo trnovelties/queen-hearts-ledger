@@ -130,14 +130,18 @@ export const WinnerInfoDisplay = ({
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="text-yellow-600 text-6xl">⚠️</div>
-            <p className="text-center text-muted-foreground">
-              Please complete your game first to see winner distribution amount
-            </p>
+            <div className="text-center text-muted-foreground space-y-2">
+              <p>Please complete your game first to see winner distribution amount</p>
+              <div className="text-sm">
+                <p>1. Complete game first</p>
+                <p>2. After completion, visit archived game and print winner distribution slip</p>
+              </div>
+            </div>
             <Button 
               onClick={() => setShowGameCompletionModal(false)}
               className="w-full"
             >
-              Got it
+              Complete Your Game
             </Button>
           </div>
         </DialogContent>
