@@ -342,8 +342,8 @@ export const usePdfReports = () => {
         return sum;
       }, 0) || 0;
       
-      // Calculate organization net profit: Organization Total - Expenses
-      const organizationNetProfit = organizationTotal - totalExpenses;
+      // Calculate organization net profit: Organization Total - (Expenses + Donations)
+      const organizationNetProfit = organizationTotal - totalExpenses - totalDonations;
       
       // Calculate next game contribution from the database field
       const nextGameContribution = gameData.jackpot_contribution_to_next_game || 0;
