@@ -12,6 +12,7 @@ import { DonationModal } from "@/components/DonationModal";
 import { PayoutSlipModal } from "@/components/PayoutSlipModal";
 import { WinnerForm } from "@/components/WinnerForm";
 import { GameForm } from "@/components/GameForm";
+import { SlotGridModal } from "@/components/SlotGridModal";
 import { useAuth } from "@/context/AuthContext";
 import { useGameData } from "@/hooks/useGameData";
 import { usePdfReports } from "@/hooks/usePdfReports";
@@ -43,6 +44,8 @@ export default function Dashboard() {
   const [payoutSlipOpen, setPayoutSlipOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dailyExpenseModalOpen, setDailyExpenseModalOpen] = useState(false);
+  const [slotGridOpen, setSlotGridOpen] = useState(false);
+  const [selectedSlotGridGame, setSelectedSlotGridGame] = useState<any>(null);
 
   // Form States
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
@@ -256,6 +259,11 @@ export default function Dashboard() {
     setDailyExpenseModalOpen(true);
   };
 
+  const openSlotGrid = (game: any) => {
+    setSelectedSlotGridGame(game);
+    setSlotGridOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -349,6 +357,7 @@ export default function Dashboard() {
               onOpenWeekForm={openWeekForm}
               onOpenDeleteConfirm={openDeleteConfirm}
               onGeneratePdfReport={generateGamePdfReport}
+              onOpenSlotGrid={openSlotGrid}
               onOpenExpenseModal={openExpenseModal}
               onOpenDonationModal={openDonationModal}
               onOpenDailyExpenseModal={openDailyExpenseModal}
@@ -510,6 +519,14 @@ export default function Dashboard() {
         onOpenChange={setGameFormOpen} 
         games={games} 
         onComplete={handleGameComplete} 
+      />
+      
+      <SlotGridModal 
+        open={slotGridOpen} 
+        onOpenChange={setSlotGridOpen} 
+        game={selectedSlotGridGame} 
+        selectedSlots={selectedSlotGridGame?.weeks?.map((week: any) => week.slot_chosen).filter((slot: any) => slot) || []}
+        currentWeekNumber={selectedSlotGridGame?.weeks?.length ? Math.max(...selectedSlotGridGame.weeks.map((w: any) => w.week_number)) : 1}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, Grid } from "lucide-react";
 import { TicketSalesTable } from './TicketSalesTable';
 import { WinnerForm } from './WinnerForm';
 import { PayoutSlipModal } from './PayoutSlipModal';
@@ -17,6 +17,7 @@ interface WeekManagementProps {
   onToggleWeek: (weekId: string) => void;
   onOpenWeekForm: (gameId: string) => void;
   onGeneratePdfReport: (game: any) => void;
+  onOpenSlotGrid: (game: any) => void;
   currentGameId: string | null;
   setCurrentGameId: (id: string | null) => void;
   games: any[];
@@ -33,6 +34,7 @@ export const WeekManagement = ({
   onToggleWeek,
   onOpenWeekForm,
   onGeneratePdfReport,
+  onOpenSlotGrid,
   currentGameId,
   setCurrentGameId,
   games,
@@ -141,6 +143,14 @@ export const WeekManagement = ({
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" /> Export Game PDF
+          </Button>
+          <Button
+            onClick={() => onOpenSlotGrid(game)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
+          >
+            <Grid className="h-4 w-4" /> View Slot Grid
           </Button>
           <Button
             onClick={() => onOpenWeekForm(game.id)}

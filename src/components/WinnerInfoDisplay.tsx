@@ -1,7 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Printer, Edit, Grid } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { Printer, Edit } from 'lucide-react';
 import { toast } from "sonner";
 
 interface WinnerInfoDisplayProps {
@@ -48,93 +47,6 @@ export const WinnerInfoDisplay = ({
     }
   };
 
-  const handlePrintSlotGrid = () => {
-    try {
-      const doc = new jsPDF();
-      
-      // Header
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Selected Slot Grid', 105, 25, { align: 'center' });
-      
-      // Game and Week info
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
-      const gameNumber = game?.game_number ? game.game_number.toString() : '1';
-      const weekNumber = week.week_number ? week.week_number.toString() : '1';
-      doc.text(`Game ${gameNumber} - Week ${weekNumber}`, 105, 40, { align: 'center' });
-      
-      // Date range - closer to game/week info
-      const startDate = week.start_date ? new Date(week.start_date).toLocaleDateString() : '';
-      const endDate = week.end_date ? new Date(week.end_date).toLocaleDateString() : '';
-      doc.text(`${startDate} - ${endDate}`, 105, 50, { align: 'center' });
-      
-      // Selected slot info in header
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Selected Slot: #${week.slot_chosen}`, 105, 65, { align: 'center' });
-      
-      // Grid parameters - fit within PDF bounds with minimal padding
-      const boxSize = 15;
-      const cols = 6;
-      const padding = 1; // Minimal padding
-      const rowSpacing = 22; // Increased vertical spacing
-      const colSpacing = 32; // Breathable horizontal spacing - balanced
-      
-      // Calculate available space (A4: 210mm width, 297mm height)
-      const availableWidth = 210 - (padding * 2);
-      const availableHeight = 297 - (padding * 2) - 80; // Account for header space
-      
-      // Calculate grid dimensions to center it within available space
-      const gridWidth = (cols - 1) * colSpacing + boxSize;
-      const gridHeight = Math.ceil(54 / cols - 1) * rowSpacing + boxSize;
-      
-      const startX = padding + (availableWidth - gridWidth) / 2;
-      const startY = 85; // Start after header content
-      
-      // Draw 54 slots in grid
-      for (let i = 1; i <= 54; i++) {
-        const row = Math.floor((i - 1) / cols);
-        const col = (i - 1) % cols;
-        
-        const x = startX + col * colSpacing;
-        const y = startY + row * rowSpacing;
-        
-        // Draw the box
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(1);
-        doc.rect(x, y, boxSize, boxSize);
-        
-        // Check if this is the selected slot
-        const selectedSlot = parseInt(week.slot_chosen);
-        if (i === selectedSlot) {
-          // Draw large green X that exceeds the box
-          doc.setDrawColor(0, 150, 0); // Green color
-          doc.setLineWidth(4);
-          
-          // X lines extending beyond the box
-          const extend = 4;
-          doc.line(x - extend, y - extend, x + boxSize + extend, y + boxSize + extend);
-          doc.line(x - extend, y + boxSize + extend, x + boxSize + extend, y - extend);
-        }
-        
-        // Add slot number to the right of the box with increased font size
-        doc.setDrawColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11); // Increased font size by 1x
-        doc.setTextColor(0, 0, 0);
-        doc.text(i.toString().padStart(2, '0'), x + boxSize + 3, y + boxSize/2 + 2);
-      }
-      
-      // Save PDF
-      doc.save(`slot-grid-game-${gameNumber}-week-${weekNumber}.pdf`);
-      toast.success('Slot grid PDF downloaded successfully!');
-      
-    } catch (error) {
-      console.error('Error generating slot grid PDF:', error);
-      toast.error('Failed to generate slot grid PDF');
-    }
-  };
 
   return (
     <div className="mt-6 p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg">
@@ -154,15 +66,6 @@ export const WinnerInfoDisplay = ({
               Edit Winner Details
             </Button>
           )}
-          <Button 
-            onClick={handlePrintSlotGrid} 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
-          >
-            <Printer className="h-4 w-4" />
-            Print Selected Slot
-          </Button>
           {onOpenPayoutSlip && (
             <Button 
               onClick={handlePrintSlip} 
