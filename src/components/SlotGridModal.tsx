@@ -24,57 +24,58 @@ export const SlotGridModal = ({
     try {
       const doc = new jsPDF();
       
-      // Header with reduced spacing
-      doc.setFontSize(20);
+      // Header - centered and closer to top
+      doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.text('Queen of Hearts Available Slots', 105, 25, { align: 'center' });
+      doc.text('Queen of Hearts Available Slots', 105, 20, { align: 'center' });
       
-      // Game and Week info - closer to title
-      doc.setFontSize(14);
+      // Game and Week info - right below title
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       const gameNumber = game?.game_number ? game.game_number.toString().padStart(2, '0') : '01';
       const weekNumber = currentWeekNumber || 1;
-      doc.text(`Game ${gameNumber} - Current Week ${weekNumber}`, 105, 35, { align: 'center' });
+      doc.text(`Game ${gameNumber} - Current Week ${weekNumber}`, 105, 28, { align: 'center' });
       
-      // Grid parameters to match modal exactly (9 columns, 70x90 boxes)
-      const boxWidth = 12; // Scaled down for PDF
-      const boxHeight = 15; // Scaled down for PDF
+      // Grid parameters - NO GAPS, boxes touching like modal
+      const boxWidth = 20; // Larger boxes
+      const boxHeight = 20; // Larger boxes  
       const cols = 9;
-      const horizontalSpacing = 2; // Tight spacing like modal
-      const verticalSpacing = 2; // Tight spacing like modal
+      const gap = 0; // NO GAP - boxes touch each other
       
-      // Calculate total grid width and center it
-      const totalGridWidth = (cols * boxWidth) + ((cols - 1) * horizontalSpacing);
-      const startX = (210 - totalGridWidth) / 2; // Center in A4 width
-      const startY = 50; // Start after header
+      // Calculate total grid size and center it with minimal margins
+      const totalGridWidth = cols * boxWidth;
+      const totalGridHeight = 6 * boxHeight; // 6 rows
+      const startX = (210 - totalGridWidth) / 2; // Center horizontally
+      const startY = 40; // Start close to header
       
-      // Draw 54 slots in 9-column grid exactly like modal
+      // Draw 54 slots in 9-column grid with NO GAPS
       for (let i = 1; i <= 54; i++) {
         const row = Math.floor((i - 1) / cols);
         const col = (i - 1) % cols;
         
-        const x = startX + (col * (boxWidth + horizontalSpacing));
-        const y = startY + (row * (boxHeight + verticalSpacing));
+        // Position with NO spacing between boxes
+        const x = startX + (col * boxWidth);
+        const y = startY + (row * boxHeight);
         
-        // Draw the box border (black, 1px like modal)
+        // Draw the box border - thick like modal
         doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.5);
+        doc.setLineWidth(1);
         doc.rect(x, y, boxWidth, boxHeight);
         
-        // Add slot number in center
+        // Add slot number - LARGER and centered
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
+        doc.setFontSize(14); // Much larger font
         doc.setTextColor(0, 0, 0);
-        doc.text(i.toString(), x + boxWidth/2, y + boxHeight/2 + 1, { align: 'center' });
+        doc.text(i.toString(), x + boxWidth/2, y + boxHeight/2 + 2, { align: 'center' });
         
         // Check if this slot is selected - draw green X exactly like modal
         if (selectedSlots.includes(i)) {
-          // Green X overlay that fills most of the box
-          doc.setDrawColor(0, 189, 44); // Match the green color from modal
-          doc.setLineWidth(1.5);
+          // Green X overlay that fills the box
+          doc.setDrawColor(0, 189, 44); // Exact green from modal
+          doc.setLineWidth(3);
           
-          // X lines with small margin from edges
-          const margin = 1;
+          // X lines from corner to corner
+          const margin = 2;
           doc.line(x + margin, y + margin, x + boxWidth - margin, y + boxHeight - margin);
           doc.line(x + margin, y + boxHeight - margin, x + boxWidth - margin, y + margin);
         }
