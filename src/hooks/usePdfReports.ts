@@ -348,8 +348,30 @@ export const usePdfReports = () => {
       // Calculate next game contribution from the database field
       const nextGameContribution = gameData.jackpot_contribution_to_next_game || 0;
       
-      // Calculate actual game distributions (total distributions minus next game contribution)
-      const actualGameDistributions = totalDistributions - nextGameContribution;
+      // Calculate actual game distributions using shortfall logic
+      const calculateActualDistributions = () => {
+        const minimumStartingJackpot = gameData.minimum_starting_jackpot || 500;
+        const netAvailableForWinner = gameData.net_available_for_final_winner;
+        
+        // Check if there's a shortfall and Queen of Hearts winner
+        const hasQueenOfHeartsWinner = gameData.weeks?.some((week: any) => 
+          week.winner_name && week.card_selected === 'Queen of Hearts'
+        );
+        
+        const isShortfall = netAvailableForWinner !== undefined && 
+                           netAvailableForWinner < minimumStartingJackpot && 
+                           hasQueenOfHeartsWinner;
+        
+        if (isShortfall) {
+          // For shortfall cases, use minimum starting jackpot
+          return minimumStartingJackpot;
+        }
+        
+        // For regular cases, use net available for winner or fallback calculation
+        return netAvailableForWinner || (totalDistributions - nextGameContribution);
+      };
+      
+      const actualGameDistributions = calculateActualDistributions();
       
       // Financial Summary Box with proper fit-content height
       const financialBoxHeight = 65;
