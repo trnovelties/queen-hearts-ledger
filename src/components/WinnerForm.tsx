@@ -575,7 +575,7 @@ export function WinnerForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>{isEditing ? "Edit Winner Details" : "Record Winner Details"}</CardTitle>
