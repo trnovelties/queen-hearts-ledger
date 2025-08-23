@@ -249,7 +249,7 @@ export function WinnerForm({
           } else {
             // Define the desired card order
             const desiredOrder = [
-              "Queen of Hearts", "Joker", "Joker Red",
+              "Queen of Hearts", "1. joker", "2. joker",
               "Ace of Hearts", "2 of Hearts", "3 of Hearts", "4 of Hearts", "5 of Hearts", 
               "6 of Hearts", "7 of Hearts", "8 of Hearts", "9 of Hearts", "10 of Hearts", 
               "Jack of Hearts", "King of Hearts",
@@ -329,15 +329,15 @@ export function WinnerForm({
         const selectedCards = previousWinners?.map(w => w.card_selected) || [];
         console.log('Previously selected cards:', selectedCards);
 
-        // Count joker selections (handle both "Joker" and "Joker Red")
+        // Count joker selections (handle both "1. joker" and "2. joker")
         const jokerSelections = selectedCards.filter(card => 
-          card === 'Joker' || card === 'Joker Red'
+          card === '1. joker' || card === '2. joker'
         ).length;
 
         // Filter out unavailable cards
         const available = cardDistributions.filter(card => {
           // Special handling for jokers - allow up to 2 selections
-          if (card.card === 'Joker' || card.card === 'Joker Red') {
+          if (card.card === '1. joker' || card.card === '2. joker') {
             return jokerSelections < 2;
           }
           

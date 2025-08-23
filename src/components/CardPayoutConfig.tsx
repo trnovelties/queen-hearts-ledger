@@ -26,8 +26,8 @@ export function CardPayoutConfig() {
   const [cardDistributions, setCardDistributions] = useState<CardDistribution[]>([
     // Special cards first
     { card: "Queen of Hearts", distribution: "jackpot" },
-    { card: "Joker", distribution: 50 },
-    { card: "Joker Red", distribution: 50 },
+    { card: "1. joker", distribution: 50 },
+    { card: "2. joker", distribution: 50 },
     // Hearts
     { card: "Ace of Hearts", distribution: 35 },
     { card: "2 of Hearts", distribution: 25 },
@@ -134,7 +134,7 @@ export function CardPayoutConfig() {
             
             // Define the desired card order
             const desiredOrder = [
-              "Queen of Hearts", "Joker", "Joker Red",
+              "Queen of Hearts", "1. joker", "2. joker",
               "Ace of Hearts", "2 of Hearts", "3 of Hearts", "4 of Hearts", "5 of Hearts", 
               "6 of Hearts", "7 of Hearts", "8 of Hearts", "9 of Hearts", "10 of Hearts", 
               "Jack of Hearts", "King of Hearts",
