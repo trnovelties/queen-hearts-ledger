@@ -296,12 +296,10 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   const calculateWinnerPayout = () => {
     const weeklyPayout = slipData.week?.weekly_payout || winnerData?.payoutAmount || 0;
     const minimumStartingJackpot = slipData.game?.minimum_starting_jackpot || 500;
-    const totalJackpotContributions = slipData.game?.total_jackpot_contributions || weekJackpotTotal;
-    const carryoverJackpot = slipData.game?.carryover_jackpot || 0;
+    const netAvailableForWinner = slipData.game?.net_available_for_final_winner;
     
-    // Check if there's a shortfall (total contributions + carryover < minimum)
-    const totalAvailableJackpot = totalJackpotContributions + carryoverJackpot;
-    const isShortfall = totalAvailableJackpot < minimumStartingJackpot;
+    // Check if there's a shortfall based on net available vs minimum
+    const isShortfall = netAvailableForWinner !== undefined && netAvailableForWinner < minimumStartingJackpot;
     
     // If shortfall and this is a Queen of Hearts winner, show minimum starting jackpot
     const isQueenOfHearts = (slipData.week?.card_selected || winnerData?.cardSelected) === 'Queen of Hearts';
