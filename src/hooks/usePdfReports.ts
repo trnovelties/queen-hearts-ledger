@@ -342,26 +342,28 @@ export const usePdfReports = () => {
         return sum;
       }, 0) || 0;
       
-      // Calculate organization net profit: Organization Total - (Expenses + Donations)
-      const organizationNetProfit = organizationTotal - totalExpenses - totalDonations;
+      // Calculate shortfall coverage and check if there's a shortfall
+      const shortfallCoverage = gameData.jackpot_shortfall_covered || 0;
+      const minimumStartingJackpot = gameData.minimum_starting_jackpot || 500;
+      const netAvailableForWinner = gameData.net_available_for_final_winner;
+      
+      // Check if there's a shortfall and Queen of Hearts winner
+      const hasQueenOfHeartsWinner = gameData.weeks?.some((week: any) => 
+        week.winner_name && week.card_selected === 'Queen of Hearts'
+      );
+      
+      const isShortfall = netAvailableForWinner !== undefined && 
+                         netAvailableForWinner < minimumStartingJackpot && 
+                         hasQueenOfHeartsWinner;
+      
+      // Calculate organization net profit: Organization Total - (Expenses + Donations + Shortfall Coverage)
+      const organizationNetProfit = organizationTotal - totalExpenses - totalDonations - shortfallCoverage;
       
       // Calculate next game contribution from the database field
       const nextGameContribution = gameData.jackpot_contribution_to_next_game || 0;
       
       // Calculate actual game distributions using shortfall logic
       const calculateActualDistributions = () => {
-        const minimumStartingJackpot = gameData.minimum_starting_jackpot || 500;
-        const netAvailableForWinner = gameData.net_available_for_final_winner;
-        
-        // Check if there's a shortfall and Queen of Hearts winner
-        const hasQueenOfHeartsWinner = gameData.weeks?.some((week: any) => 
-          week.winner_name && week.card_selected === 'Queen of Hearts'
-        );
-        
-        const isShortfall = netAvailableForWinner !== undefined && 
-                           netAvailableForWinner < minimumStartingJackpot && 
-                           hasQueenOfHeartsWinner;
-        
         if (isShortfall) {
           // For shortfall cases, use minimum starting jackpot
           return minimumStartingJackpot;
@@ -373,8 +375,20 @@ export const usePdfReports = () => {
       
       const actualGameDistributions = calculateActualDistributions();
       
-      // Financial Summary Box with proper fit-content height
-      const financialBoxHeight = 65;
+      // Build financial items array, conditionally including shortfall coverage
+      const financialItems = [
+        ['Total Tickets Sold:', `${totalTicketsSold.toLocaleString()} tickets`],
+        ['Total Sales Revenue:', formatCurrency(totalSalesRevenue)],
+        ['Total Winner Distributions:', formatCurrency(actualGameDistributions)],
+        ['Total Expenses:', formatCurrency(totalExpenses)],
+        ['Total Donations:', formatCurrency(totalDonations)],
+        ...(isShortfall ? [['Shortfall Coverage:', formatCurrency(shortfallCoverage)]] : []),
+        ['Organization Net Profit:', formatCurrency(organizationNetProfit)],
+        ['Next game Contribution:', formatCurrency(nextGameContribution)]
+      ];
+      
+      // Adjust box height based on number of items
+      const financialBoxHeight = isShortfall ? 73 : 65;
       doc.setFillColor(245, 245, 245);
       doc.rect(margin, yPosition, contentWidth, financialBoxHeight, 'F');
       doc.setLineWidth(0.8);
@@ -389,16 +403,6 @@ export const usePdfReports = () => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
-      
-      const financialItems = [
-        ['Total Tickets Sold:', `${totalTicketsSold.toLocaleString()} tickets`],
-        ['Total Sales Revenue:', formatCurrency(totalSalesRevenue)],
-        ['Total Winner Distributions:', formatCurrency(actualGameDistributions)],
-        ['Total Expenses:', formatCurrency(totalExpenses)],
-        ['Total Donations:', formatCurrency(totalDonations)],
-        ['Organization Net Profit:', formatCurrency(organizationNetProfit)],
-        ['Next game Contribution:', formatCurrency(nextGameContribution)]
-      ];
       
       financialItems.forEach(([label, value], index) => {
         const yPos = financialStartY + (index * financialLineSpacing);
