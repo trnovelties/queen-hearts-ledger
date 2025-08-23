@@ -588,7 +588,7 @@ export function WinnerForm({
             <div className="grid gap-6" style={{ gridTemplateColumns: isEditing && existingWinnerData ? '1fr 1fr' : '1fr' }}>
               {/* Left column: Previous winner details (only show when editing) */}
               {isEditing && existingWinnerData && (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="p-3 pr-8 bg-yellow-50 border border-yellow-200 rounded-lg h-fit">
                   <h4 className="font-medium text-yellow-800 mb-3">Previous Winner Details</h4>
                   <div className="space-y-3 text-sm">
                     <div>
