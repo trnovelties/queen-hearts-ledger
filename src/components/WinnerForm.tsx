@@ -343,19 +343,9 @@ export function WinnerForm({
         const selectedCards = previousWinners?.map(w => w.card_selected) || [];
         console.log('Previously selected cards:', selectedCards);
 
-        // Count joker selections (handle both "1. joker" and "2. joker")
-        const jokerSelections = selectedCards.filter(card => 
-          card === '1. joker' || card === '2. joker'
-        ).length;
-
         // Filter out unavailable cards
         const available = cardDistributions.filter(card => {
-          // Special handling for jokers - allow up to 2 selections
-          if (card.card === '1. joker' || card.card === '2. joker') {
-            return jokerSelections < 2;
-          }
-          
-          // For all other cards, exclude if already selected
+          // For all cards (including jokers), exclude if already selected
           return !selectedCards.includes(card.card);
         });
 
