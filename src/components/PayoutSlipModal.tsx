@@ -292,6 +292,29 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
   // Calculate ending jackpot (previous + contributions - distribution)
   const endingJackpot = (slipData.week?.ending_jackpot || 0);
 
+  // Calculate shortfall logic for winner payout
+  const calculateWinnerPayout = () => {
+    const weeklyPayout = slipData.week?.weekly_payout || winnerData?.payoutAmount || 0;
+    const minimumStartingJackpot = slipData.game?.minimum_starting_jackpot || 500;
+    const totalJackpotContributions = slipData.game?.total_jackpot_contributions || weekJackpotTotal;
+    const carryoverJackpot = slipData.game?.carryover_jackpot || 0;
+    
+    // Check if there's a shortfall (total contributions + carryover < minimum)
+    const totalAvailableJackpot = totalJackpotContributions + carryoverJackpot;
+    const isShortfall = totalAvailableJackpot < minimumStartingJackpot;
+    
+    // If shortfall and this is a Queen of Hearts winner, show minimum starting jackpot
+    const isQueenOfHearts = (slipData.week?.card_selected || winnerData?.cardSelected) === 'Queen of Hearts';
+    if (isShortfall && isQueenOfHearts) {
+      return minimumStartingJackpot;
+    }
+    
+    // Otherwise, show the actual weekly payout
+    return weeklyPayout;
+  };
+
+  const winnerPayoutAmount = calculateWinnerPayout();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto" aria-describedby="distribution-slip-content">
@@ -380,7 +403,7 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
           <div className="text-center space-y-4 bg-green-50 border-2 border-green-300 rounded-lg p-8">
             <h3 className="text-2xl font-bold text-green-800">WINNER PRIZE AMOUNT</h3>
             <div className="text-6xl font-bold text-green-700">
-              {formatCurrency(slipData.week?.weekly_payout || winnerData?.payoutAmount || 0)}
+              {formatCurrency(winnerPayoutAmount)}
             </div>
             <p className="text-lg text-green-600">Amount to be distributed to winner</p>
           </div>
