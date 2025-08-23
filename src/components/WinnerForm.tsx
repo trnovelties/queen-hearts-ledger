@@ -623,84 +623,90 @@ export function WinnerForm({
               <div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="winnerName">Winner's Name</Label>
-                <Input
-                  id="winnerName"
-                  type="text"
-                  value={formData.winnerName}
-                  onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cardSelected">Card Selected</Label>
-                <Select 
-                  value={formData.cardSelected}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, cardSelected: value });
-                    const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
-                    setSelectedDistribution(distribution);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a card" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
-                    {cardDistributions.map((card, index) => {
-                      const isAvailable = availableCards.some(available => available.card === card.card);
-                      return (
-                        <SelectItem 
-                          key={index} 
-                          value={card.card} 
-                          disabled={!isAvailable}
-                          className={!isAvailable ? "opacity-50" : ""}
-                        >
-                          {card.card} - ${card.distribution}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.cardSelected !== 'Queen of Hearts' && (
+              {/* Row 1: Winner Name and Card Selected */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="selectedDistribution">Selected Distribution</Label>
+                  <Label htmlFor="winnerName">Winner's Name</Label>
                   <Input
-                    id="selectedDistribution"
-                    type="number"
-                    value={selectedDistribution}
-                    readOnly
+                    id="winnerName"
+                    type="text"
+                    value={formData.winnerName}
+                    onChange={(e) => setFormData({ ...formData, winnerName: e.target.value })}
+                    placeholder="John Doe"
+                    required
                   />
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="slotChosen">Slot Chosen</Label>
-                <Select value={formData.slotChosen} onValueChange={(value) => setFormData({ ...formData, slotChosen: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select slot" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => {
-                      const isAvailable = availableSlots.includes(slot);
-                      return (
-                        <SelectItem 
-                          key={slot} 
-                          value={slot.toString()}
-                          disabled={!isAvailable}
-                          className={!isAvailable ? "opacity-50" : ""}
-                        >
-                          {slot}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label htmlFor="cardSelected">Card Selected</Label>
+                  <Select 
+                    value={formData.cardSelected}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, cardSelected: value });
+                      const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
+                      setSelectedDistribution(distribution);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a card" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Queen of Hearts">Queen of Hearts</SelectItem>
+                      {cardDistributions.map((card, index) => {
+                        const isAvailable = availableCards.some(available => available.card === card.card);
+                        return (
+                          <SelectItem 
+                            key={index} 
+                            value={card.card} 
+                            disabled={!isAvailable}
+                            className={!isAvailable ? "opacity-50" : ""}
+                          >
+                            {card.card} - ${card.distribution}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2: Selected Distribution and Slot Chosen */}
+              <div className="grid grid-cols-2 gap-4">
+                {formData.cardSelected !== 'Queen of Hearts' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="selectedDistribution">Selected Distribution</Label>
+                    <Input
+                      id="selectedDistribution"
+                      type="number"
+                      value={selectedDistribution}
+                      readOnly
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="slotChosen">Slot Chosen</Label>
+                  <Select value={formData.slotChosen} onValueChange={(value) => setFormData({ ...formData, slotChosen: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select slot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => {
+                        const isAvailable = availableSlots.includes(slot);
+                        return (
+                          <SelectItem 
+                            key={slot} 
+                            value={slot.toString()}
+                            disabled={!isAvailable}
+                            className={!isAvailable ? "opacity-50" : ""}
+                          >
+                            {slot}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
