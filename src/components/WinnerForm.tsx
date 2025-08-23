@@ -60,6 +60,8 @@ export function WinnerForm({
   const [penaltyPercentage, setPenaltyPercentage] = useState(0);
   const [availableCards, setAvailableCards] = useState<{ card: string; distribution: number }[]>([]);
   const [availableSlots, setAvailableSlots] = useState<number[]>([]);
+  const [existingWinnerData, setExistingWinnerData] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Calculate total accumulated jackpot for this week
   const totalAccumulatedJackpot = (currentJackpotTotal || 0);
@@ -319,6 +321,64 @@ export function WinnerForm({
     loadGameConfiguration();
   }, [open, gameData, gameId]);
 
+  // Effect to load existing winner data when editing
+  useEffect(() => {
+    const loadExistingWinnerData = async () => {
+      if (!weekId || !open) return;
+
+      try {
+        const { data: weekData, error } = await supabase
+          .from('weeks')
+          .select('*')
+          .eq('id', weekId)
+          .eq('user_id', user?.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching existing winner data:', error);
+          return;
+        }
+
+        if (weekData?.winner_name) {
+          // This is an edit operation
+          setIsEditing(true);
+          setExistingWinnerData({
+            winnerName: weekData.winner_name,
+            cardSelected: weekData.card_selected,
+            slotChosen: weekData.slot_chosen,
+            winnerPresent: weekData.winner_present,
+            authorizedSignatureName: weekData.authorized_signature_name,
+            weeklyPayout: weekData.weekly_payout
+          });
+
+          // Pre-populate form with existing data
+          setFormData({
+            winnerName: weekData.winner_name || '',
+            cardSelected: weekData.card_selected || '',
+            slotChosen: weekData.slot_chosen?.toString() || '',
+            winnerPresent: weekData.winner_present ?? true,
+            authorizedSignatureName: weekData.authorized_signature_name || ''
+          });
+
+          // Set the distribution if not Queen of Hearts
+          if (weekData.card_selected !== 'Queen of Hearts') {
+            const distribution = cardDistributions.find(card => card.card === weekData.card_selected)?.distribution || weekData.weekly_payout || 0;
+            setSelectedDistribution(distribution);
+          }
+        } else {
+          // This is a new entry
+          setIsEditing(false);
+          setExistingWinnerData(null);
+        }
+
+      } catch (error) {
+        console.error('Error loading existing winner data:', error);
+      }
+    };
+
+    loadExistingWinnerData();
+  }, [weekId, open, user?.id, cardDistributions]);
+
   // Effect to filter available cards based on previous selections
   useEffect(() => {
     const filterAvailableCards = async () => {
@@ -518,12 +578,45 @@ export function WinnerForm({
       <DialogContent className="max-w-md">
         <Card className="border-0 shadow-none">
           <CardHeader>
-            <CardTitle>Record Winner Details</CardTitle>
+            <CardTitle>{isEditing ? "Edit Winner Details" : "Record Winner Details"}</CardTitle>
             <CardDescription>
-              Enter the winner's information for this week
+              {isEditing ? "Modify the winner's information for this week" : "Enter the winner's information for this week"}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Display existing winner data when editing */}
+            {isEditing && existingWinnerData && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h4 className="font-medium text-yellow-800 mb-3">Previous Winner Details</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="font-medium text-yellow-700">Winner Name:</span>
+                    <div className="text-yellow-900">{existingWinnerData.winnerName}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-yellow-700">Card Selected:</span>
+                    <div className="text-yellow-900">{existingWinnerData.cardSelected}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-yellow-700">Slot Chosen:</span>
+                    <div className="text-yellow-900">#{existingWinnerData.slotChosen}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-yellow-700">Payout Amount:</span>
+                    <div className="text-yellow-900">${existingWinnerData.weeklyPayout || 0}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-yellow-700">Winner Present:</span>
+                    <div className="text-yellow-900">{existingWinnerData.winnerPresent ? 'Yes' : 'No'}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-yellow-700">Authorized Signature:</span>
+                    <div className="text-yellow-900">{existingWinnerData.authorizedSignatureName}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="winnerName">Winner's Name</Label>
@@ -540,6 +633,7 @@ export function WinnerForm({
               <div className="space-y-2">
                 <Label htmlFor="cardSelected">Card Selected</Label>
                 <Select 
+                  value={formData.cardSelected}
                   onValueChange={(value) => {
                     setFormData({ ...formData, cardSelected: value });
                     const distribution = cardDistributions.find(card => card.card === value)?.distribution || 0;
