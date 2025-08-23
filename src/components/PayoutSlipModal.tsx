@@ -307,7 +307,12 @@ export function PayoutSlipModal({ open, onOpenChange, winnerData }: PayoutSlipMo
       return minimumStartingJackpot;
     }
     
-    // Otherwise, show the actual weekly payout
+    // For regular cases, show net available amount for winner
+    if (netAvailableForWinner !== undefined) {
+      return netAvailableForWinner;
+    }
+    
+    // Fallback to weekly payout if net available not calculated
     return weeklyPayout;
   };
 
