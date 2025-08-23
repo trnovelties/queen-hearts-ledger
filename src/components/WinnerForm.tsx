@@ -575,7 +575,7 @@ export function WinnerForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>{isEditing ? "Edit Winner Details" : "Record Winner Details"}</CardTitle>
@@ -584,38 +584,43 @@ export function WinnerForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Display existing winner data when editing */}
-            {isEditing && existingWinnerData && (
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h4 className="font-medium text-yellow-800 mb-3">Previous Winner Details</h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="font-medium text-yellow-700">Winner Name:</span>
-                    <div className="text-yellow-900">{existingWinnerData.winnerName}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-yellow-700">Card Selected:</span>
-                    <div className="text-yellow-900">{existingWinnerData.cardSelected}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-yellow-700">Slot Chosen:</span>
-                    <div className="text-yellow-900">#{existingWinnerData.slotChosen}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-yellow-700">Payout Amount:</span>
-                    <div className="text-yellow-900">${existingWinnerData.weeklyPayout || 0}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-yellow-700">Winner Present:</span>
-                    <div className="text-yellow-900">{existingWinnerData.winnerPresent ? 'Yes' : 'No'}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-yellow-700">Authorized Signature:</span>
-                    <div className="text-yellow-900">{existingWinnerData.authorizedSignatureName}</div>
+            {/* Horizontal split layout */}
+            <div className="grid gap-6" style={{ gridTemplateColumns: isEditing && existingWinnerData ? '1fr 1fr' : '1fr' }}>
+              {/* Left column: Previous winner details (only show when editing) */}
+              {isEditing && existingWinnerData && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="font-medium text-yellow-800 mb-3">Previous Winner Details</h4>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <span className="font-medium text-yellow-700">Winner Name:</span>
+                      <div className="text-yellow-900">{existingWinnerData.winnerName}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-yellow-700">Card Selected:</span>
+                      <div className="text-yellow-900">{existingWinnerData.cardSelected}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-yellow-700">Slot Chosen:</span>
+                      <div className="text-yellow-900">#{existingWinnerData.slotChosen}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-yellow-700">Payout Amount:</span>
+                      <div className="text-yellow-900">${existingWinnerData.weeklyPayout || 0}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-yellow-700">Winner Present:</span>
+                      <div className="text-yellow-900">{existingWinnerData.winnerPresent ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-yellow-700">Authorized Signature:</span>
+                      <div className="text-yellow-900">{existingWinnerData.authorizedSignatureName}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Right column: Edit form */}
+              <div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -737,6 +742,8 @@ export function WinnerForm({
                 </Button>
               </div>
             </form>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </DialogContent>
