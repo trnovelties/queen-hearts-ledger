@@ -45,18 +45,18 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Login Form */}
-      <div className="w-full lg:w-1/2 bg-primary flex flex-col">
-        {/* Cover Image Section */}
-        <div className="h-48 bg-muted/20 flex items-center justify-center">
-          <div className="text-primary-foreground/50">
-            Cover Image Area
-          </div>
+    <div className="min-h-screen flex flex-col">
+      {/* Top Cover Image Section - Full Width */}
+      <div className="h-32 bg-muted/20 flex items-center justify-center border-b">
+        <div className="text-muted-foreground">
+          Cover Image Area - League Leader Plus
         </div>
-        
-        {/* Login Form Section */}
-        <div className="flex-1 flex items-center justify-center p-8">
+      </div>
+      
+      {/* Main Content Area - Two Columns */}
+      <div className="flex-1 flex">
+        {/* Left Panel - Login Form */}
+        <div className="w-full lg:w-1/2 bg-primary flex items-center justify-center p-8">
           <div className="w-full max-w-sm">
             {/* Logo */}
             <div className="mb-8 text-center">
@@ -125,30 +125,30 @@ export default function Login() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Right Panel - Features */}
-      <div className="hidden lg:flex w-1/2 bg-muted items-center justify-center p-8">
-        <div className="max-w-md">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">Features:</h2>
-          <ul className="space-y-2 text-foreground/80">
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              Real-time jackpot tracking and calculations
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              Comprehensive financial reporting and analytics
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              Automated payout calculations and winner management
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              Online database lets you check on your games from virtually anywhere!
-            </li>
-          </ul>
+        {/* Right Panel - Features */}
+        <div className="hidden lg:flex w-1/2 bg-muted items-center justify-center p-8">
+          <div className="max-w-md">
+            <h2 className="text-xl font-semibold mb-4 text-foreground">Features:</h2>
+            <ul className="space-y-2 text-foreground/80">
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                Real-time jackpot tracking and calculations
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                Comprehensive financial reporting and analytics
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                Automated payout calculations and winner management
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                Online database lets you check on your games from virtually anywhere!
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
