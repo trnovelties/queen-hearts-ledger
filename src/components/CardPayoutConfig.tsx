@@ -132,6 +132,14 @@ export function CardPayoutConfig() {
               ? JSON.parse(data.card_payouts) 
               : data.card_payouts;
             
+            // Handle migration from old "Joker" to new "1. joker" and "2. joker"
+            if (distributionsData['Joker'] !== undefined && distributionsData['1. joker'] === undefined && distributionsData['2. joker'] === undefined) {
+              const jokerValue = distributionsData['Joker'];
+              distributionsData['1. joker'] = jokerValue;
+              distributionsData['2. joker'] = jokerValue;
+              delete distributionsData['Joker'];
+            }
+            
             // Define the desired card order
             const desiredOrder = [
               "Queen of Hearts", "1. joker", "2. joker",
@@ -158,6 +166,12 @@ export function CardPayoutConfig() {
                 orderedDistributions.push({
                   card: cardName,
                   distribution: distributionsData[cardName] === 'jackpot' ? 'jackpot' : Number(distributionsData[cardName])
+                });
+              } else if ((cardName === '1. joker' || cardName === '2. joker') && distributionsData['1. joker'] === undefined && distributionsData['2. joker'] === undefined) {
+                // Add default values for jokers if not found
+                orderedDistributions.push({
+                  card: cardName,
+                  distribution: 50
                 });
               }
             });

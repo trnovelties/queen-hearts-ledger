@@ -247,6 +247,14 @@ export function WinnerForm({
               distribution: distribution.payout || 0
             })));
           } else {
+            // Handle migration from old "Joker" to new "1. joker" and "2. joker"
+            if (distributionsData['Joker'] !== undefined && distributionsData['1. joker'] === undefined && distributionsData['2. joker'] === undefined) {
+              const jokerValue = distributionsData['Joker'];
+              distributionsData['1. joker'] = jokerValue;
+              distributionsData['2. joker'] = jokerValue;
+              delete distributionsData['Joker'];
+            }
+            
             // Define the desired card order
             const desiredOrder = [
               "Queen of Hearts", "1. joker", "2. joker",
@@ -273,6 +281,12 @@ export function WinnerForm({
                 orderedDistributions.push({
                   card: cardName,
                   distribution: typeof distributionsData[cardName] === 'number' ? distributionsData[cardName] : 0
+                });
+              } else if ((cardName === '1. joker' || cardName === '2. joker') && distributionsData[cardName] === undefined) {
+                // Add default values for jokers if not found
+                orderedDistributions.push({
+                  card: cardName,
+                  distribution: 50
                 });
               }
             });
