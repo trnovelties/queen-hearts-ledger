@@ -183,14 +183,16 @@ export const WeekManagement = ({
           {isGameCompleted ? "Game Information" : "Weeks"}
         </h3>
         <div className="flex space-x-2">
-          <Button
-            onClick={() => onGeneratePdfReport(game)}
-            variant="export"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" /> Export Game PDF
-          </Button>
+          {isGameCompleted && (
+            <Button
+              onClick={() => onGeneratePdfReport(game)}
+              variant="export"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" /> Export Game PDF
+            </Button>
+          )}
           {needsGameCompletionButton() && (
             <Button
               onClick={() => {
