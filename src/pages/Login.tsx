@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,44 +88,74 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-accent p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          {/* Logo title and description removed */}
-        </CardHeader>
-        
-        <CardContent>
+    <div className="min-h-screen flex">
+      {/* Left Panel - Login Form */}
+      <div className="w-full lg:w-1/2 bg-primary flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="mb-8 text-center">
+            <div className="h-16 w-16 mx-auto mb-4 bg-secondary rounded-lg flex items-center justify-center">
+              <span className="text-2xl font-bold text-secondary-foreground">TR</span>
+            </div>
+            <h1 className="text-2xl font-bold text-primary-foreground mb-2">
+              Queen of Hearts Manager
+            </h1>
+            <p className="text-primary-foreground/80 text-sm">
+              Online League Management
+            </p>
+          </div>
+
           <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Sign Up</TabsTrigger>
+            <TabsList className="grid grid-cols-2 mb-6 bg-primary-foreground/10">
+              <TabsTrigger 
+                value="login" 
+                className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary"
+              >
+                Login
+              </TabsTrigger>
+              <TabsTrigger 
+                value="register"
+                className="data-[state=active]:bg-primary-foreground data-[state=active]:text-primary"
+              >
+                Sign Up
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-primary-foreground">
+                    Username:
+                  </Label>
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="example@organization.org"
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="bg-primary-foreground border-0"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-primary-foreground">
+                    Password:
+                  </Label>
                   <Input 
                     id="password" 
                     type="password" 
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="bg-primary-foreground border-0"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold" 
+                  disabled={isLoading}
+                >
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
               </form>
@@ -135,46 +164,113 @@ export default function Login() {
             <TabsContent value="register">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-primary-foreground">
+                    Email:
+                  </Label>
                   <Input 
                     id="signup-email" 
                     type="email" 
-                    placeholder="example@organization.org"
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="bg-primary-foreground border-0"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-primary-foreground">
+                    Password:
+                  </Label>
                   <Input 
                     id="signup-password" 
                     type="password" 
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="bg-primary-foreground border-0"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Label htmlFor="confirm-password" className="text-primary-foreground">
+                    Confirm Password:
+                  </Label>
                   <Input 
                     id="confirm-password" 
                     type="password" 
-                    placeholder="••••••••"
+                    placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    className="bg-primary-foreground border-0"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold" 
+                  disabled={isLoading}
+                >
                   {isLoading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6 text-center">
+            <p className="text-primary-foreground/70 text-sm">
+              Don't have a username or password?{" "}
+              <button 
+                type="button"
+                className="text-secondary underline hover:no-underline"
+                onClick={() => setActiveTab("register")}
+              >
+                Contact Admin
+              </button>
+              {" "}for information on how you can get signed up for Queen of Hearts Manager.
+            </p>
+          </div>
+
+          <div className="mt-6 text-primary-foreground/70 text-sm">
+            <p className="mb-2">
+              Queen of Hearts Manager gives you the opportunity to run your leagues from any computer with an Internet connection.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Features */}
+      <div className="hidden lg:flex w-1/2 bg-muted items-center justify-center p-8">
+        <div className="max-w-md">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Features:</h2>
+          <ul className="space-y-2 text-foreground/80">
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              Real-time jackpot tracking and calculations
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              Comprehensive financial reporting and analytics
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              Automated payout calculations and winner management
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              Online database lets you check on your games from virtually anywhere!
+            </li>
+          </ul>
+
+          <div className="mt-8">
+            <h3 className="font-semibold mb-2 text-foreground">Queen of Hearts Manager requires:</h3>
+            <ul className="space-y-1 text-sm text-foreground/70">
+              <li>• Modern web browser (Chrome, Firefox, Safari, Edge)</li>
+              <li>• Internet connection for real-time sync</li>
+              <li>• Mobile-friendly responsive design</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
