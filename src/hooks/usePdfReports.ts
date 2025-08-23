@@ -387,8 +387,9 @@ export const usePdfReports = () => {
         ['Next game Contribution:', formatCurrency(nextGameContribution)]
       ];
       
-      // Adjust box height based on number of items
-      const financialBoxHeight = isShortfall ? 73 : 65;
+      // Keep consistent box height and adjust line spacing for shortfall
+      const financialBoxHeight = 65;
+      const financialLineSpacing = isShortfall ? 7 : 8;
       doc.setFillColor(245, 245, 245);
       doc.rect(margin, yPosition, contentWidth, financialBoxHeight, 'F');
       doc.setLineWidth(0.8);
@@ -398,7 +399,6 @@ export const usePdfReports = () => {
       const financialStartY = yPosition + 8;
       const financialLeftX = margin + 8;
       const financialValueX = margin + 120;
-      const financialLineSpacing = 8;
       
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
