@@ -670,43 +670,29 @@ export function WinnerForm({
                 </div>
               </div>
 
-              {/* Row 2: Selected Distribution and Slot Chosen */}
-              <div className="grid grid-cols-2 gap-4">
-                {formData.cardSelected !== 'Queen of Hearts' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="selectedDistribution">Selected Distribution</Label>
-                    <Input
-                      id="selectedDistribution"
-                      type="number"
-                      value={selectedDistribution}
-                      readOnly
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="slotChosen">Slot Chosen</Label>
-                  <Select value={formData.slotChosen} onValueChange={(value) => setFormData({ ...formData, slotChosen: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select slot" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => {
-                        const isAvailable = availableSlots.includes(slot);
-                        return (
-                          <SelectItem 
-                            key={slot} 
-                            value={slot.toString()}
-                            disabled={!isAvailable}
-                            className={!isAvailable ? "opacity-50" : ""}
-                          >
-                            {slot}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Row 2: Slot Chosen */}
+              <div className="space-y-2">
+                <Label htmlFor="slotChosen">Slot Chosen</Label>
+                <Select value={formData.slotChosen} onValueChange={(value) => setFormData({ ...formData, slotChosen: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select slot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 52 }, (_, i) => i + 1).map((slot) => {
+                      const isAvailable = availableSlots.includes(slot);
+                      return (
+                        <SelectItem 
+                          key={slot} 
+                          value={slot.toString()}
+                          disabled={!isAvailable}
+                          className={!isAvailable ? "opacity-50" : ""}
+                        >
+                          {slot}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center space-x-2">
