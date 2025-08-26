@@ -249,17 +249,17 @@ export function WinnerForm({
               distribution: distribution.payout || 0
             })));
           } else {
-            // Handle migration from old "Joker" to new "1. joker" and "2. joker"
-            if (distributionsData['Joker'] !== undefined && distributionsData['1. joker'] === undefined && distributionsData['2. joker'] === undefined) {
+            // Handle migration from old "Joker" to new "1. Joker" and "2. Joker"
+            if (distributionsData['Joker'] !== undefined && distributionsData['1. Joker'] === undefined && distributionsData['2. Joker'] === undefined) {
               const jokerValue = distributionsData['Joker'];
-              distributionsData['1. joker'] = jokerValue;
-              distributionsData['2. joker'] = jokerValue;
+              distributionsData['1. Joker'] = jokerValue;
+              distributionsData['2. Joker'] = jokerValue;
               delete distributionsData['Joker'];
             }
             
             // Define the desired card order
             const desiredOrder = [
-              "Queen of Hearts", "1. joker", "2. joker",
+              "Queen of Hearts", "1. Joker", "2. Joker",
               "Ace of Hearts", "2 of Hearts", "3 of Hearts", "4 of Hearts", "5 of Hearts", 
               "6 of Hearts", "7 of Hearts", "8 of Hearts", "9 of Hearts", "10 of Hearts", 
               "Jack of Hearts", "King of Hearts",
@@ -284,7 +284,7 @@ export function WinnerForm({
                   card: cardName,
                   distribution: typeof distributionsData[cardName] === 'number' ? distributionsData[cardName] : 0
                 });
-              } else if ((cardName === '1. joker' || cardName === '2. joker') && distributionsData[cardName] === undefined) {
+              } else if ((cardName === '1. Joker' || cardName === '2. Joker') && distributionsData[cardName] === undefined) {
                 // Add default values for jokers if not found
                 orderedDistributions.push({
                   card: cardName,
