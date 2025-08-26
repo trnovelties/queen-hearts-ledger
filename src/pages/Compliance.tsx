@@ -12,9 +12,7 @@ export default function Compliance() {
       <Alert>
         <Construction className="h-4 w-4" />
         <AlertDescription>
-          <strong>Upcoming Feature:</strong> This section is currently under development. 
-          Compliance management tools will be available soon to help you maintain regulatory requirements 
-          and documentation for your Queen of Hearts games.
+          <strong>Upcoming Feature:</strong> This section is currently under development.
         </AlertDescription>
       </Alert>
 
