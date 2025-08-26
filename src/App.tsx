@@ -10,6 +10,7 @@ import IncomeExpense from "./pages/IncomeExpense";
 import Admin from "./pages/Admin";
 import Account from "./pages/Account";
 import AdminView from "./pages/AdminView";
+import Compliance from "./pages/Compliance";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import { AdminProvider } from "./context/AdminContext";
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
               <Route path="/income-expense" element={<AppLayout><IncomeExpense /></AppLayout>} />
               <Route path="/admin" element={<AppLayout><Admin /></AppLayout>} />
+              <Route path="/compliance" element={<AppLayout><Compliance /></AppLayout>} />
               <Route path="/admin-view" element={<AppLayout><AdminView /></AppLayout>} />
               <Route path="/account" element={<AppLayout><Account /></AppLayout>} />
               <Route path="*" element={<NotFound />} />

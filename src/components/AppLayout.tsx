@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -145,6 +145,12 @@ function AppContent({
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={location.pathname === "/compliance" ? "bg-sidebar-primary" : ""}>
+                    <Shield className="mr-2 h-6 w-6" />
+                    <span>Compliance</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 {profile?.role === 'admin' && <SidebarMenuItem>
                     <SidebarMenuButton onClick={() => navigate("/admin-view")} className={location.pathname === "/admin-view" ? "bg-sidebar-primary" : ""}>
                       <AdminViewIcon className="mr-2 h-6 w-6" />
@@ -185,6 +191,7 @@ function AppContent({
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
               {location.pathname === "/admin" && "Settings"}
+              {location.pathname === "/compliance" && "Compliance"}
               {location.pathname === "/admin-view" && "Admin View"}
               {location.pathname === "/account" && "Account"}
             </h1>
