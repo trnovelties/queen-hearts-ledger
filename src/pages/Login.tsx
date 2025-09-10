@@ -118,7 +118,7 @@ export default function Login() {
                     <Button
                       onClick={handleLogin}
                       disabled={isLoading}
-                      className="w-full sm:w-auto sm:min-w-[100px] lg:w-[80px] h-10 sm:h-12 lg:h-[48px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-xs sm:text-sm lg:text-base rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
+                      className="w-full sm:w-auto sm:min-w-[100px] lg:w-[80px] h-10 sm:h-12 lg:h-[48px] bg-[#999999] hover:bg-[#888888] active:bg-[#777777] disabled:bg-[#CCCCCC] text-white font-medium text-xs sm:text-sm lg:text-base rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
                     >
                       {isLoading ? "Loading..." : "Login"}
                     </Button>
