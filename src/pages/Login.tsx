@@ -74,7 +74,7 @@ export default function Login() {
         <div className="flex-1 flex flex-col lg:flex-row border-white border-[1px]">
           {/* Login Form Section */}
           <div className="w-full lg:w-[540px] flex items-center justify-center px-2 sm:px-4 lg:px-[35px] lg:pr-[60px] py-4 lg:py-0">
-            <div className="w-full max-w-[380px] sm:max-w-[460px] lg:w-[450px] bg-red-600 shadow-[6px_10px_14px_rgba(0,0,0,0.35)] lg:shadow-[8px_12px_12px_rgba(0,0,0,0.45)] py-5">
+            <div className="w-full max-w-[380px] sm:max-w-[460px] lg:w-[450px] bg-[#CC2136] shadow-[6px_10px_14px_rgba(0,0,0,0.35)] lg:shadow-[8px_12px_12px_rgba(0,0,0,0.45)] py-5">
               {/* Form Container */}
               <div className="px-4 sm:px-6 lg:px-2.5 py-4 sm:py-6 lg:py-0">
                 {/* Form Fields */}
