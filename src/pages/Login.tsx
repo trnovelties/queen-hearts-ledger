@@ -2,23 +2,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Mail, Lock, Heart, Crown } from "lucide-react";
 
 export default function Login() {
-  const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,224 +43,120 @@ export default function Login() {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please ensure both passwords match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { error } = await signup(email, password);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Account created!",
-        description: "Welcome to Queen of Hearts Manager.",
-      });
-      
-      // Auto-login after signup is handled by the AuthContext
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      toast({
-        title: "Signup failed",
-        description: error?.message || "There was an issue creating your account.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-background to-accent/50">
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
-      
-      <div className="relative z-10 w-full max-w-md">
+    <div className="min-h-screen bg-white flex items-center justify-center p-2.5">
+      {/* Main Container */}
+      <div className="w-full max-w-[1308px] h-[800px] bg-gray-300 border-[3px] border-black flex flex-col">
+        
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-primary p-3 rounded-full shadow-lg">
-              <Heart className="h-8 w-8 text-primary-foreground fill-current" />
+        <div className="h-[263px] flex border-b border-red-600">
+          {/* Logo Section */}
+          <div className="w-[337px] h-full flex items-center justify-center px-[43px] pr-[70px]">
+            <div className="w-[251px] h-[239px] bg-gray-400 flex items-center justify-center text-gray-600 text-sm">
+              Mail Image Placeholder
             </div>
-            <Crown className="h-6 w-6 text-secondary ml-2" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Queen of Hearts
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Streamline your fundraiser with real-time tracking
-          </p>
+          
+          {/* Title Section */}
+          <div className="flex-1 flex items-end justify-end px-[60px] py-[40px]">
+            <h1 className="text-[28px] font-bold text-black">
+              Online Organization Management
+            </h1>
+          </div>
         </div>
 
-        {/* Main Card */}
-        <Card className="shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-semibold text-center text-card-foreground">
-              Welcome Back
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-2 mb-6 bg-muted/50">
-                <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  Login
-                </TabsTrigger>
-                <TabsTrigger value="register" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  Sign Up
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-card-foreground">
-                      Email Address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="Enter your email"
-                        className="pl-10 h-12 bg-background/50 border-input/50 focus:border-primary focus:bg-background"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
+        {/* Main Content Section */}
+        <div className="flex-1 flex border-white border-[1px]">
+          {/* Login Form Section */}
+          <div className="w-[640px] flex items-center justify-center px-[43px] pr-[70px]">
+            <div className="w-[527px] h-[404px] bg-red-600 shadow-[10px_14px_14px_rgba(0,0,0,0.45)]">
+              {/* Form Container */}
+              <div className="px-2.5 py-0">
+                {/* Form Fields */}
+                <div className="bg-red-600 border-white/50 px-2.5 py-2.5 pb-[17px]">
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-card-foreground">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="password" 
-                        type="password" 
-                        placeholder="Enter your password"
-                        className="pl-10 h-12 bg-background/50 border-input/50 focus:border-primary focus:bg-background"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
+                  {/* Username Field */}
+                  <div className="flex items-center py-2.5 mb-5">
+                    <label className="text-white font-medium text-2xl w-[125px]">
+                      Username:
+                    </label>
+                    <Input 
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-[352px] h-[57px] bg-white border-0 rounded-none text-black"
+                      required
+                    />
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:shadow-lg" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                        Logging in...
-                      </div>
-                    ) : (
-                      "Sign In"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="register">
-                <form onSubmit={handleSignup} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-sm font-medium text-card-foreground">
-                      Email Address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="Enter your email"
-                        className="pl-10 h-12 bg-background/50 border-input/50 focus:border-primary focus:bg-background"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
+
+                  {/* Password Field */}
+                  <div className="flex items-center py-2.5 mb-5">
+                    <label className="text-white font-medium text-2xl w-[125px]">
+                      Password:
+                    </label>
+                    <Input 
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-[352px] h-[57px] bg-white border-0 rounded-none text-black"
+                      required
+                    />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-sm font-medium text-card-foreground">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="signup-password" 
-                        type="password" 
-                        placeholder="Create a password"
-                        className="pl-10 h-12 bg-background/50 border-input/50 focus:border-primary focus:bg-background"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
+
+                  {/* Login Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleLogin}
+                      disabled={isLoading}
+                      className="w-[121px] h-[66px] bg-gray-500 hover:bg-gray-600 text-white font-medium text-2xl rounded-none border-0"
+                    >
+                      {isLoading ? "..." : "Login"}
+                    </Button>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="text-sm font-medium text-card-foreground">
-                      Confirm Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="confirm-password" 
-                        type="password" 
-                        placeholder="Confirm your password"
-                        className="pl-10 h-12 bg-background/50 border-input/50 focus:border-primary focus:bg-background"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:shadow-lg" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                        Creating Account...
-                      </div>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-        
-        {/* Footer */}
-        <div className="text-center mt-6">
-          <p className="text-xs text-muted-foreground">
-            Secure fundraiser management for organizations
-          </p>
+                </div>
+
+                {/* Information Text */}
+                <div className="px-5 py-8 text-white">
+                  <p className="font-medium text-base leading-relaxed">
+                    Don't have a username or password? Contact TR Novelties for information on how you can get signed up for this platform.
+                  </p>
+                  <br />
+                  <p className="font-medium text-base leading-relaxed">
+                    TR Novelties gives you the opportunity to run your game from any computer with an Internet connection.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Welcome Text Section */}
+          <div className="flex-1 flex items-center px-5 pr-[60px] py-[40px]">
+            <div className="text-black">
+              <p className="font-medium text-2xl leading-relaxed mb-6">
+                Welcome to TR Novelties, LLC.
+              </p>
+              <p className="font-medium text-2xl leading-relaxed mb-6">
+                We aim to revolutionize traditional organization fundraising with a modern twist.
+              </p>
+              <p className="font-medium text-2xl leading-relaxed">
+                Our flagship offering is a high-quality "Lucky Draw Board (Queen of Hearts") board combined with a secure, user-friendly digital platform that tracks drawings, manages funds collected, and ensures financial transparency.
+              </p>
+            </div>
+          </div>
         </div>
+
+        {/* Footer Section */}
+        <div className="h-[82px] flex items-center justify-between px-[55px] pr-[74px] py-[25px] pb-2.5">
+          <span className="text-red-600 font-medium text-xl">Terms of Use</span>
+          <span className="text-red-600 font-medium text-xl">www.trnovelties.com</span>
+        </div>
+      </div>
+
+      {/* Copyright */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+        <p className="text-black font-bold text-[28px]">
+          © 2026 TR Novelties LLC. All rights reserved
+        </p>
       </div>
     </div>
   );
