@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import trNoveliesLogo from "@/assets/tr-novelties-logo-new.png";
+import trNoveliesLogo from "@/assets/tr-novelties-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -55,8 +55,8 @@ export default function Login() {
           <div className="w-full lg:w-[280px] h-[130px] sm:h-[170px] lg:h-full flex items-center justify-center px-4 sm:px-[35px] lg:pr-[60px] py-4 lg:py-0">
             <div className="w-[100px] sm:w-[150px] lg:w-[200px] h-[90px] sm:h-[130px] lg:h-[190px] flex items-center justify-center">
                <img 
-                 src="https://isjbdwxngfrgftfannzi.supabase.co/storage/v1/object/public/app_assets/Queen%20of%20Heartts%20Image%202.png" 
-                 alt="TR Novelties Logo" 
+                 src={trNoveliesLogo} 
+                 alt="Queen of Hearts Logo" 
                  className="w-full h-full object-contain"
                />
             </div>
