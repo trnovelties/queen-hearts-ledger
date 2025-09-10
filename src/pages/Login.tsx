@@ -127,9 +127,6 @@ export default function Login() {
                   <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed mb-3 lg:mb-4">
                     Don't have a username or password? Contact <span className="underline">TR Novelties</span>.
                   </p>
-                  <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed">
-                    TR Novelties gives you the opportunity to run your game from any computer with an Internet connection.
-                  </p>
                 </div>
               </div>
             </div>
