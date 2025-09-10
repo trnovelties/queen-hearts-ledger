@@ -126,7 +126,7 @@ export default function Login() {
                 </div>
 
                 {/* Information Text */}
-                <div className="text-white px-3 sm:px-4 lg:px-3">
+                <div className="text-white px-3 sm:px-4 lg:px-3 pt-3">
                   <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed mb-3 lg:mb-4">
                     Don't have a username or password? Contact <span className="underline">TR Novelties</span>.
                   </p>
