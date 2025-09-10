@@ -64,7 +64,7 @@ export default function Login() {
           
           {/* Title Section */}
           <div className="flex-1 flex items-center lg:items-end justify-center lg:justify-end px-4 sm:px-6 lg:px-[50px] py-3 lg:py-[35px]">
-            <h1 className="text-sm sm:text-lg lg:text-[24px] font-bold text-black text-center lg:text-right leading-tight">
+            <h1 className="text-sm sm:text-base lg:text-xl font-bold text-black text-center lg:text-right leading-tight">
               Online Organization Management
             </h1>
           </div>
@@ -82,7 +82,7 @@ export default function Login() {
                   
                   {/* Username Field */}
                   <div className="flex flex-col lg:flex-row lg:items-center mb-4 sm:mb-6 lg:mb-5 gap-2 lg:gap-0">
-                    <label className="text-white font-medium text-base sm:text-xl lg:text-2xl w-full lg:w-[125px] mb-1 lg:mb-0">
+                    <label className="text-white font-medium text-sm sm:text-base lg:text-lg w-full lg:w-[125px] mb-1 lg:mb-0">
                       Username:
                     </label>
                     <Input 
@@ -97,7 +97,7 @@ export default function Login() {
 
                   {/* Password Field */}
                   <div className="flex flex-col lg:flex-row lg:items-center mb-6 sm:mb-8 lg:mb-5 gap-2 lg:gap-0">
-                    <label className="text-white font-medium text-base sm:text-xl lg:text-2xl w-full lg:w-[125px] mb-1 lg:mb-0">
+                    <label className="text-white font-medium text-sm sm:text-base lg:text-lg w-full lg:w-[125px] mb-1 lg:mb-0">
                       Password:
                     </label>
                     <Input 
@@ -115,7 +115,7 @@ export default function Login() {
                     <Button
                       onClick={handleLogin}
                       disabled={isLoading}
-                      className="w-full sm:w-auto sm:min-w-[120px] lg:w-[100px] h-10 sm:h-12 lg:h-[56px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-sm sm:text-lg lg:text-xl rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
+                      className="w-full sm:w-auto sm:min-w-[120px] lg:w-[100px] h-10 sm:h-12 lg:h-[56px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-sm sm:text-base lg:text-lg rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
                     >
                       {isLoading ? "Loading..." : "Login"}
                     </Button>
@@ -138,13 +138,13 @@ export default function Login() {
           {/* Welcome Text Section */}
           <div className="flex-1 flex items-center px-4 sm:px-6 lg:px-5 lg:pr-[60px] py-4 lg:py-[40px]">
             <div className="text-black">
-              <p className="font-medium text-sm sm:text-base lg:text-2xl leading-relaxed mb-3 sm:mb-4 lg:mb-6">
+              <p className="font-medium text-sm sm:text-base lg:text-lg leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 Welcome to TR Novelties, LLC.
               </p>
-              <p className="font-medium text-sm sm:text-base lg:text-2xl leading-relaxed mb-3 sm:mb-4 lg:mb-6">
+              <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 We aim to revolutionize traditional organization fundraising with a modern twist.
               </p>
-              <p className="font-medium text-sm sm:text-base lg:text-2xl leading-relaxed">
+              <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed">
                 Our flagship offering is a high-quality "Lucky Draw Board (Queen of Hearts") board combined with a secure, user-friendly digital platform that tracks drawings, manages funds collected, and ensures financial transparency.
               </p>
             </div>
@@ -153,13 +153,13 @@ export default function Login() {
 
         {/* Footer Section */}
         <div className="h-auto lg:h-[70px] flex flex-col sm:flex-row lg:flex-row items-center justify-between px-4 sm:px-6 lg:px-[45px] lg:pr-[60px] py-3 lg:py-[20px] lg:pb-2.5 gap-2 sm:gap-4 lg:gap-0">
-          <span className="text-red-600 font-medium text-sm sm:text-base lg:text-xl">Terms of Use</span>
-          <span className="text-red-600 font-medium text-sm sm:text-base lg:text-xl">www.trnovelties.com</span>
+          <span className="text-red-600 font-medium text-xs sm:text-sm lg:text-base">Terms of Use</span>
+          <span className="text-red-600 font-medium text-xs sm:text-sm lg:text-base">www.trnovelties.com</span>
         </div>
 
         {/* Copyright - Responsive positioning */}
         <div className="lg:absolute lg:bottom-[-60px] lg:left-1/2 lg:transform lg:-translate-x-1/2 p-4 lg:p-0">
-          <p className="text-black font-bold text-sm sm:text-base lg:text-[28px] text-center">
+          <p className="text-black font-bold text-xs sm:text-sm lg:text-lg text-center">
             © 2026 TR Novelties LLC. All rights reserved
           </p>
         </div>

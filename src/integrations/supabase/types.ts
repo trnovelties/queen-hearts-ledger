@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -394,21 +394,21 @@ export type Database = {
     Functions: {
       calculate_displayed_jackpot: {
         Args: {
+          carryover_jackpot?: number
           contributions_total: number
           minimum_jackpot: number
-          carryover_jackpot?: number
         }
         Returns: number
       }
       get_organization_data: {
         Args: { target_user_id: string }
         Returns: {
-          user_id: string
-          email: string
-          organization_name: string
-          logo_url: string
           about: string
+          email: string
+          logo_url: string
+          organization_name: string
           role: string
+          user_id: string
         }[]
       }
       get_user_profile: {
@@ -429,10 +429,10 @@ export type Database = {
       }
       update_user_profile: {
         Args: {
-          p_user_id: string
-          p_organization_name: string
           p_about: string
           p_logo_url: string
+          p_organization_name: string
+          p_user_id: string
         }
         Returns: undefined
       }
