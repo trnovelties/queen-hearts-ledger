@@ -78,7 +78,7 @@ export default function Login() {
               {/* Form Container */}
               <div className="px-4 sm:px-6 lg:px-2.5 py-4 sm:py-6 lg:py-0">
                 {/* Form Fields */}
-                <div className="bg-red-600 border-white/50 px-4 sm:px-6 lg:px-2.5 py-4 sm:py-6 lg:py-2.5 pb-6 lg:pb-[17px]">
+                <div className="border-white/50 px-4 sm:px-6 lg:px-2.5 py-4 sm:py-6 lg:py-2.5 pb-6 lg:pb-[17px]">
                   
                   {/* Username Field */}
                   <div className="flex flex-col lg:flex-row lg:items-center mb-4 sm:mb-6 lg:mb-5 gap-2 lg:gap-0">
