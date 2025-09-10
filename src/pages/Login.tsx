@@ -138,7 +138,7 @@ export default function Login() {
           {/* Welcome Text Section */}
           <div className="flex-1 flex items-center px-4 sm:px-6 lg:px-5 lg:pr-[60px] py-4 lg:py-[40px]">
             <div className="text-black">
-              <p className="font-medium text-base sm:text-lg lg:text-lg leading-relaxed mb-3 sm:mb-4 lg:mb-4">
+              <p className="font-bold text-lg sm:text-xl lg:text-xl leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 Welcome to TR Novelties, LLC.
               </p>
               <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 sm:mb-4 lg:mb-4">
