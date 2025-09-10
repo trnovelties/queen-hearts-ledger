@@ -123,7 +123,7 @@ export default function Login() {
                 </div>
 
                 {/* Information Text */}
-                <div className="px-4 sm:px-6 lg:px-5 py-4 sm:py-5 lg:py-8 text-white">
+                <div className="px-4 sm:px-6 lg:px-5 py-3 sm:py-4 lg:py-4 text-white">
                   <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed mb-3 lg:mb-4">
                     Don't have a username or password? Contact TR Novelties for information on how you can get signed up for this platform.
                   </p>
