@@ -138,13 +138,13 @@ export default function Login() {
           {/* Welcome Text Section */}
           <div className="flex-1 flex items-center px-4 sm:px-6 lg:px-5 lg:pr-[60px] py-4 lg:py-[40px]">
             <div className="text-black">
-              <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 sm:mb-4 lg:mb-4">
+              <p className="font-medium text-base sm:text-lg lg:text-lg leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 Welcome to TR Novelties, LLC.
               </p>
-              <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed mb-3 sm:mb-4 lg:mb-4">
+              <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 We aim to revolutionize traditional organization fundraising with a modern twist.
               </p>
-              <p className="font-medium text-xs sm:text-xs lg:text-xs leading-relaxed">
+              <p className="font-medium text-sm sm:text-sm lg:text-sm leading-relaxed">
                 Our flagship offering is a high-quality "Lucky Draw Board (Queen of Hearts") board combined with a secure, user-friendly digital platform that tracks drawings, manages funds collected, and ensures financial transparency.
               </p>
             </div>
