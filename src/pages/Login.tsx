@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import trNoveliesLogo from "@/assets/tr-novelties-logo.png";
+import trNoveliesLogo from "@/assets/tr-novelties-logo-new.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -64,7 +64,7 @@ export default function Login() {
           
           {/* Title Section */}
           <div className="flex-1 flex items-center lg:items-end justify-center lg:justify-end px-4 sm:px-6 lg:px-[50px] py-3 lg:py-[35px]">
-            <h1 className="text-sm sm:text-base lg:text-xl font-bold text-black text-center lg:text-right leading-tight">
+            <h1 className="text-xs sm:text-sm lg:text-base font-bold text-black text-center lg:text-right leading-tight">
               Online Organization Management
             </h1>
           </div>
@@ -82,9 +82,9 @@ export default function Login() {
                   
                   {/* Username Field */}
                   <div className="flex flex-col lg:flex-row lg:items-center mb-4 sm:mb-6 lg:mb-5 gap-2 lg:gap-0">
-                    <label className="text-white font-medium text-sm sm:text-base lg:text-lg w-full lg:w-[125px] mb-1 lg:mb-0">
-                      Username:
-                    </label>
+                     <label className="text-white font-medium text-xs sm:text-sm lg:text-base w-full lg:w-[125px] mb-1 lg:mb-0">
+                       Username:
+                     </label>
                     <Input 
                       type="email"
                       value={email}
@@ -97,9 +97,9 @@ export default function Login() {
 
                   {/* Password Field */}
                   <div className="flex flex-col lg:flex-row lg:items-center mb-6 sm:mb-8 lg:mb-5 gap-2 lg:gap-0">
-                    <label className="text-white font-medium text-sm sm:text-base lg:text-lg w-full lg:w-[125px] mb-1 lg:mb-0">
-                      Password:
-                    </label>
+                     <label className="text-white font-medium text-xs sm:text-sm lg:text-base w-full lg:w-[125px] mb-1 lg:mb-0">
+                       Password:
+                     </label>
                     <Input 
                       type="password"
                       value={password}
@@ -115,7 +115,7 @@ export default function Login() {
                     <Button
                       onClick={handleLogin}
                       disabled={isLoading}
-                      className="w-full sm:w-auto sm:min-w-[120px] lg:w-[100px] h-10 sm:h-12 lg:h-[56px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-sm sm:text-base lg:text-lg rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
+                      className="w-full sm:w-auto sm:min-w-[120px] lg:w-[100px] h-10 sm:h-12 lg:h-[56px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-xs sm:text-sm lg:text-base rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
                     >
                       {isLoading ? "Loading..." : "Login"}
                     </Button>
@@ -124,10 +124,10 @@ export default function Login() {
 
                 {/* Information Text */}
                 <div className="px-4 sm:px-6 lg:px-5 py-4 sm:py-5 lg:py-8 text-white">
-                  <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 lg:mb-4">
+                  <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed mb-3 lg:mb-4">
                     Don't have a username or password? Contact TR Novelties for information on how you can get signed up for this platform.
                   </p>
-                  <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed">
+                  <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed">
                     TR Novelties gives you the opportunity to run your game from any computer with an Internet connection.
                   </p>
                 </div>
@@ -138,13 +138,13 @@ export default function Login() {
           {/* Welcome Text Section */}
           <div className="flex-1 flex items-center px-4 sm:px-6 lg:px-5 lg:pr-[60px] py-4 lg:py-[40px]">
             <div className="text-black">
-              <p className="font-medium text-sm sm:text-base lg:text-lg leading-relaxed mb-3 sm:mb-4 lg:mb-4">
+              <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 Welcome to TR Novelties, LLC.
               </p>
-              <p className="font-medium text-sm sm:text-base lg:text-base leading-relaxed mb-3 sm:mb-4 lg:mb-4">
+              <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed mb-3 sm:mb-4 lg:mb-4">
                 We aim to revolutionize traditional organization fundraising with a modern twist.
               </p>
-              <p className="font-medium text-xs sm:text-sm lg:text-sm leading-relaxed">
+              <p className="font-medium text-xs sm:text-xs lg:text-xs leading-relaxed">
                 Our flagship offering is a high-quality "Lucky Draw Board (Queen of Hearts") board combined with a secure, user-friendly digital platform that tracks drawings, manages funds collected, and ensures financial transparency.
               </p>
             </div>
@@ -159,7 +159,7 @@ export default function Login() {
 
         {/* Copyright - Responsive positioning */}
         <div className="lg:absolute lg:bottom-[-60px] lg:left-1/2 lg:transform lg:-translate-x-1/2 p-4 lg:p-0">
-          <p className="text-black font-bold text-xs sm:text-sm lg:text-lg text-center">
+          <p className="text-black font-bold text-xs sm:text-sm lg:text-base text-center">
             © 2026 TR Novelties LLC. All rights reserved
           </p>
         </div>
