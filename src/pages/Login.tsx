@@ -63,7 +63,7 @@ export default function Login() {
           </div>
           
           {/* Title Section */}
-          <div className="flex-1 flex items-start justify-end px-4 sm:px-6 lg:px-[50px] py-3 lg:py-[35px]">
+          <div className="flex-1 flex items-start justify-center lg:justify-end px-4 sm:px-6 lg:px-[50px] py-3 lg:py-[35px]">
             <h1 className="text-sm sm:text-base lg:text-lg font-bold text-black text-right leading-tight">
               Online Organization Management
             </h1>
