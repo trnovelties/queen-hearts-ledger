@@ -154,7 +154,7 @@ export default function Login() {
         {/* Footer Section */}
         <div className="h-auto lg:h-[70px] flex flex-col sm:flex-row lg:flex-row items-center justify-between px-4 sm:px-6 lg:px-[45px] lg:pr-[60px] py-3 lg:py-[20px] lg:pb-2.5 gap-2 sm:gap-4 lg:gap-0">
           <span className="text-red-600 font-medium text-xs sm:text-sm lg:text-base">Terms of Use</span>
-          <span className="text-red-600 font-medium text-xs sm:text-sm lg:text-base">www.trnovelties.com</span>
+          <a href="http://www.trnovelties.com/" target="_blank" rel="noopener noreferrer" className="text-red-600 font-medium text-xs sm:text-sm lg:text-base hover:underline">www.trnovelties.com</a>
         </div>
 
         {/* Copyright - Responsive positioning */}
