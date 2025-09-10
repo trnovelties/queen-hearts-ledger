@@ -47,13 +47,13 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-2 sm:p-4 lg:p-2.5">
       {/* Main Container */}
-      <div className="w-full max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1308px] h-auto lg:h-[800px] bg-gray-300 border-2 sm:border-[3px] border-black flex flex-col relative">
+      <div className="w-full max-w-[85vw] sm:max-w-[80vw] lg:max-w-[1100px] h-auto lg:h-[680px] bg-gray-300 border-2 sm:border-[3px] border-black flex flex-col relative">
         
         {/* Header Section */}
-        <div className="h-auto lg:h-[263px] flex flex-col lg:flex-row border-b border-red-600">
+        <div className="h-auto lg:h-[220px] flex flex-col lg:flex-row border-b border-red-600">
           {/* Logo Section */}
-          <div className="w-full lg:w-[337px] h-[150px] sm:h-[200px] lg:h-full flex items-center justify-center px-4 sm:px-[43px] lg:pr-[70px] py-4 lg:py-0">
-            <div className="w-[120px] sm:w-[180px] lg:w-[251px] h-[110px] sm:h-[160px] lg:h-[239px] flex items-center justify-center">
+          <div className="w-full lg:w-[280px] h-[130px] sm:h-[170px] lg:h-full flex items-center justify-center px-4 sm:px-[35px] lg:pr-[60px] py-4 lg:py-0">
+            <div className="w-[100px] sm:w-[150px] lg:w-[200px] h-[90px] sm:h-[130px] lg:h-[190px] flex items-center justify-center">
               <img 
                 src={trNoveliesLogo} 
                 alt="TR Novelties Logo" 
@@ -63,8 +63,8 @@ export default function Login() {
           </div>
           
           {/* Title Section */}
-          <div className="flex-1 flex items-center lg:items-end justify-center lg:justify-end px-4 sm:px-8 lg:px-[60px] py-4 lg:py-[40px]">
-            <h1 className="text-base sm:text-xl lg:text-[28px] font-bold text-black text-center lg:text-right leading-tight">
+          <div className="flex-1 flex items-center lg:items-end justify-center lg:justify-end px-4 sm:px-6 lg:px-[50px] py-3 lg:py-[35px]">
+            <h1 className="text-sm sm:text-lg lg:text-[24px] font-bold text-black text-center lg:text-right leading-tight">
               Online Organization Management
             </h1>
           </div>
@@ -73,8 +73,8 @@ export default function Login() {
         {/* Main Content Section */}
         <div className="flex-1 flex flex-col lg:flex-row border-white border-[1px]">
           {/* Login Form Section */}
-          <div className="w-full lg:w-[640px] flex items-center justify-center px-2 sm:px-4 lg:px-[43px] lg:pr-[70px] py-4 lg:py-0">
-            <div className="w-full max-w-[420px] sm:max-w-[520px] lg:w-[527px] h-auto lg:h-[404px] bg-red-600 shadow-[8px_12px_16px_rgba(0,0,0,0.35)] lg:shadow-[10px_14px_14px_rgba(0,0,0,0.45)]">
+          <div className="w-full lg:w-[540px] flex items-center justify-center px-2 sm:px-4 lg:px-[35px] lg:pr-[60px] py-4 lg:py-0">
+            <div className="w-full max-w-[380px] sm:max-w-[460px] lg:w-[450px] h-auto lg:h-[340px] bg-red-600 shadow-[6px_10px_14px_rgba(0,0,0,0.35)] lg:shadow-[8px_12px_12px_rgba(0,0,0,0.45)]">
               {/* Form Container */}
               <div className="px-4 sm:px-6 lg:px-2.5 py-4 sm:py-6 lg:py-0">
                 {/* Form Fields */}
@@ -89,7 +89,7 @@ export default function Login() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full lg:w-[352px] h-12 sm:h-14 lg:h-[57px] bg-white border-0 rounded-none text-black text-base sm:text-lg px-3 sm:px-4 focus:ring-2 focus:ring-white/50 focus:outline-none"
+                      className="w-full lg:w-[300px] h-10 sm:h-12 lg:h-[48px] bg-white border-0 rounded-none text-black text-sm sm:text-base px-3 sm:px-4 focus:ring-2 focus:ring-white/50 focus:outline-none"
                       required
                       placeholder="Enter your email"
                     />
@@ -104,7 +104,7 @@ export default function Login() {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full lg:w-[352px] h-12 sm:h-14 lg:h-[57px] bg-white border-0 rounded-none text-black text-base sm:text-lg px-3 sm:px-4 focus:ring-2 focus:ring-white/50 focus:outline-none"
+                      className="w-full lg:w-[300px] h-10 sm:h-12 lg:h-[48px] bg-white border-0 rounded-none text-black text-sm sm:text-base px-3 sm:px-4 focus:ring-2 focus:ring-white/50 focus:outline-none"
                       required
                       placeholder="Enter your password"
                     />
@@ -115,7 +115,7 @@ export default function Login() {
                     <Button
                       onClick={handleLogin}
                       disabled={isLoading}
-                      className="w-full sm:w-auto sm:min-w-[140px] lg:w-[121px] h-12 sm:h-14 lg:h-[66px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-base sm:text-xl lg:text-2xl rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
+                      className="w-full sm:w-auto sm:min-w-[120px] lg:w-[100px] h-10 sm:h-12 lg:h-[56px] bg-gray-500 hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-400 text-white font-medium text-sm sm:text-lg lg:text-xl rounded-none border-0 transition-colors duration-200 shadow-md hover:shadow-lg"
                     >
                       {isLoading ? "Loading..." : "Login"}
                     </Button>
@@ -152,7 +152,7 @@ export default function Login() {
         </div>
 
         {/* Footer Section */}
-        <div className="h-auto lg:h-[82px] flex flex-col sm:flex-row lg:flex-row items-center justify-between px-4 sm:px-8 lg:px-[55px] lg:pr-[74px] py-4 lg:py-[25px] lg:pb-2.5 gap-2 sm:gap-4 lg:gap-0">
+        <div className="h-auto lg:h-[70px] flex flex-col sm:flex-row lg:flex-row items-center justify-between px-4 sm:px-6 lg:px-[45px] lg:pr-[60px] py-3 lg:py-[20px] lg:pb-2.5 gap-2 sm:gap-4 lg:gap-0">
           <span className="text-red-600 font-medium text-sm sm:text-base lg:text-xl">Terms of Use</span>
           <span className="text-red-600 font-medium text-sm sm:text-base lg:text-xl">www.trnovelties.com</span>
         </div>
