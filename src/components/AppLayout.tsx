@@ -114,52 +114,109 @@ function AppContent({
   } = useSidebar();
   const isCollapsed = state === "collapsed";
   return <div className="min-h-screen flex w-full relative">
-      <Sidebar className="border-r border-border/40">
-        <SidebarHeader className="pt-6 pb-4 px-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white pl-2">
+      <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
+        <SidebarHeader className="pt-4 pb-2 px-4">
+          <div className="flex items-center gap-3">
+            {profile?.logo_url ? (
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={profile.logo_url} alt={profile?.organization_name || "Organization logo"} className="object-cover" />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {profile?.organization_name?.charAt(0) || "Q"}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground text-xs font-medium">
+                  {profile?.organization_name?.charAt(0) || "Q"}
+                </span>
+              </div>
+            )}
+            <h2 className="text-lg font-semibold text-sidebar-foreground">
               {profile?.organization_name || "Queen of Hearts"}
             </h2>
           </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel className="text-base mx-0 px-0 py-[21px]">Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/dashboard")} className={location.pathname === "/dashboard" ? "bg-sidebar-primary" : ""}>
-                    <BarChart2 className="mr-2 h-6 w-6" />
+                  <SidebarMenuButton 
+                    onClick={() => navigate("/dashboard")} 
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${
+                      location.pathname === "/dashboard" 
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                        : ""
+                    }`}
+                  >
+                    <BarChart2 className="h-5 w-5" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/income-expense")} className={location.pathname === "/income-expense" ? "bg-sidebar-primary" : ""}>
-                    <PieChart className="mr-2 h-6 w-6" />
+                  <SidebarMenuButton 
+                    onClick={() => navigate("/income-expense")} 
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${
+                      location.pathname === "/income-expense" 
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                        : ""
+                    }`}
+                  >
+                    <PieChart className="h-5 w-5" />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/admin")} className={location.pathname === "/admin" ? "bg-sidebar-primary" : ""}>
-                    <Settings className="mr-2 h-6 w-6" />
+                  <SidebarMenuButton 
+                    onClick={() => navigate("/admin")} 
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${
+                      location.pathname === "/admin" 
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                        : ""
+                    }`}
+                  >
+                    <Settings className="h-5 w-5" />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={location.pathname === "/compliance" ? "bg-sidebar-primary" : ""}>
-                    <Shield className="mr-2 h-6 w-6" />
+                  <SidebarMenuButton 
+                    onClick={() => navigate("/compliance")} 
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${
+                      location.pathname === "/compliance" 
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                        : ""
+                    }`}
+                  >
+                    <Shield className="h-5 w-5" />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {profile?.role === 'admin' && <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => navigate("/admin-view")} className={location.pathname === "/admin-view" ? "bg-sidebar-primary" : ""}>
-                      <AdminViewIcon className="mr-2 h-6 w-6" />
+                {profile?.role === 'admin' && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      onClick={() => navigate("/admin-view")} 
+                      className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${
+                        location.pathname === "/admin-view" 
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                          : ""
+                      }`}
+                    >
+                      <AdminViewIcon className="h-5 w-5" />
                       <span>Admin View</span>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>}
+                  </SidebarMenuItem>
+                )}
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/account")} className={location.pathname === "/account" ? "bg-sidebar-primary" : ""}>
-                    <User className="mr-2 h-6 w-6" />
+                  <SidebarMenuButton 
+                    onClick={() => navigate("/account")} 
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${
+                      location.pathname === "/account" 
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                        : ""
+                    }`}
+                  >
+                    <User className="h-5 w-5" />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -167,11 +224,14 @@ function AppContent({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-          <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-sidebar-foreground hover:text-white hover:bg-sidebar-primary">
-            <LogOut className="mr-2 h-6 w-6" />
-            Logout
-          </Button>
+        <SidebarFooter className="p-4">
+          <SidebarMenuButton 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 w-full justify-start"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Logout</span>
+          </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
 
@@ -179,15 +239,15 @@ function AppContent({
       <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" style={{
       left: isCollapsed ? '0px' : '256px'
     }}>
-        <button onClick={toggleSidebar} className="w-12 h-12 bg-[#A1E96C] hover:bg-[#8fd956] rounded-full flex items-center justify-center shadow-lg transition-all duration-300 border-2 border-white" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
-          {isCollapsed ? <ChevronRight className="w-6 h-6 text-[#132E2C]" /> : <ChevronLeft className="w-6 h-6 text-[#132E2C]" />}
+        <button onClick={toggleSidebar} className="w-8 h-8 bg-sidebar-background hover:bg-sidebar-accent/10 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border border-sidebar-border" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          {isCollapsed ? <ChevronRight className="w-4 h-4 text-sidebar-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />}
         </button>
       </div>
 
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-border/40 flex items-center px-6 justify-between bg-white">
           <div className="flex items-center">
-            <h1 className="text-xl font-semibold text-primary">
+            <h1 className="text-2xl font-bold text-primary">
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
               {location.pathname === "/admin" && "Settings"}
@@ -198,16 +258,20 @@ function AppContent({
           </div>
           
           <div className="flex items-center">
-            {profile?.logo_url ? <Avatar className="h-10 w-10 border-2 border-primary">
+            {profile?.logo_url ? (
+              <Avatar className="h-10 w-10 border-2 border-primary">
                 <AvatarImage src={profile.logo_url} alt={profile?.organization_name || "Organization logo"} className="object-cover" />
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {profile?.organization_name?.charAt(0) || "♥"}
                 </AvatarFallback>
-              </Avatar> : <Avatar className="h-10 w-10 border-2 border-primary">
+              </Avatar>
+            ) : (
+              <Avatar className="h-10 w-10 border-2 border-primary">
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {profile?.organization_name?.charAt(0) || "♥"}
                 </AvatarFallback>
-              </Avatar>}
+              </Avatar>
+            )}
           </div>
         </header>
 
