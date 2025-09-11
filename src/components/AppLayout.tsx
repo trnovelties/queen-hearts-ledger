@@ -276,7 +276,7 @@ function AppContent({
         </header>
 
         <main className="flex-1 overflow-auto p-6 bg-accent">
-          <Card className="overflow-hidden border-none shadow-md">
+          <Card className="overflow-hidden border-none">
             <CardContent className="p-6">
               {children}
             </CardContent>
