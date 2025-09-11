@@ -115,7 +115,7 @@ function AppContent({
   const isCollapsed = state === "collapsed";
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
-        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center">
+        <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center justify-center">
           <div className="flex items-center gap-2">
             {profile?.logo_url ? (
               <Avatar className="h-8 w-8">
