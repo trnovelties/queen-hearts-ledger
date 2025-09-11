@@ -134,38 +134,38 @@ function AppContent({
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/dashboard")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${location.pathname === "/dashboard" ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : ""}`}>
-                    <BarChart2 className={`h-5 w-5 ${location.pathname === "/dashboard" ? "text-white" : "text-primary"}`} />
+                  <SidebarMenuButton onClick={() => navigate("/dashboard")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-red-50 hover:text-black ${location.pathname === "/dashboard" ? "bg-gray-50 text-black font-medium" : ""}`}>
+                    <BarChart2 className={`h-5 w-5 ${location.pathname === "/dashboard" ? "text-red-500" : "text-primary"} ${location.pathname !== "/dashboard" ? "group-hover:text-red-500" : ""}`} />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/income-expense")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${location.pathname === "/income-expense" ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : ""}`}>
-                    <PieChart className="h-5 w-5 text-primary" />
+                  <SidebarMenuButton onClick={() => navigate("/income-expense")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-red-50 hover:text-black ${location.pathname === "/income-expense" ? "bg-gray-50 text-black font-medium" : ""}`}>
+                    <PieChart className={`h-5 w-5 ${location.pathname === "/income-expense" ? "text-red-500" : "text-primary"} ${location.pathname !== "/income-expense" ? "group-hover:text-red-500" : ""}`} />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/admin")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${location.pathname === "/admin" ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : ""}`}>
-                    <Settings className="h-5 w-5 text-primary" />
+                  <SidebarMenuButton onClick={() => navigate("/admin")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-red-50 hover:text-black ${location.pathname === "/admin" ? "bg-gray-50 text-black font-medium" : ""}`}>
+                    <Settings className={`h-5 w-5 ${location.pathname === "/admin" ? "text-red-500" : "text-primary"} ${location.pathname !== "/admin" ? "group-hover:text-red-500" : ""}`} />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${location.pathname === "/compliance" ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : ""}`}>
-                    <Shield className="h-5 w-5 text-primary" />
+                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-red-50 hover:text-black ${location.pathname === "/compliance" ? "bg-gray-50 text-black font-medium" : ""}`}>
+                    <Shield className={`h-5 w-5 ${location.pathname === "/compliance" ? "text-red-500" : "text-primary"} ${location.pathname !== "/compliance" ? "group-hover:text-red-500" : ""}`} />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {profile?.role === 'admin' && <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => navigate("/admin-view")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${location.pathname === "/admin-view" ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : ""}`}>
-                      <AdminViewIcon className="h-5 w-5 text-primary" />
+                    <SidebarMenuButton onClick={() => navigate("/admin-view")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-red-50 hover:text-black ${location.pathname === "/admin-view" ? "bg-gray-50 text-black font-medium" : ""}`}>
+                      <AdminViewIcon className={`h-5 w-5 ${location.pathname === "/admin-view" ? "text-red-500" : "text-primary"} ${location.pathname !== "/admin-view" ? "group-hover:text-red-500" : ""}`} />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>}
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/account")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 ${location.pathname === "/account" ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" : ""}`}>
-                    <User className="h-5 w-5 text-primary" />
+                  <SidebarMenuButton onClick={() => navigate("/account")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-red-50 hover:text-black ${location.pathname === "/account" ? "bg-gray-50 text-black font-medium" : ""}`}>
+                    <User className={`h-5 w-5 ${location.pathname === "/account" ? "text-red-500" : "text-primary"} ${location.pathname !== "/account" ? "group-hover:text-red-500" : ""}`} />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
