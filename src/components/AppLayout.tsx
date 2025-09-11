@@ -149,7 +149,7 @@ function AppContent({
                         : ""
                     }`}
                   >
-                    <BarChart2 className="h-5 w-5" />
+                    <BarChart2 className="h-5 w-5 text-primary" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -162,7 +162,7 @@ function AppContent({
                         : ""
                     }`}
                   >
-                    <PieChart className="h-5 w-5" />
+                    <PieChart className="h-5 w-5 text-primary" />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -175,7 +175,7 @@ function AppContent({
                         : ""
                     }`}
                   >
-                    <Settings className="h-5 w-5" />
+                    <Settings className="h-5 w-5 text-primary" />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -188,7 +188,7 @@ function AppContent({
                         : ""
                     }`}
                   >
-                    <Shield className="h-5 w-5" />
+                    <Shield className="h-5 w-5 text-primary" />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -202,7 +202,7 @@ function AppContent({
                           : ""
                       }`}
                     >
-                      <AdminViewIcon className="h-5 w-5" />
+                      <AdminViewIcon className="h-5 w-5 text-primary" />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -216,7 +216,7 @@ function AppContent({
                         : ""
                     }`}
                   >
-                    <User className="h-5 w-5" />
+                    <User className="h-5 w-5 text-primary" />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -229,7 +229,7 @@ function AppContent({
             onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent/10 w-full justify-start"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 text-primary" />
             <span>Logout</span>
           </SidebarMenuButton>
         </SidebarFooter>
