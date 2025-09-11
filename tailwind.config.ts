@@ -57,13 +57,13 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
-					DEFAULT: '#3D3D3D',
-					foreground: '#ffffff',
+					DEFAULT: '#ffffff',
+					foreground: '#1F2937',
 					primary: '#CC2136',
 					'primary-foreground': '#ffffff',
 					accent: '#CC2136',
 					'accent-foreground': '#ffffff',
-					border: '#CC2136',
+					border: '#E5E7EB',
 					ring: '#CC2136'
 				}
 			},
