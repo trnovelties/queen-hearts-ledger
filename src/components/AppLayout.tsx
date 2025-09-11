@@ -143,52 +143,52 @@ function AppContent({
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/dashboard")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
                       location.pathname === "/dashboard" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <BarChart2 className="h-5 w-5 text-primary" />
+                    <BarChart2 className="h-6 w-6 text-primary" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/income-expense")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
                       location.pathname === "/income-expense" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <PieChart className="h-5 w-5 text-primary" />
+                    <PieChart className="h-6 w-6 text-primary" />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/admin")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
                       location.pathname === "/admin" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <Settings className="h-5 w-5 text-primary" />
+                    <Settings className="h-6 w-6 text-primary" />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/compliance")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
                       location.pathname === "/compliance" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <Shield className="h-5 w-5 text-primary" />
+                    <Shield className="h-6 w-6 text-primary" />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -196,13 +196,13 @@ function AppContent({
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       onClick={() => navigate("/admin-view")} 
-                      className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
+                      className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
                         location.pathname === "/admin-view" 
                           ? "bg-gray-100 text-sidebar-foreground font-medium" 
                           : ""
                       }`}
                     >
-                      <AdminViewIcon className="h-5 w-5 text-primary" />
+                      <AdminViewIcon className="h-6 w-6 text-primary" />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -210,13 +210,13 @@ function AppContent({
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/account")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
                       location.pathname === "/account" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <User className="h-5 w-5 text-primary" />
+                    <User className="h-6 w-6 text-primary" />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -227,9 +227,9 @@ function AppContent({
         <SidebarFooter className="p-4">
           <SidebarMenuButton 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors w-full justify-start"
+            className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors w-full justify-start text-base"
           >
-            <LogOut className="h-5 w-5 text-primary" />
+            <LogOut className="h-6 w-6 text-primary" />
             <span>Logout</span>
           </SidebarMenuButton>
         </SidebarFooter>
