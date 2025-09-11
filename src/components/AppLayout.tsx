@@ -140,10 +140,10 @@ function AppContent({
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem className="mb-2">
+                <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/dashboard")} 
-                    className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors rounded-lg ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/dashboard" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
@@ -153,10 +153,10 @@ function AppContent({
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem className="mb-2">
+                <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/income-expense")} 
-                    className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors rounded-lg ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/income-expense" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
@@ -166,10 +166,10 @@ function AppContent({
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem className="mb-2">
+                <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/admin")} 
-                    className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors rounded-lg ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/admin" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
@@ -179,10 +179,10 @@ function AppContent({
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem className="mb-2">
+                <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/compliance")} 
-                    className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors rounded-lg ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/compliance" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
@@ -193,10 +193,10 @@ function AppContent({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {profile?.role === 'admin' && (
-                  <SidebarMenuItem className="mb-2">
+                  <SidebarMenuItem>
                     <SidebarMenuButton 
                       onClick={() => navigate("/admin-view")} 
-                      className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors rounded-lg ${
+                      className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                         location.pathname === "/admin-view" 
                           ? "bg-gray-100 text-sidebar-foreground font-medium" 
                           : ""
@@ -207,10 +207,10 @@ function AppContent({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
-                <SidebarMenuItem className="mb-2">
+                <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/account")} 
-                    className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors rounded-lg ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/account" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
@@ -227,7 +227,7 @@ function AppContent({
         <SidebarFooter className="p-4">
           <SidebarMenuButton 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 transition-colors w-full justify-start rounded-lg"
+            className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors w-full justify-start"
           >
             <LogOut className="h-5 w-5 text-primary" />
             <span>Logout</span>
