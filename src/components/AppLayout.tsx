@@ -114,7 +114,7 @@ function AppContent({
   } = useSidebar();
   const isCollapsed = state === "collapsed";
   return <div className="min-h-screen flex w-full relative">
-      <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
+      <Sidebar className="border-r border-sidebar-border bg-sidebar-background w-72">
         <SidebarHeader className="pt-4 pb-2 px-4">
           <div className="flex items-center gap-3">
             {profile?.logo_url ? (
@@ -237,7 +237,7 @@ function AppContent({
 
       {/* Floating expand/collapse button */}
       <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" style={{
-      left: isCollapsed ? '0px' : '256px'
+      left: isCollapsed ? '0px' : '288px'
     }}>
         <button onClick={toggleSidebar} className="w-8 h-8 bg-sidebar-background hover:bg-sidebar-accent/10 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border border-sidebar-border" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
           {isCollapsed ? <ChevronRight className="w-4 h-4 text-sidebar-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />}
