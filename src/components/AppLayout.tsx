@@ -114,7 +114,7 @@ function AppContent({
   } = useSidebar();
   const isCollapsed = state === "collapsed";
   return <div className="min-h-screen flex w-full relative">
-      <Sidebar className="border-r border-sidebar-border bg-sidebar-background w-72">
+      <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
         <SidebarHeader className="pt-4 pb-2 px-4">
           <div className="flex items-center gap-3">
             {profile?.logo_url ? (
@@ -143,52 +143,52 @@ function AppContent({
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/dashboard")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/dashboard" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <BarChart2 className="h-6 w-6 text-primary" />
+                    <BarChart2 className="h-5 w-5 text-primary" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/income-expense")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/income-expense" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <PieChart className="h-6 w-6 text-primary" />
+                    <PieChart className="h-5 w-5 text-primary" />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/admin")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/admin" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <Settings className="h-6 w-6 text-primary" />
+                    <Settings className="h-5 w-5 text-primary" />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/compliance")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/compliance" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <Shield className="h-6 w-6 text-primary" />
+                    <Shield className="h-5 w-5 text-primary" />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -196,13 +196,13 @@ function AppContent({
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       onClick={() => navigate("/admin-view")} 
-                      className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
+                      className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                         location.pathname === "/admin-view" 
                           ? "bg-gray-100 text-sidebar-foreground font-medium" 
                           : ""
                       }`}
                     >
-                      <AdminViewIcon className="h-6 w-6 text-primary" />
+                      <AdminViewIcon className="h-5 w-5 text-primary" />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -210,13 +210,13 @@ function AppContent({
                 <SidebarMenuItem>
                   <SidebarMenuButton 
                     onClick={() => navigate("/account")} 
-                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors text-base ${
+                    className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors ${
                       location.pathname === "/account" 
                         ? "bg-gray-100 text-sidebar-foreground font-medium" 
                         : ""
                     }`}
                   >
-                    <User className="h-6 w-6 text-primary" />
+                    <User className="h-5 w-5 text-primary" />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -227,9 +227,9 @@ function AppContent({
         <SidebarFooter className="p-4">
           <SidebarMenuButton 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors w-full justify-start text-base"
+            className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors w-full justify-start"
           >
-            <LogOut className="h-6 w-6 text-primary" />
+            <LogOut className="h-5 w-5 text-primary" />
             <span>Logout</span>
           </SidebarMenuButton>
         </SidebarFooter>
@@ -237,7 +237,7 @@ function AppContent({
 
       {/* Floating expand/collapse button */}
       <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" style={{
-      left: isCollapsed ? '0px' : '288px'
+      left: isCollapsed ? '0px' : '256px'
     }}>
         <button onClick={toggleSidebar} className="w-8 h-8 bg-sidebar-background hover:bg-sidebar-accent/10 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border border-sidebar-border" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
           {isCollapsed ? <ChevronRight className="w-4 h-4 text-sidebar-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />}
