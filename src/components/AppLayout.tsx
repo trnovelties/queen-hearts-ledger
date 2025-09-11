@@ -116,7 +116,7 @@ function AppContent({
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
         <SidebarHeader className="h-16 px-4 border-b border-sidebar-border flex items-center justify-start">
-          <div className="flex items-center gap-2">
+          <div className="h-full flex items-center gap-2">
             {profile?.logo_url ? (
               <Avatar className="h-8 w-8">
                 <AvatarImage src={profile.logo_url} alt={profile?.organization_name || "Organization logo"} className="object-cover" />
