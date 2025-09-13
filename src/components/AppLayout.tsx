@@ -179,7 +179,7 @@ function AppContent({
 
       {/* Floating expand/collapse button */}
       <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" style={{
-      left: isCollapsed ? '10px' : '240px'
+      left: isCollapsed ? '10px' : '220px'
     }}>
         <button onClick={toggleSidebar} className="w-8 h-8 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border-2 border-red-500 hover:border-red-600" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
           {isCollapsed ? <ChevronRight className="w-4 h-4 text-red-600" /> : <ChevronLeft className="w-4 h-4 text-red-600" />}
