@@ -35,7 +35,7 @@ export const GameSummaryDisplay = ({
   const actualOrganizationNetProfit = game.actual_organization_net_profit || 0;
   const isProfitable = actualOrganizationNetProfit >= 0;
   const hasShortfall = jackpotShortfall > 0;
-  return <Card className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
+  return <Card className="mb-6 bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300">
       <CardContent className="p-6">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-4">
