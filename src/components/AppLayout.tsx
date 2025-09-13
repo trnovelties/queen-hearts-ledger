@@ -139,7 +139,7 @@ function AppContent({
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/compliance" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                    <Shield className={`h-5 w-5 ${location.pathname === "/compliance" ? "text-white" : "text-primary"}`} />
+                    <Shield className={`h-5 w-5 hover:text-red-500 transition-colors ${location.pathname === "/compliance" ? "text-white" : "text-primary"}`} />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
