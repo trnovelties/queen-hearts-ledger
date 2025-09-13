@@ -253,7 +253,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
           <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1F4E4A20" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#3D3D3D20" />
                 <XAxis 
                   dataKey="name" 
                   stroke="#132E2C" 
@@ -358,9 +358,9 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                 <Line 
                   type="monotone" 
                   dataKey="jackpotIncrease" 
-                  stroke="#1F4E4A" 
+                  stroke="#3D3D3D" 
                   strokeWidth={3}
-                  dot={{ fill: "#1F4E4A", r: 5 }}
+                  dot={{ fill: "#3D3D3D", r: 5 }}
                   name="Jackpot Increase"
                 />
               </LineChart>
