@@ -355,7 +355,7 @@ export default function IncomeExpense() {
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Carryover</div>
-                          <div className="font-bold text-[#A1E96C]">{formatCurrency(game.carryover_jackpot)}</div>
+                          <div className="font-bold text-black">{formatCurrency(game.carryover_jackpot)}</div>
                         </div>
                       </div>
                      </div>
