@@ -112,7 +112,10 @@ export default function Login() {
 
                   {/* Login Button */}
                   <div className="flex flex-col sm:flex-row items-center justify-end gap-3 lg:gap-4 mt-4 lg:mt-0">
-                    <span className="text-white text-xs sm:text-sm underline cursor-pointer hover:text-white/80">
+                    <span 
+                      className="text-white text-xs sm:text-sm underline cursor-pointer hover:text-white/80"
+                      onClick={() => navigate("/forgot-password")}
+                    >
                       Forgot Password?
                     </span>
                     <Button

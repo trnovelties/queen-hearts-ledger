@@ -11,6 +11,8 @@ import Admin from "./pages/Admin";
 import Account from "./pages/Account";
 import AdminView from "./pages/AdminView";
 import Compliance from "./pages/Compliance";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import { AdminProvider } from "./context/AdminContext";
@@ -26,6 +28,8 @@ const App = () => (
             <Toaster />
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
               <Route path="/income-expense" element={<AppLayout><IncomeExpense /></AppLayout>} />
