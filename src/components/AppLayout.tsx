@@ -168,6 +168,13 @@ function AppContent({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          
+          {/* Sidebar toggle button in middle */}
+          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <button onClick={toggleSidebar} className="w-8 h-8 bg-transparent hover:bg-red-50 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border-2 border-red-500 hover:border-red-600" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+              {isCollapsed ? <ChevronRight className="w-4 h-4 text-red-500" /> : <ChevronLeft className="w-4 h-4 text-red-500" />}
+            </button>
+          </div>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t border-sidebar-border">
           <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-4 py-6 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors w-full justify-start">
@@ -176,15 +183,6 @@ function AppContent({
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
-
-      {/* Floating expand/collapse button */}
-      <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" style={{
-      left: isCollapsed ? '0px' : '256px'
-    }}>
-        <button onClick={toggleSidebar} className="w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border-2 border-red-500 hover:border-red-600" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
-          {isCollapsed ? <ChevronRight className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
-        </button>
-      </div>
 
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-border flex items-center px-12 justify-between bg-white">
