@@ -73,7 +73,7 @@ export const ExpenseDonationCard = ({
           <Button 
             onClick={handleAddEntry}
             disabled={!selectedDate || !selectedType}
-            className="w-full bg-[#1F4E4A] hover:bg-[#132E2C] text-white"
+            className="w-full bg-red-600 hover:bg-red-700 text-white"
           >
             Add Entry
           </Button>
