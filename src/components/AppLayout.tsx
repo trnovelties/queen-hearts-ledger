@@ -115,7 +115,7 @@ function AppContent({
         <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center justify-center">
           <div className="flex items-center gap-2 min-w-0 flex-1 pl-2">
             <img 
-              src="/src/assets/organization-logo.png" 
+              src={profile?.logo_image || "/src/assets/organization-logo.png"} 
               alt="Organization Logo" 
               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
             />
