@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
 import { formatDateStringForDisplay } from '@/lib/dateUtils';
+import { InlineLoading } from "@/components/ui/loading";
 
 type Organization = {
   id: string;
@@ -75,11 +76,7 @@ export function OrganizationSelector() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <div className="text-gray-600">Loading organizations...</div>
-      </div>
-    );
+    return <InlineLoading message="Loading organizations..." size="md" />;
   }
 
   return (

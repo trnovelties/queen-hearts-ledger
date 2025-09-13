@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { getTodayDateString } from "@/lib/dateUtils";
+import { ButtonLoading } from "@/components/ui/loading";
 
 interface GameFormProps {
   open: boolean;
@@ -249,7 +250,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" disabled={isLoading} className="flex-1">
-                  {isLoading ? "Creating..." : "Create Game"}
+                  {isLoading ? <ButtonLoading message="Creating..." /> : "Create Game"}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel

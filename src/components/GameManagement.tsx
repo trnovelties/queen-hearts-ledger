@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GameForm } from "./GameForm";
 import { ExpenseModal } from "./ExpenseModal";
+import { InlineLoading } from "@/components/ui/loading";
 import { GameDetailsModal } from "./GameDetailsModal";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
@@ -130,7 +131,7 @@ export function GameManagement() {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center p-4">Loading games...</div>;
+    return <InlineLoading message="Loading games..." size="lg" />;
   }
 
   if (!user) {

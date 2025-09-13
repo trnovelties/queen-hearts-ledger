@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
+import { CardLoading } from "@/components/ui/loading";
 
 interface OrganizationRule {
   id: string;
@@ -127,7 +128,7 @@ export function OrganizationRules() {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <CardLoading message="Loading organization rules..." />;
   }
 
   return (
