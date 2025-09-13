@@ -114,11 +114,7 @@ function AppContent({
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
         <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center justify-center">
           <div className="flex items-center gap-2 min-w-0 flex-1 pl-1">
-            <img 
-              src={profile?.logo_url || "/src/assets/organization-logo.png"} 
-              alt="Organization Logo" 
-              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-            />
+            <img src={profile?.logo_url || "/src/assets/organization-logo.png"} alt="Organization Logo" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
             <span className="text-base font-medium text-sidebar-foreground truncate">
               {profile?.organization_name || 'Organization'}
             </span>
@@ -188,7 +184,7 @@ function AppContent({
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-border flex items-center px-12 justify-between bg-white">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-black">
+            <h1 className="text-2xl text-black font-semibold">
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
               {location.pathname === "/admin" && "Settings"}
@@ -199,11 +195,7 @@ function AppContent({
           </div>
           
           <div className="flex items-center p-4">
-            <img 
-              src="https://isjbdwxngfrgftfannzi.supabase.co/storage/v1/object/public/app_assets/Queen%20of%20Heartts%20Frame%2018.png" 
-              alt="Queen of Hearts App Logo" 
-              className="h-10 w-10 object-contain rounded-full border-2 border-primary"
-            />
+            <img src="https://isjbdwxngfrgftfannzi.supabase.co/storage/v1/object/public/app_assets/Queen%20of%20Heartts%20Frame%2018.png" alt="Queen of Hearts App Logo" className="h-10 w-10 object-contain rounded-full border-2 border-primary" />
           </div>
         </header>
 

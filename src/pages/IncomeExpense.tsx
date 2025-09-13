@@ -183,52 +183,38 @@ export default function IncomeExpense() {
     }));
     validateGame(ticketSales, expenses, payouts);
   };
-
   const downloadWeeklyPerformancePDF = async (game: GameSummary) => {
     try {
       const jsPDF = (await import('jspdf')).default;
       const autoTable = (await import('jspdf-autotable')).default;
-      
       const doc = new jsPDF();
-      
+
       // Header information
       const startDate = formatDateStringForDisplay(game.start_date);
       const endDate = game.end_date ? formatDateStringForDisplay(game.end_date) : 'Ongoing';
       const numberOfWeeks = game.weeks.length;
-      
+
       // Title
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('Weekly Performance Report', 20, 20);
-      
+
       // Game information
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       doc.text(`Game: ${game.name}`, 20, 35);
       doc.text(`Period: ${startDate} - ${endDate}`, 20, 45);
       doc.text(`Number of Weeks: ${numberOfWeeks}`, 20, 55);
-      
+
       // Prepare table data
       const tableHeaders = ['Week', 'Period', 'Tickets Sold', 'Sales', 'Winner', 'Slot', 'Card', 'Distribution', 'Present'];
-      
       const tableData = game.weeks.map((week: any) => {
         const weekTicketSales = game.ticket_sales.filter((sale: any) => sale.week_id === week.id);
         const weeklyTicketsFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
         const weeklySalesFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-        
-        return [
-          `Week ${week.week_number}`,
-          `${formatDateStringForDisplay(week.start_date)} - ${formatDateStringForDisplay(week.end_date)}`,
-          (weeklyTicketsFromSales || week.weekly_tickets_sold || 0).toLocaleString(),
-          formatCurrency(weeklySalesFromSales || week.weekly_sales || 0),
-          week.winner_name || 'No winner',
-          week.slot_chosen ? `#${week.slot_chosen}` : '-',
-          week.card_selected || '-',
-          formatCurrency(week.weekly_payout),
-          week.winner_present !== null ? (week.winner_present ? 'Yes' : 'No') : '-'
-        ];
+        return [`Week ${week.week_number}`, `${formatDateStringForDisplay(week.start_date)} - ${formatDateStringForDisplay(week.end_date)}`, (weeklyTicketsFromSales || week.weekly_tickets_sold || 0).toLocaleString(), formatCurrency(weeklySalesFromSales || week.weekly_sales || 0), week.winner_name || 'No winner', week.slot_chosen ? `#${week.slot_chosen}` : '-', week.card_selected || '-', formatCurrency(week.weekly_payout), week.winner_present !== null ? week.winner_present ? 'Yes' : 'No' : '-'];
       });
-      
+
       // Add table
       autoTable(doc, {
         head: [tableHeaders],
@@ -236,10 +222,11 @@ export default function IncomeExpense() {
         startY: 70,
         styles: {
           fontSize: 8,
-          cellPadding: 3,
+          cellPadding: 3
         },
         headStyles: {
-          fillColor: [31, 78, 74], // #1F4E4A
+          fillColor: [31, 78, 74],
+          // #1F4E4A
           textColor: 255,
           fontStyle: 'bold'
         },
@@ -247,7 +234,7 @@ export default function IncomeExpense() {
           fillColor: [247, 248, 252] // #F7F8FC
         }
       });
-      
+
       // Save the PDF
       doc.save(`${game.name}_Weekly_Performance.pdf`);
       toast.success('Weekly performance report downloaded successfully!');
@@ -260,7 +247,7 @@ export default function IncomeExpense() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#1F4E4A] font-inter">Comprehensive financial analysis and reporting</h1>
+          <h1 className="text-2xl sm:text-3xl font-inter text-slate-950 font-semibold">Comprehensive financial analysis and reporting</h1>
         </div>
       </div>
 
@@ -355,7 +342,7 @@ export default function IncomeExpense() {
                         </div>
                         <div>
                           <div className="text-xs text-[#132E2C]/60">Carryover</div>
-                          <div className="font-bold text-black">{formatCurrency(game.carryover_jackpot)}</div>
+                          <div className="font-bold text-[#A1E96C]">{formatCurrency(game.carryover_jackpot)}</div>
                         </div>
                       </div>
                      </div>
@@ -369,12 +356,7 @@ export default function IncomeExpense() {
                  {game.weeks.length > 0 && <div className="bg-white rounded-lg shadow-sm p-4">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-sm font-semibold text-[#132E2C]">Weekly Performance</h4>
-                        <Button
-                          onClick={() => downloadWeeklyPerformancePDF(game)}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-8 px-3 border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5"
-                        >
+                        <Button onClick={() => downloadWeeklyPerformancePDF(game)} variant="outline" size="sm" className="text-xs h-8 px-3 border-[#1F4E4A]/20 hover:bg-[#1F4E4A]/5">
                           <Download className="h-3 w-3 mr-1" />
                           Download PDF
                         </Button>
@@ -396,13 +378,11 @@ export default function IncomeExpense() {
                           </thead>
                           <tbody>
                             {game.weeks.map((week: any) => {
-                              // Calculate week totals from ticket sales for this week
-                              const weekTicketSales = game.ticket_sales.filter((sale: any) => sale.week_id === week.id);
-                              const weeklyTicketsFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
-                              const weeklySalesFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
-                              
-                              return (
-                                <tr key={week.id} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
+                      // Calculate week totals from ticket sales for this week
+                      const weekTicketSales = game.ticket_sales.filter((sale: any) => sale.week_id === week.id);
+                      const weeklyTicketsFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.tickets_sold, 0);
+                      const weeklySalesFromSales = weekTicketSales.reduce((sum: number, sale: any) => sum + sale.amount_collected, 0);
+                      return <tr key={week.id} className="border-b border-[#1F4E4A]/10 hover:bg-[#F7F8FC]/30">
                                   <td className="p-2 font-medium text-[#1F4E4A]">Week {week.week_number}</td>
                                   <td className="p-2 text-sm">{formatDateStringForDisplay(week.start_date)} - {formatDateStringForDisplay(week.end_date)}</td>
                                   <td className="p-2 text-center font-medium">{weeklyTicketsFromSales.toLocaleString() || week.weekly_tickets_sold?.toLocaleString() || 0}</td>
@@ -424,9 +404,8 @@ export default function IncomeExpense() {
                                         {week.winner_present ? 'Yes' : 'No'}
                                       </span> : <span className="text-[#132E2C]/50">-</span>}
                                   </td>
-                                </tr>
-                              );
-                            })}
+                                </tr>;
+                    })}
                           </tbody>
                        </table>
                      </div>
