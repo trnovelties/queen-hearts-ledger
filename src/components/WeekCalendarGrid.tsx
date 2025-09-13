@@ -24,7 +24,7 @@ export const WeekCalendarGrid = ({
            <Button onClick={() => {
         onToggleWeek(week.id);
         onSetCurrentGameId(gameId);
-      }} variant="outline" className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${expandedWeek === week.id ? 'bg-[#3D3D3D] border-[#3D3D3D] text-white shadow-md' : 'bg-[#3D3D3D] border-[#3D3D3D] text-white hover:bg-[#2D2D2D] hover:text-white'}`}>
+      }} variant="outline" className={`w-full h-16 text-lg font-semibold transition-all duration-200 ${expandedWeek === week.id ? 'bg-red-600 border-red-600 text-white shadow-md' : 'bg-[#3D3D3D] border-[#3D3D3D] text-white hover:bg-[#2D2D2D] hover:text-white'}`}>
              Week {week.week_number}
            </Button>
           
