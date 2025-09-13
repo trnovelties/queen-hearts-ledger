@@ -169,8 +169,8 @@ function AppContent({
             </SidebarGroupContent>
           </SidebarGroup>
           
-          {/* Sidebar toggle button in middle */}
-          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          {/* Sidebar toggle button in right corner */}
+          <div className="absolute right-2 bottom-4">
             <button onClick={toggleSidebar} className="w-8 h-8 bg-transparent hover:bg-red-50 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border-2 border-red-500 hover:border-red-600" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
               {isCollapsed ? <ChevronRight className="w-4 h-4 text-red-500" /> : <ChevronLeft className="w-4 h-4 text-red-500" />}
             </button>
