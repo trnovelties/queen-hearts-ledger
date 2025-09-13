@@ -112,8 +112,13 @@ function AppContent({
   const isCollapsed = state === "collapsed";
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
-        <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center">
-          
+        <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-lg">Q</span>
+            </div>
+            <span className="text-lg font-semibold text-sidebar-foreground">Queen of Hearts</span>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="mt-6">
