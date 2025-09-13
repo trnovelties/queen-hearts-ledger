@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,18 +10,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, Building } from "lucide-react";
+
 export default function Account() {
-  const {
-    toast
-  } = useToast();
-  const {
-    profile
-  } = useAuth();
+  const { toast } = useToast();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [organizationName, setOrganizationName] = useState("");
   const [about, setAbout] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   useEffect(() => {
     if (profile) {
       setOrganizationName(profile.organization_name || "");
@@ -28,18 +27,19 @@ export default function Account() {
       setLogoPreview(profile.logo_url || null);
     }
   }, [profile]);
+
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
           title: "File too large",
           description: "Please select an image smaller than 5MB.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
+      
       setLogoFile(file);
       const reader = new FileReader();
       reader.onload = () => {
@@ -48,57 +48,58 @@ export default function Account() {
       reader.readAsDataURL(file);
     }
   };
+
   const uploadLogo = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${profile?.id}-${Date.now()}.${fileExt}`;
-
+      
       // Check if bucket exists, if not create it
-      const {
-        data: buckets
-      } = await supabase.storage.listBuckets();
+      const { data: buckets } = await supabase.storage.listBuckets();
       const brandImageBucket = buckets?.find(bucket => bucket.name === 'brand_image');
+      
       if (!brandImageBucket) {
-        const {
-          error: bucketError
-        } = await supabase.storage.createBucket('brand_image', {
+        const { error: bucketError } = await supabase.storage.createBucket('brand_image', {
           public: true,
           allowedMimeTypes: ['image/*'],
           fileSizeLimit: 5242880 // 5MB
         });
+        
         if (bucketError) {
           console.error('Error creating bucket:', bucketError);
           throw bucketError;
         }
       }
-      const {
-        data,
-        error
-      } = await supabase.storage.from('brand_image').upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+      
+      const { data, error } = await supabase.storage
+        .from('brand_image')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
       if (error) throw error;
 
       // Get public URL
-      const {
-        data: {
-          publicUrl
-        }
-      } = supabase.storage.from('brand_image').getPublicUrl(fileName);
+      const { data: { publicUrl } } = supabase.storage
+        .from('brand_image')
+        .getPublicUrl(fileName);
+
       return publicUrl;
     } catch (error) {
       console.error('Error uploading logo:', error);
       return null;
     }
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.id) return;
+
     setLoading(true);
     try {
       let logoUrl = profile.logo_url;
-
+      
       // Upload new logo if file is selected
       if (logoFile) {
         const uploadedUrl = await uploadLogo(logoFile);
@@ -108,150 +109,298 @@ export default function Account() {
           throw new Error("Failed to upload logo");
         }
       }
-      const {
-        error
-      } = await supabase.rpc('update_user_profile', {
+
+      const { error } = await supabase.rpc('update_user_profile', {
         p_user_id: profile.id,
         p_organization_name: organizationName,
         p_about: about,
         p_logo_url: logoUrl
       });
+
       if (error) throw error;
+
       toast({
         title: "Organization updated",
-        description: "Your organization information has been saved successfully."
+        description: "Your organization information has been saved successfully.",
       });
+      
       setLogoFile(null);
     } catch (error: any) {
       console.error('Error updating organization:', error);
       toast({
         title: "Update failed",
         description: error?.message || "Failed to update organization.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-  return <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="text-center space-y-3">
-          <h1 className="text-3xl font-bold font-inter text-slate-950 sm:text-4xl">Account Settings</h1>
-          <p className="text-[#132E2C]/60 text-lg">Manage your organization profile and game settings</p>
-        </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Profile Overview Card */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
-              <CardHeader className="text-center pb-4">
-                <div className="flex justify-center mb-4">
-                  {logoPreview ? <Avatar className="h-24 w-24 border-4 border-[#A1E96C]/30 shadow-lg">
-                      <AvatarImage src={logoPreview} alt="Organization logo" className="object-cover" />
-                      <AvatarFallback className="text-3xl bg-[#A1E96C]/20 text-[#1F4E4A]">
-                        {organizationName?.charAt(0) || "♥"}
-                      </AvatarFallback>
-                    </Avatar> : <Avatar className="h-24 w-24 border-4 border-dashed border-[#1F4E4A]/30 shadow-lg">
-                      <AvatarFallback className="text-3xl bg-[#F7F8FC] text-[#1F4E4A]">
-                        {organizationName?.charAt(0) || "♥"}
-                      </AvatarFallback>
-                    </Avatar>}
-                </div>
-                <CardTitle className="text-[#1F4E4A] font-inter">
-                  {organizationName || "Your Organization"}
-                </CardTitle>
-                <CardDescription className="text-[#132E2C]/60">
-                  Queen of Hearts Manager
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-[#F7F8FC] p-4 rounded-lg space-y-3">
-                  <h4 className="font-semibold text-[#132E2C] text-sm uppercase tracking-wide">Account Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#132E2C]/60">Email:</span>
-                      <span className="font-medium text-[#1F4E4A]">{profile?.email || "Not available"}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#132E2C]/60">Role:</span>
-                      <span className="font-medium text-[#1F4E4A] capitalize">{profile?.role || "Not available"}</span>
+  return (
+    <div className="min-h-screen">
+      {/* Hero Header Section */}
+      <div className="bg-gradient-to-br from-[#1F4E4A] to-[#132E2C] text-white">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-5xl font-bold font-inter mb-4">Account Settings</h1>
+            <p className="text-xl text-white/80 max-w-2xl mx-auto">
+              Manage your organization profile and customize your Queen of Hearts game experience
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid gap-8 lg:grid-cols-12">
+          
+          {/* Left Sidebar - Profile Summary */}
+          <div className="lg:col-span-4">
+            <div className="sticky top-8 space-y-6">
+              {/* Profile Card */}
+              <Card className="bg-white border-[#1F4E4A]/20 shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-[#1F4E4A] to-[#132E2C] h-20"></div>
+                <CardContent className="relative px-6 pb-6">
+                  <div className="flex flex-col items-center -mt-12 mb-6">
+                    {logoPreview ? (
+                      <Avatar className="h-24 w-24 border-4 border-white shadow-xl ring-2 ring-[#1F4E4A]/20">
+                        <AvatarImage 
+                          src={logoPreview} 
+                          alt="Organization logo" 
+                          className="object-cover" 
+                        />
+                        <AvatarFallback className="text-2xl bg-[#1F4E4A] text-white">
+                          {organizationName?.charAt(0) || "♥"}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Avatar className="h-24 w-24 border-4 border-white shadow-xl ring-2 ring-[#1F4E4A]/20">
+                        <AvatarFallback className="text-2xl bg-[#1F4E4A] text-white">
+                          {organizationName?.charAt(0) || "♥"}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+                  
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#1F4E4A] mb-2">
+                      {organizationName || "Your Organization"}
+                    </h2>
+                    <p className="text-[#132E2C]/60 font-medium">
+                      Queen of Hearts Manager
+                    </p>
+                  </div>
+
+                  {/* Account Info */}
+                  <div className="space-y-4">
+                    <div className="border-t border-[#1F4E4A]/10 pt-4">
+                      <h3 className="text-sm font-semibold text-[#132E2C] uppercase tracking-wide mb-3">
+                        Account Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-[#132E2C]/60">Email Address</span>
+                          <span className="text-sm font-medium text-[#1F4E4A]">
+                            {profile?.email || "Not available"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm text-[#132E2C]/60">Account Type</span>
+                          <span className="text-sm font-medium text-[#1F4E4A] capitalize">
+                            {profile?.role || "Not available"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              <Card className="bg-white border-[#1F4E4A]/20 shadow-lg">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-[#1F4E4A] mb-4">Organization Status</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[#132E2C]/60">Profile Complete</span>
+                      <span className="text-sm font-medium text-[#1F4E4A]">
+                        {organizationName && about ? "100%" : "60%"}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-[#1F4E4A] h-2 rounded-full transition-all duration-300"
+                        style={{ width: organizationName && about ? "100%" : "60%" }}
+                      ></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          {/* Organization Settings Form */}
-          <div className="lg:col-span-2">
-            <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-[#1F4E4A] font-inter">
-                  <Building className="h-5 w-5" />
-                  <span>Organization Information</span>
+          {/* Right Content - Settings Form */}
+          <div className="lg:col-span-8">
+            <Card className="bg-white border-[#1F4E4A]/20 shadow-lg">
+              <CardHeader className="border-b border-[#1F4E4A]/10 bg-gray-50/50">
+                <CardTitle className="flex items-center space-x-3 text-[#1F4E4A] text-2xl font-inter">
+                  <Building className="h-6 w-6" />
+                  <span>Organization Settings</span>
                 </CardTitle>
-                <CardDescription className="text-[#132E2C]/60">
-                  Configure your organization's information and branding for the Queen of Hearts game
+                <CardDescription className="text-[#132E2C]/60 text-base mt-2">
+                  Update your organization's information and branding for the Queen of Hearts game system
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid gap-6 sm:grid-cols-1">
-                    {/* Organization Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="organizationName" className="text-sm font-semibold text-[#132E2C]">
-                        Organization Name *
-                      </Label>
-                      <Input id="organizationName" placeholder="Enter your organization name" value={organizationName} onChange={e => setOrganizationName(e.target.value)} required className="bg-white border-[#1F4E4A]/20 focus:border-[#1F4E4A] focus:ring-[#1F4E4A]" />
+              
+              <CardContent className="p-8">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  
+                  {/* Organization Information Section */}
+                  <div className="space-y-6">
+                    <div className="border-b border-[#1F4E4A]/10 pb-4">
+                      <h3 className="text-lg font-semibold text-[#1F4E4A] mb-1">Basic Information</h3>
+                      <p className="text-sm text-[#132E2C]/60">Essential details about your organization</p>
                     </div>
+                    
+                    <div className="grid gap-6 sm:grid-cols-1">
+                      {/* Organization Name */}
+                      <div className="space-y-3">
+                        <Label htmlFor="organizationName" className="text-base font-semibold text-[#132E2C]">
+                          Organization Name *
+                        </Label>
+                        <Input
+                          id="organizationName"
+                          placeholder="Enter your organization name"
+                          value={organizationName}
+                          onChange={(e) => setOrganizationName(e.target.value)}
+                          required
+                          className="h-12 text-base bg-white border-[#1F4E4A]/20 focus:border-[#1F4E4A] focus:ring-[#1F4E4A]"
+                        />
+                        <p className="text-sm text-[#132E2C]/60">
+                          This name will appear on reports and game interfaces
+                        </p>
+                      </div>
 
-                    {/* About Organization */}
-                    <div className="space-y-2">
-                      <Label htmlFor="about" className="text-sm font-semibold text-[#132E2C]">
-                        About Organization
-                      </Label>
-                      <Textarea id="about" placeholder="Tell us about your organization..." value={about} onChange={e => setAbout(e.target.value)} rows={4} className="bg-white border-[#1F4E4A]/20 focus:border-[#1F4E4A] focus:ring-[#1F4E4A] resize-none" />
+                      {/* About Organization */}
+                      <div className="space-y-3">
+                        <Label htmlFor="about" className="text-base font-semibold text-[#132E2C]">
+                          About Organization
+                        </Label>
+                        <Textarea
+                          id="about"
+                          placeholder="Tell us about your organization, its mission, and activities..."
+                          value={about}
+                          onChange={(e) => setAbout(e.target.value)}
+                          rows={4}
+                          className="text-base bg-white border-[#1F4E4A]/20 focus:border-[#1F4E4A] focus:ring-[#1F4E4A] resize-none"
+                        />
+                        <p className="text-sm text-[#132E2C]/60">
+                          Optional description that helps identify your organization
+                        </p>
+                      </div>
                     </div>
+                  </div>
 
-                    {/* Logo Upload Section */}
-                    <div className="space-y-4">
-                      <Label className="text-sm font-semibold text-[#132E2C]">Organization Logo</Label>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 p-4 bg-[#F7F8FC] rounded-lg">
+                  {/* Branding Section */}
+                  <div className="space-y-6">
+                    <div className="border-b border-[#1F4E4A]/10 pb-4">
+                      <h3 className="text-lg font-semibold text-[#1F4E4A] mb-1">Branding & Logo</h3>
+                      <p className="text-sm text-[#132E2C]/60">Upload your organization's logo for reports and game materials</p>
+                    </div>
+                    
+                    <div className="bg-gray-50/50 p-6 rounded-lg border border-[#1F4E4A]/10">
+                      <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8">
+                        
+                        {/* Logo Preview */}
                         <div className="flex-shrink-0">
-                          {logoPreview ? <Avatar className="h-16 w-16 border-2 border-[#A1E96C]/30">
-                              <AvatarImage src={logoPreview} alt="Organization logo" className="object-cover" />
-                              <AvatarFallback className="text-xl bg-[#A1E96C]/20 text-[#1F4E4A]">
-                                {organizationName?.charAt(0) || "♥"}
-                              </AvatarFallback>
-                            </Avatar> : <Avatar className="h-16 w-16 border-2 border-dashed border-[#1F4E4A]/30">
-                              <AvatarFallback className="text-xl bg-white text-[#1F4E4A]">
-                                {organizationName?.charAt(0) || "♥"}
-                              </AvatarFallback>
-                            </Avatar>}
+                          <div className="text-center">
+                            {logoPreview ? (
+                              <Avatar className="h-20 w-20 border-2 border-[#1F4E4A]/30 shadow-lg mx-auto mb-3">
+                                <AvatarImage 
+                                  src={logoPreview} 
+                                  alt="Organization logo" 
+                                  className="object-cover" 
+                                />
+                                <AvatarFallback className="text-xl bg-[#1F4E4A]/20 text-[#1F4E4A]">
+                                  {organizationName?.charAt(0) || "♥"}
+                                </AvatarFallback>
+                              </Avatar>
+                            ) : (
+                              <Avatar className="h-20 w-20 border-2 border-dashed border-[#1F4E4A]/30 shadow-lg mx-auto mb-3">
+                                <AvatarFallback className="text-xl bg-white text-[#1F4E4A]">
+                                  {organizationName?.charAt(0) || "♥"}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <p className="text-sm text-[#132E2C]/60">Current Logo</p>
+                          </div>
                         </div>
                         
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" id="logo-upload" />
-                            <Label htmlFor="logo-upload" className="inline-flex items-center space-x-2 cursor-pointer bg-[#1F4E4A] text-white hover:bg-[#132E2C] px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                              <Upload className="h-4 w-4" />
-                              <span>Upload Logo</span>
+                        {/* Upload Controls */}
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <Label className="text-base font-semibold text-[#132E2C] mb-3 block">
+                              Upload New Logo
                             </Label>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoChange}
+                                className="hidden"
+                                id="logo-upload"
+                              />
+                              <Label
+                                htmlFor="logo-upload"
+                                className="inline-flex items-center space-x-3 cursor-pointer bg-[#1F4E4A] text-white hover:bg-[#132E2C] px-6 py-3 rounded-lg text-base font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                              >
+                                <Upload className="h-5 w-5" />
+                                <span>Choose File</span>
+                              </Label>
+                              {logoFile && (
+                                <span className="text-sm text-[#1F4E4A] font-medium">
+                                  {logoFile.name}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-sm text-[#132E2C]/60">
-                            Upload a square image (PNG, JPG) up to 5MB for your organization
-                          </p>
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <ul className="text-sm text-[#132E2C]/70 space-y-1">
+                              <li>• Recommended size: 400x400 pixels</li>
+                              <li>• Supported formats: PNG, JPG, GIF</li>
+                              <li>• Maximum file size: 5MB</li>
+                              <li>• Square images work best</li>
+                            </ul>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <div className="flex justify-end pt-6 border-t border-[#1F4E4A]/10">
-                    <Button type="submit" disabled={loading} className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white px-8 py-2 font-medium">
-                      {loading ? "Saving..." : "Save Organization Settings"}
-                    </Button>
+                  {/* Submit Section */}
+                  <div className="border-t border-[#1F4E4A]/10 pt-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+                      <div>
+                        <p className="text-sm text-[#132E2C]/60">
+                          Changes will be applied immediately to all game reports and interfaces
+                        </p>
+                      </div>
+                      <Button 
+                        type="submit" 
+                        disabled={loading}
+                        className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white px-8 py-3 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        {loading ? (
+                          <span className="flex items-center space-x-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-top-transparent"></div>
+                            <span>Saving Changes...</span>
+                          </span>
+                        ) : (
+                          "Save Organization Settings"
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </form>
               </CardContent>
@@ -259,5 +408,6 @@ export default function Account() {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }
