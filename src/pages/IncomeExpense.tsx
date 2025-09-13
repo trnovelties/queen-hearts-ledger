@@ -243,7 +243,7 @@ export default function IncomeExpense() {
       toast.error('Error generating PDF report');
     }
   };
-  return <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-[#F7F8FC] min-h-screen">
+  return <div className="p-4 sm:p-6 lg:p-8 space-y-6 min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
