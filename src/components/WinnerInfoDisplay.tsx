@@ -68,9 +68,9 @@ export const WinnerInfoDisplay = ({
           {onOpenWinnerForm && gameId && !isGameArchived && (
             <Button 
               onClick={handleEditWinner} 
-              variant="outline" 
+              variant="secondary" 
               size="sm" 
-              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
+              className="flex items-center gap-2"
             >
               <Edit className="h-4 w-4" />
               Edit Winner Details
@@ -79,9 +79,9 @@ export const WinnerInfoDisplay = ({
           {onOpenPayoutSlip && (
             <Button 
               onClick={handlePrintSlip} 
-              variant="outline" 
+              variant="secondary" 
               size="sm" 
-              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
+              className="flex items-center gap-2"
             >
               <Printer className="h-4 w-4" />
               Print Distribution Slip
