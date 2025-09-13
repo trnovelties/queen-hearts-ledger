@@ -168,8 +168,8 @@ function AppContent({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="p-4">
-          <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 transition-colors w-full justify-start">
+        <SidebarFooter className="p-4 border-t border-sidebar-border">
+          <SidebarMenuButton onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors w-full justify-start">
             <LogOut className="h-5 w-5 text-primary" />
             <span>Logout</span>
           </SidebarMenuButton>
