@@ -131,7 +131,7 @@ function AppContent({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => navigate("/dashboard")} className={`flex items-center gap-3 px-4 py-6 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/dashboard" ? "bg-gray-100 text-black font-medium" : ""}`}>
-                    <BarChart2 className={`h-5 w-5 ${location.pathname === "/dashboard" ? "text-red-500" : "text-primary"}`} />
+                    <BarChart2 className={`h-5 w-5 ${location.pathname === "/dashboard" ? "text-white" : "text-primary"}`} />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
