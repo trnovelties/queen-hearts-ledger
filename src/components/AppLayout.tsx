@@ -186,7 +186,7 @@ function AppContent({
       </div>
 
       <div className="flex-1 flex flex-col">
-        <header className="h-16 border-b border-border flex items-center px-6 justify-between bg-white">
+        <header className="h-16 border-b border-border flex items-center px-12 justify-between bg-white">
           <div className="flex items-center">
             <h1 className="text-2xl font-bold text-black">
               {location.pathname === "/dashboard" && "Dashboard"}
