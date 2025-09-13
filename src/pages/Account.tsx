@@ -138,57 +138,62 @@ export default function Account() {
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="text-center space-y-3">
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#1F4E4A] font-inter">Account Settings</h1>
-          <p className="text-[#132E2C]/60 text-lg">Manage your organization profile and game settings</p>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold text-primary mb-2">Account Settings</h1>
+          <p className="text-muted-foreground text-lg">Manage your organization profile and preferences</p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Profile Overview Card */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
-              <CardHeader className="text-center pb-4">
-                <div className="flex justify-center mb-4">
-                  {logoPreview ? (
-                    <Avatar className="h-24 w-24 border-4 border-[#1F4E4A]/30 shadow-lg">
-                      <AvatarImage 
-                        src={logoPreview} 
-                        alt="Organization logo" 
-                        className="object-cover" 
-                      />
-                      <AvatarFallback className="text-3xl bg-[#1F4E4A]/20 text-white">
-                        {organizationName?.charAt(0) || "♥"}
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <Avatar className="h-24 w-24 border-4 border-dashed border-[#1F4E4A]/30 shadow-lg">
-                      <AvatarFallback className="text-3xl bg-[#F7F8FC] text-[#1F4E4A]">
-                        {organizationName?.charAt(0) || "♥"}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-                <CardTitle className="text-[#1F4E4A] font-inter">
-                  {organizationName || "Your Organization"}
-                </CardTitle>
-                <CardDescription className="text-[#132E2C]/60">
-                  Queen of Hearts Manager
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-[#F7F8FC] p-4 rounded-lg space-y-3">
-                  <h4 className="font-semibold text-[#132E2C] text-sm uppercase tracking-wide">Account Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#132E2C]/60">Email:</span>
-                      <span className="font-medium text-[#1F4E4A]">{profile?.email || "Not available"}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#132E2C]/60">Role:</span>
-                      <span className="font-medium text-[#1F4E4A] capitalize">{profile?.role || "Not available"}</span>
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Profile Summary Sidebar */}
+          <div className="lg:col-span-4">
+            <Card className="sticky top-6">
+              <CardContent className="p-6">
+                <div className="text-center space-y-4">
+                  {/* Logo Display */}
+                  <div className="relative inline-block">
+                    {logoPreview ? (
+                      <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-lg">
+                        <AvatarImage 
+                          src={logoPreview} 
+                          alt="Organization logo" 
+                          className="object-cover" 
+                        />
+                        <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                          {organizationName?.charAt(0) || "♥"}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Avatar className="h-20 w-20 border-4 border-dashed border-muted-foreground/30">
+                        <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
+                          {organizationName?.charAt(0) || "♥"}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+
+                  {/* Organization Name */}
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground mb-1">
+                      {organizationName || "Your Organization"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Queen of Hearts Manager</p>
+                  </div>
+
+                  {/* Account Info */}
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-3 text-left">
+                    <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground">Account Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Email:</span>
+                        <span className="font-medium text-foreground truncate ml-2">{profile?.email || "Not available"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Role:</span>
+                        <span className="font-medium text-foreground capitalize">{profile?.role || "Not available"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -196,78 +201,77 @@ export default function Account() {
             </Card>
           </div>
 
-          {/* Organization Settings Form */}
-          <div className="lg:col-span-2">
-            <Card className="bg-white border-[#1F4E4A]/10 shadow-sm">
+          {/* Main Content */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Organization Information Card */}
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-[#1F4E4A] font-inter">
-                  <Building className="h-5 w-5" />
-                  <span>Organization Information</span>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5 text-primary" />
+                  Organization Information
                 </CardTitle>
-                <CardDescription className="text-[#132E2C]/60">
-                  Configure your organization's information and branding for the Queen of Hearts game
+                <CardDescription>
+                  Configure your organization's profile and branding
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid gap-6 sm:grid-cols-1">
-                    {/* Organization Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="organizationName" className="text-sm font-semibold text-[#132E2C]">
-                        Organization Name *
-                      </Label>
-                      <Input
-                        id="organizationName"
-                        placeholder="Enter your organization name"
-                        value={organizationName}
-                        onChange={(e) => setOrganizationName(e.target.value)}
-                        required
-                        className="bg-white border-[#1F4E4A]/20 focus:border-[#1F4E4A] focus:ring-[#1F4E4A]"
-                      />
-                    </div>
+                  {/* Organization Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="organizationName" className="text-sm font-medium">
+                      Organization Name *
+                    </Label>
+                    <Input
+                      id="organizationName"
+                      placeholder="Enter your organization name"
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                      required
+                      className="focus:ring-primary focus:border-primary"
+                    />
+                  </div>
 
-                    {/* About Organization */}
-                    <div className="space-y-2">
-                      <Label htmlFor="about" className="text-sm font-semibold text-[#132E2C]">
-                        About Organization
-                      </Label>
-                      <Textarea
-                        id="about"
-                        placeholder="Tell us about your organization..."
-                        value={about}
-                        onChange={(e) => setAbout(e.target.value)}
-                        rows={4}
-                        className="bg-white border-[#1F4E4A]/20 focus:border-[#1F4E4A] focus:ring-[#1F4E4A] resize-none"
-                      />
-                    </div>
+                  {/* About Organization */}
+                  <div className="space-y-2">
+                    <Label htmlFor="about" className="text-sm font-medium">
+                      About Organization
+                    </Label>
+                    <Textarea
+                      id="about"
+                      placeholder="Tell us about your organization..."
+                      value={about}
+                      onChange={(e) => setAbout(e.target.value)}
+                      rows={4}
+                      className="focus:ring-primary focus:border-primary resize-none"
+                    />
+                  </div>
 
-                    {/* Logo Upload Section */}
-                    <div className="space-y-4">
-                      <Label className="text-sm font-semibold text-[#132E2C]">Organization Logo</Label>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 p-4 bg-[#F7F8FC] rounded-lg">
-                        <div className="flex-shrink-0">
+                  {/* Logo Upload */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Organization Logo</Label>
+                    <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 bg-muted/20">
+                      <div className="flex flex-col items-center space-y-4">
+                        <div className="flex items-center space-x-4">
                           {logoPreview ? (
-                            <Avatar className="h-16 w-16 border-2 border-[#1F4E4A]/30">
+                            <Avatar className="h-16 w-16 border-2 border-primary/20">
                               <AvatarImage 
                                 src={logoPreview} 
-                                alt="Organization logo" 
+                                alt="Organization logo preview" 
                                 className="object-cover" 
                               />
-                              <AvatarFallback className="text-xl bg-[#1F4E4A]/20 text-white">
+                              <AvatarFallback className="text-lg bg-primary/10 text-primary">
                                 {organizationName?.charAt(0) || "♥"}
                               </AvatarFallback>
                             </Avatar>
                           ) : (
-                            <Avatar className="h-16 w-16 border-2 border-dashed border-[#1F4E4A]/30">
-                              <AvatarFallback className="text-xl bg-white text-[#1F4E4A]">
+                            <Avatar className="h-16 w-16 border-2 border-dashed border-muted-foreground/30">
+                              <AvatarFallback className="text-lg bg-muted text-muted-foreground">
                                 {organizationName?.charAt(0) || "♥"}
                               </AvatarFallback>
                             </Avatar>
                           )}
-                        </div>
-                        
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center space-x-2">
+                          
+                          <div className="flex-1 space-y-2">
                             <Input
                               type="file"
                               accept="image/*"
@@ -277,28 +281,29 @@ export default function Account() {
                             />
                             <Label
                               htmlFor="logo-upload"
-                              className="inline-flex items-center space-x-2 cursor-pointer bg-[#1F4E4A] text-white hover:bg-[#132E2C] px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                              className="inline-flex items-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
                             >
                               <Upload className="h-4 w-4" />
-                              <span>Upload Logo</span>
+                              Choose Logo
                             </Label>
                           </div>
-                          <p className="text-sm text-[#132E2C]/60">
-                            Upload a square image (PNG, JPG) up to 5MB for your organization
-                          </p>
                         </div>
+                        
+                        <p className="text-sm text-muted-foreground text-center">
+                          Upload a square image (PNG, JPG) up to 5MB. Recommended size: 400x400px
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Submit Button */}
-                  <div className="flex justify-end pt-6 border-t border-[#1F4E4A]/10">
+                  <div className="flex justify-end pt-4 border-t">
                     <Button 
                       type="submit" 
                       disabled={loading}
-                      className="bg-[#1F4E4A] hover:bg-[#132E2C] text-white px-8 py-2 font-medium"
+                      className="min-w-[200px]"
                     >
-                      {loading ? "Saving..." : "Save Organization Settings"}
+                      {loading ? "Saving..." : "Save Changes"}
                     </Button>
                   </div>
                 </form>
