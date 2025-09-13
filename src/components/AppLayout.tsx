@@ -113,11 +113,15 @@ function AppContent({
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
         <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">Q</span>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">
+                {profile?.organization_name ? profile.organization_name.charAt(0).toUpperCase() : 'O'}
+              </span>
             </div>
-            <span className="text-lg font-semibold text-sidebar-foreground">Queen of Hearts</span>
+            <span className="text-sm font-medium text-sidebar-foreground truncate">
+              {profile?.organization_name || 'Organization'}
+            </span>
           </div>
         </SidebarHeader>
         <SidebarContent>
