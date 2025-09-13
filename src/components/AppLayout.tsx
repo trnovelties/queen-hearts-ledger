@@ -193,7 +193,7 @@ function AppContent({
             <img 
               src="https://isjbdwxngfrgftfannzi.supabase.co/storage/v1/object/public/app_assets/Queen%20of%20Heartts%20Image%202.png" 
               alt="Queen of Hearts App Logo" 
-              className="h-10 w-10 object-contain rounded-full border-2 border-primary"
+              className="h-8 w-8 object-contain rounded-full border-2 border-primary"
             />
           </div>
         </header>
