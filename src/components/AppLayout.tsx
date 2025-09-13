@@ -187,8 +187,7 @@ function AppContent({
 
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-border flex items-center px-6 justify-between bg-white">
-          <div className="flex items-center gap-4">
-            <SidebarTrigger className="hover:bg-gray-100 rounded-md p-2" />
+          <div className="flex items-center">
             <h1 className="text-2xl font-bold text-black">
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
