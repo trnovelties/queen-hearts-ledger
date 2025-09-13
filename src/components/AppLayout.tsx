@@ -112,25 +112,8 @@ function AppContent({
   const isCollapsed = state === "collapsed";
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
-        <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-            {profile?.logo_url ? (
-              <img 
-                src={profile.logo_url} 
-                alt="Organization Logo" 
-                className="w-full h-full object-cover rounded-full"
-              />
-            ) : (
-              <div className="w-full h-full bg-primary rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
-                  {profile?.organization_name?.charAt(0) || 'O'}
-                </span>
-              </div>
-            )}
-          </div>
-          <span className="font-semibold text-sidebar-foreground truncate">
-            {profile?.organization_name || 'Organization'}
-          </span>
+        <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center">
+          
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="mt-6">
