@@ -252,7 +252,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
                 <Button type="submit" disabled={isLoading} className="flex-1">
                   {isLoading ? <ButtonLoading message="Creating..." /> : "Create Game"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
               </div>
