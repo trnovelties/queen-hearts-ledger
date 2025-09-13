@@ -177,7 +177,7 @@ export const WeekManagement = ({
   };
 
   return (
-    <div className="p-4 border-t">
+    <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">
           {isGameCompleted ? "Game Information" : "Weeks"}
