@@ -190,16 +190,11 @@ function AppContent({
           </div>
           
           <div className="flex items-center">
-            {profile?.logo_url ? <Avatar className="h-10 w-10 border-2 border-primary">
-                <AvatarImage src={profile.logo_url} alt={profile?.organization_name || "Organization logo"} className="object-cover" />
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {profile?.organization_name?.charAt(0) || "♥"}
-                </AvatarFallback>
-              </Avatar> : <Avatar className="h-10 w-10 border-2 border-primary">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {profile?.organization_name?.charAt(0) || "♥"}
-                </AvatarFallback>
-              </Avatar>}
+            <img 
+              src="https://isjbdwxngfrgftfannzi.supabase.co/storage/v1/object/public/app_assets/Queen%20of%20Heartts%20Image%202.png" 
+              alt="Queen of Hearts App Logo" 
+              className="h-10 w-10 object-cover rounded-full border-2 border-primary"
+            />
           </div>
         </header>
 
