@@ -120,38 +120,38 @@ function AppContent({
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/dashboard")} className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/dashboard" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                    <BarChart2 className={`h-5 w-5 ${location.pathname === "/dashboard" ? "text-white" : "text-primary"}`} />
+                  <SidebarMenuButton onClick={() => navigate("/dashboard")} className={`flex items-center gap-3 px-4 py-4 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/dashboard" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                    <BarChart2 className={`h-5 w-5 ${location.pathname === "/dashboard" ? "text-red-500" : "text-primary"}`} />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/income-expense")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/income-expense" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                    <PieChart className={`h-5 w-5 ${location.pathname === "/income-expense" ? "text-white" : "text-primary"}`} />
+                  <SidebarMenuButton onClick={() => navigate("/income-expense")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/income-expense" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                    <PieChart className={`h-5 w-5 ${location.pathname === "/income-expense" ? "text-red-500" : "text-primary"}`} />
                     <span>Income vs Expense</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/admin")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/admin" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                    <Settings className={`h-5 w-5 ${location.pathname === "/admin" ? "text-white" : "text-primary"}`} />
+                  <SidebarMenuButton onClick={() => navigate("/admin")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/admin" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                    <Settings className={`h-5 w-5 ${location.pathname === "/admin" ? "text-red-500" : "text-primary"}`} />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/compliance" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                    <Shield className={`h-5 w-5 hover:text-red-500 transition-colors ${location.pathname === "/compliance" ? "text-white" : "text-primary"}`} />
+                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/compliance" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                    <Shield className={`h-5 w-5 ${location.pathname === "/compliance" ? "text-red-500" : "text-primary"}`} />
                     <span>Compliance</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {profile?.role === 'admin' && <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => navigate("/admin-view")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/admin-view" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                      <AdminViewIcon className={`h-5 w-5 ${location.pathname === "/admin-view" ? "text-white" : "text-primary"}`} />
+                    <SidebarMenuButton onClick={() => navigate("/admin-view")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/admin-view" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                      <AdminViewIcon className={`h-5 w-5 ${location.pathname === "/admin-view" ? "text-red-500" : "text-primary"}`} />
                       <span>Admin View</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>}
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/account")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/account" ? "bg-gray-100 text-sidebar-foreground font-medium" : ""}`}>
-                    <User className={`h-5 w-5 ${location.pathname === "/account" ? "text-white" : "text-primary"}`} />
+                  <SidebarMenuButton onClick={() => navigate("/account")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/account" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                    <User className={`h-5 w-5 ${location.pathname === "/account" ? "text-red-500" : "text-primary"}`} />
                     <span>Account</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
