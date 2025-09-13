@@ -202,12 +202,12 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
   ];
 
   const chartColors = {
-    primary: '#1F4E4A',
-    secondary: '#A1E96C',
-    accent: '#132E2C',
-    expense: '#ef4444',
-    donation: '#8b5cf6',
-    profit: '#3D3D3D'
+    primary: '#ff9999',
+    secondary: '#ffb3b3',
+    accent: '#ff6666',
+    expense: '#ff4d4d',
+    donation: '#ff8080',
+    profit: '#ffcccc'
   };
 
   // Performance trend data for line chart
@@ -283,15 +283,15 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                   <Line 
                     type="monotone" 
                     dataKey="NetProfit" 
-                    stroke="#3D3D3D" 
+                    stroke="#ff6666" 
                     strokeWidth={3}
-                    dot={{ fill: "#3D3D3D", r: 5 }}
+                    dot={{ fill: "#ff6666", r: 5 }}
                     name="Income (Net Profit)"
                   />
                 ) : (
                   <Bar 
                     dataKey="Distributions" 
-                    fill="#3D3D3D" 
+                    fill="#ff9999" 
                     radius={[4, 4, 0, 0]}
                     name="Expense (Distribution)"
                   />
@@ -358,9 +358,9 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                 <Line 
                   type="monotone" 
                   dataKey="jackpotIncrease" 
-                  stroke="#3D3D3D" 
+                  stroke="#ff6666" 
                   strokeWidth={3}
-                  dot={{ fill: "#3D3D3D", r: 5 }}
+                  dot={{ fill: "#ff6666", r: 5 }}
                   name="Jackpot Increase"
                 />
               </LineChart>
