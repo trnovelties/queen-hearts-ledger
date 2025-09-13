@@ -113,13 +113,13 @@ function AppContent({
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
         <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center justify-center">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm">
-                {profile?.organization_name ? profile.organization_name.charAt(0).toUpperCase() : 'O'}
-              </span>
-            </div>
-            <span className="text-sm font-medium text-sidebar-foreground truncate">
+          <div className="flex items-center gap-2 min-w-0 flex-1 pl-2">
+            <img 
+              src="/src/assets/organization-logo.png" 
+              alt="Organization Logo" 
+              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+            />
+            <span className="text-base font-medium text-sidebar-foreground truncate">
               {profile?.organization_name || 'Organization'}
             </span>
           </div>
