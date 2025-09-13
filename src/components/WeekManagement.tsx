@@ -222,7 +222,7 @@ export const WeekManagement = ({
             onClick={() => onOpenSlotGrid(game)}
             variant="outline"
             size="sm"
-            className="flex items-center gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+            className="flex items-center gap-2 bg-red-100/50 text-red-600 border-red-300 hover:bg-red-100"
           >
             <Grid className="h-4 w-4 text-red-600" /> View Slot grid
           </Button>
@@ -230,7 +230,7 @@ export const WeekManagement = ({
             onClick={() => onOpenWeekForm(game.id)}
             variant="outline"
             size="sm"
-            className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 flex items-center gap-2"
+            className="bg-red-100/50 text-red-600 border-red-300 hover:bg-red-100 flex items-center gap-2"
           >
             <Plus className="h-4 w-4 text-red-600" /> Add Week
           </Button>
