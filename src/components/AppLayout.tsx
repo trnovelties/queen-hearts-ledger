@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { ArrowLeft, BarChart2, LogOut, PieChart, Settings, User, Menu, X, ChevronLeft, ChevronRight, Shield, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -146,10 +146,10 @@ function AppContent({
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
+                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-3 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/compliance" ? "bg-gray-100 text-black font-medium" : ""}`}>
-                    <Shield className={`h-5 w-5 ${location.pathname === "/compliance" ? "text-red-500" : "text-primary"}`} />
-                    <span>Compliance</span>
+                    <BookOpen className={`h-5 w-5 ${location.pathname === "/compliance" ? "text-red-500" : "text-primary"}`} />
+                    <span>Resources</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {profile?.role === 'admin' && <SidebarMenuItem>
@@ -192,7 +192,7 @@ function AppContent({
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
               {location.pathname === "/admin" && "Settings"}
-              {location.pathname === "/compliance" && "Compliance"}
+              {location.pathname === "/compliance" && "Resources"}
               {location.pathname === "/admin-view" && "Admin View"}
               {location.pathname === "/account" && "Account"}
             </h1>
