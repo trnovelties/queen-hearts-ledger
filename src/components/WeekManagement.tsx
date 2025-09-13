@@ -186,11 +186,11 @@ export const WeekManagement = ({
           {isGameCompleted && (
             <Button
               onClick={() => onGeneratePdfReport(game)}
-              variant="export"
+              variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
             >
-              <Download className="h-4 w-4" /> Export Game PDF
+              <Download className="h-4 w-4 text-red-600" /> Export Game PDF
             </Button>
           )}
           {needsGameCompletionButton() && (
@@ -203,9 +203,9 @@ export const WeekManagement = ({
               }}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2 bg-yellow-600 text-white border-yellow-600 hover:bg-yellow-700 hover:border-yellow-700"
+              className="flex items-center gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
             >
-              <CheckCircle className="h-4 w-4" /> Complete Your Game
+              <CheckCircle className="h-4 w-4 text-red-600" /> Complete Your Game
             </Button>
           )}
           {isGameCompleted && getQueenOfHeartsWinner() && (
@@ -213,16 +213,16 @@ export const WeekManagement = ({
               onClick={handlePrintWinnerSlip}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2 bg-green-800 text-green-200 border-green-700 hover:bg-green-700 hover:text-green-100"
+              className="flex items-center gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
             >
-              <Printer className="h-4 w-4" /> Print Winner Slip
+              <Printer className="h-4 w-4 text-red-600" /> Print Winner Slip
             </Button>
           )}
           <Button
             onClick={() => onOpenSlotGrid(game)}
             variant="outline"
             size="sm"
-            className="flex items-center gap-2 text-red-600 border-red-600 hover:bg-red-50"
+            className="flex items-center gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
           >
             <Grid className="h-4 w-4 text-red-600" /> View Slot grid
           </Button>
@@ -230,7 +230,7 @@ export const WeekManagement = ({
             onClick={() => onOpenWeekForm(game.id)}
             variant="outline"
             size="sm"
-            className="text-red-600 border-red-600 hover:bg-red-50 flex items-center gap-2"
+            className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 flex items-center gap-2"
           >
             <Plus className="h-4 w-4 text-red-600" /> Add Week
           </Button>
