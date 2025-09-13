@@ -306,7 +306,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
       <Card className="bg-white border-[#1F4E4A]/10">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle className="text-[#1F4E4A] font-inter">
+            <CardTitle className="text-black font-inter">
               Jackpot Increase Per Week
             </CardTitle>
             <CardDescription>
