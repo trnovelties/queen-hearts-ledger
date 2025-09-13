@@ -181,8 +181,8 @@ function AppContent({
       <div className="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 transition-all duration-300" style={{
       left: isCollapsed ? '0px' : '256px'
     }}>
-        <button onClick={toggleSidebar} className="w-8 h-8 bg-sidebar-background hover:bg-sidebar-accent/10 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border border-sidebar-border" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
-          {isCollapsed ? <ChevronRight className="w-4 h-4 text-sidebar-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />}
+        <button onClick={toggleSidebar} className="w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 border-2 border-red-500 hover:border-red-600" aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          {isCollapsed ? <ChevronRight className="w-4 h-4 text-white" /> : <ChevronLeft className="w-4 h-4 text-white" />}
         </button>
       </div>
 
