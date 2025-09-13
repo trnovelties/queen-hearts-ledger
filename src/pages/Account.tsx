@@ -138,7 +138,7 @@ export default function Account() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header Section */}
         <div className="text-center space-y-3">
@@ -153,13 +153,13 @@ export default function Account() {
               <CardHeader className="text-center pb-4">
                 <div className="flex justify-center mb-4">
                   {logoPreview ? (
-                    <Avatar className="h-24 w-24 border-4 border-[#A1E96C]/30 shadow-lg">
+                    <Avatar className="h-24 w-24 border-4 border-[#1F4E4A]/30 shadow-lg">
                       <AvatarImage 
                         src={logoPreview} 
                         alt="Organization logo" 
                         className="object-cover" 
                       />
-                      <AvatarFallback className="text-3xl bg-[#A1E96C]/20 text-[#1F4E4A]">
+                      <AvatarFallback className="text-3xl bg-[#1F4E4A]/20 text-white">
                         {organizationName?.charAt(0) || "♥"}
                       </AvatarFallback>
                     </Avatar>
@@ -247,13 +247,13 @@ export default function Account() {
                       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 p-4 bg-[#F7F8FC] rounded-lg">
                         <div className="flex-shrink-0">
                           {logoPreview ? (
-                            <Avatar className="h-16 w-16 border-2 border-[#A1E96C]/30">
+                            <Avatar className="h-16 w-16 border-2 border-[#1F4E4A]/30">
                               <AvatarImage 
                                 src={logoPreview} 
                                 alt="Organization logo" 
                                 className="object-cover" 
                               />
-                              <AvatarFallback className="text-xl bg-[#A1E96C]/20 text-[#1F4E4A]">
+                              <AvatarFallback className="text-xl bg-[#1F4E4A]/20 text-white">
                                 {organizationName?.charAt(0) || "♥"}
                               </AvatarFallback>
                             </Avatar>
