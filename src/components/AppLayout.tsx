@@ -113,7 +113,7 @@ function AppContent({
   return <div className="min-h-screen flex w-full relative">
       <Sidebar className="border-r border-sidebar-border bg-sidebar-background">
         <SidebarHeader className="h-16 pl-2 pr-4 border-b border-sidebar-border flex items-center justify-center">
-          <div className="flex items-center gap-2 min-w-0 flex-1 pl-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1 pl-1">
             <img 
               src={profile?.logo_url || "/src/assets/organization-logo.png"} 
               alt="Organization Logo" 
