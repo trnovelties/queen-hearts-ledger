@@ -206,8 +206,7 @@ export default function Account() {
             {/* Organization Information Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5 text-primary" />
+                <CardTitle>
                   Organization Information
                 </CardTitle>
                 <CardDescription>
