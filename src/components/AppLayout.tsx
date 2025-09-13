@@ -125,7 +125,7 @@ function AppContent({
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
+          <SidebarGroup className="mt-6">
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
