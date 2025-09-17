@@ -1,16 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
 import { CardLoading } from "@/components/ui/loading";
-import { Eye, Edit } from "lucide-react";
+import { Download, Edit } from "lucide-react";
+import jsPDF from 'jspdf';
 
 interface OrganizationRule {
   id: string;
@@ -94,6 +93,48 @@ export function OrganizationRules() {
     }
   };
 
+  const handleDownloadPDF = () => {
+    if (!rules) return;
+
+    try {
+      const doc = new jsPDF();
+      
+      // Set up the PDF
+      doc.setFontSize(20);
+      doc.text(rules.organization_name, 20, 30);
+      
+      doc.setFontSize(16);
+      doc.text('Queen of Hearts Game Rules', 20, 50);
+      
+      // Add rules content
+      doc.setFontSize(12);
+      const splitText = doc.splitTextToSize(rules.rules_content, 170);
+      doc.text(splitText, 20, 70);
+      
+      // Add disclaimer at bottom
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(10);
+      doc.text('These rules are provided for informational purposes.', 20, pageHeight - 30);
+      doc.text('Please consult your organization\'s bylaws and local regulations.', 20, pageHeight - 20);
+      
+      // Save the PDF
+      const fileName = `${rules.organization_name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rules.pdf`;
+      doc.save(fileName);
+      
+      toast({
+        title: "Success",
+        description: "Rules PDF downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSave = async () => {
     try {
       const userId = getCurrentUserId();
@@ -157,32 +198,14 @@ export function OrganizationRules() {
               </div>
 
               <div className="flex gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Preview Rules
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle className="text-center text-xl font-bold">
-                        {rules?.organization_name || 'YOUR ORGANIZATION NAME HERE'}
-                      </DialogTitle>
-                      <DialogDescription className="text-center">
-                        Queen of Hearts Game Rules
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="whitespace-pre-line text-sm leading-relaxed p-6 bg-muted rounded-lg">
-                        {rules?.rules_content || 'No rules set yet.'}
-                      </div>
-                      <div className="text-center text-xs text-muted-foreground border-t pt-4">
-                        These rules are provided for informational purposes. Please consult your organization's bylaws and local regulations.
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDownloadPDF}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
 
                 <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
                   <Edit className="h-4 w-4" />
