@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
 import { CardPayoutConfig } from "@/components/CardPayoutConfig";
-import { OrganizationRules } from "@/components/OrganizationRules";
 
 export default function Admin() {
   const { toast } = useToast();
@@ -199,20 +198,139 @@ export default function Admin() {
         )}
       </h1>
       
-      <Tabs defaultValue="distributions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="distributions">Card Distributions</TabsTrigger>
-          <TabsTrigger value="rules">Organization Rules</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="distributions" className="space-y-6">
-          <CardPayoutConfig />
-        </TabsContent>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Game Settings</CardTitle>
+            <CardDescription>
+              Configure default settings for new games and jackpot distribution
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="ticketPrice">Default Ticket Price ($)</Label>
+                <Input
+                  id="ticketPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={gameSettings.ticketPrice}
+                  onChange={(e) =>
+                    setGameSettings({
+                      ...gameSettings,
+                      ticketPrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  disabled={loading}
+                />
+              </div>
 
-        <TabsContent value="rules" className="space-y-6">
-          <OrganizationRules />
-        </TabsContent>
-      </Tabs>
+              <div>
+                <Label htmlFor="minimumStartingJackpot">Minimum Starting Jackpot ($)</Label>
+                <Input
+                  id="minimumStartingJackpot"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={gameSettings.minimumStartingJackpot}
+                  onChange={(e) =>
+                    setGameSettings({
+                      ...gameSettings,
+                      minimumStartingJackpot: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="organizationPercentage">Organization Percentage (%)</Label>
+                <Input
+                  id="organizationPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={gameSettings.organizationPercentage}
+                  onChange={(e) =>
+                    setGameSettings({
+                      ...gameSettings,
+                      organizationPercentage: parseInt(e.target.value) || 0,
+                      jackpotPercentage: 100 - (parseInt(e.target.value) || 0),
+                    })
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="jackpotPercentage">Jackpot Percentage (%)</Label>
+                <Input
+                  id="jackpotPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={gameSettings.jackpotPercentage}
+                  onChange={(e) =>
+                    setGameSettings({
+                      ...gameSettings,
+                      jackpotPercentage: parseInt(e.target.value) || 0,
+                      organizationPercentage: 100 - (parseInt(e.target.value) || 0),
+                    })
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="penaltyPercentage">Penalty Percentage (%)</Label>
+                <Input
+                  id="penaltyPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={gameSettings.penaltyPercentage}
+                  onChange={(e) =>
+                    setGameSettings({
+                      ...gameSettings,
+                      penaltyPercentage: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="flex items-start space-x-3 pt-6">
+                <Switch
+                  id="penaltyToOrganization"
+                  checked={gameSettings.penaltyToOrganization}
+                  onCheckedChange={(checked) =>
+                    setGameSettings({
+                      ...gameSettings,
+                      penaltyToOrganization: checked,
+                    })
+                  }
+                  disabled={loading}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <Label htmlFor="penaltyToOrganization">
+                    Penalty to Organization
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    When checked, penalties go to organization net profit. When unchecked, penalties roll over to next game's jackpot.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={handleSaveGameSettings} disabled={loading}>
+              {loading ? "Saving..." : "Save Settings"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <CardPayoutConfig />
+      </div>
     </div>
   );
 }

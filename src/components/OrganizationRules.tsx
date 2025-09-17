@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
 import { CardLoading } from "@/components/ui/loading";
+import { Eye, Edit } from "lucide-react";
 
 interface OrganizationRule {
   id: string;
@@ -149,14 +151,44 @@ export function OrganizationRules() {
               
               <div>
                 <h4 className="font-medium mb-2">Game Rules:</h4>
-                <div className="whitespace-pre-line text-sm text-gray-700 bg-gray-50 p-4 rounded">
+                <div className="whitespace-pre-line text-sm text-muted-foreground bg-muted p-4 rounded">
                   {rules?.rules_content || 'No rules set yet.'}
                 </div>
               </div>
 
-              <Button onClick={() => setIsEditing(true)}>
-                Edit Rules
-              </Button>
+              <div className="flex gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Preview Rules
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-center text-xl font-bold">
+                        {rules?.organization_name || 'YOUR ORGANIZATION NAME HERE'}
+                      </DialogTitle>
+                      <DialogDescription className="text-center">
+                        Queen of Hearts Game Rules
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="whitespace-pre-line text-sm leading-relaxed p-6 bg-muted rounded-lg">
+                        {rules?.rules_content || 'No rules set yet.'}
+                      </div>
+                      <div className="text-center text-xs text-muted-foreground border-t pt-4">
+                        These rules are provided for informational purposes. Please consult your organization's bylaws and local regulations.
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Rules
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

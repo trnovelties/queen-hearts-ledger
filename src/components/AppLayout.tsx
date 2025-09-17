@@ -146,9 +146,9 @@ function AppContent({
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                 <SidebarMenuItem className={`relative ${location.pathname === "/compliance" ? "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500" : ""}`}>
-                  <SidebarMenuButton onClick={() => navigate("/compliance")} className={`flex items-center gap-3 px-4 py-6 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/compliance" ? "bg-gray-100 text-black font-medium" : ""}`}>
-                    <BookOpen className={`h-5 w-5 ${location.pathname === "/compliance" ? "text-red-500" : "text-primary"}`} />
+                 <SidebarMenuItem className={`relative ${location.pathname === "/resources" ? "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500" : ""}`}>
+                  <SidebarMenuButton onClick={() => navigate("/resources")} className={`flex items-center gap-3 px-4 py-6 text-sidebar-foreground hover:bg-gray-100 hover:text-black transition-colors ${location.pathname === "/resources" ? "bg-gray-100 text-black font-medium" : ""}`}>
+                    <BookOpen className={`h-5 w-5 ${location.pathname === "/resources" ? "text-red-500" : "text-primary"}`} />
                     <span>Resources</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -192,7 +192,7 @@ function AppContent({
               {location.pathname === "/dashboard" && "Dashboard"}
               {location.pathname === "/income-expense" && "Income vs Expense"}
               {location.pathname === "/admin" && "Settings"}
-              {location.pathname === "/compliance" && "Resources"}
+              {location.pathname === "/resources" && "Resources"}
               {location.pathname === "/admin-view" && "Admin View"}
               {location.pathname === "/account" && "Account"}
             </h1>
