@@ -120,13 +120,15 @@ export function OrganizationRules() {
       const orgName = rules.organization_name || 'YOUR ORGANIZATION NAME HERE';
       const orgNameLines = doc.splitTextToSize(orgName, pageWidth - 40);
       doc.text(orgNameLines, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += orgNameLines.length * 7 + 5;
+      yPosition += orgNameLines.length * 7 + 10;
 
       // Subtitle
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(220, 38, 127); // Red color
       doc.text('Queen of Hearts Game Rules', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
+      doc.setTextColor(0, 0, 0); // Reset to black
+      yPosition += 20;
 
       // Rules Content
       doc.setFontSize(11);
