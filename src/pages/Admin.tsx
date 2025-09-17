@@ -10,11 +10,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useAdmin } from "@/context/AdminContext";
 import { CardPayoutConfig } from "@/components/CardPayoutConfig";
-
 export default function Admin() {
-  const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
-  const { viewingOrganization, isViewingOtherOrganization } = useAdmin();
+  const {
+    toast
+  } = useToast();
+  const {
+    user,
+    isAdmin
+  } = useAuth();
+  const {
+    viewingOrganization,
+    isViewingOtherOrganization
+  } = useAdmin();
   const [gameSettings, setGameSettings] = useState({
     ticketPrice: 2,
     organizationPercentage: 40,
@@ -23,40 +30,29 @@ export default function Admin() {
     penaltyToOrganization: false,
     minimumStartingJackpot: 500
   });
-  
   const [loading, setLoading] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
-  
+
   // Fetch configuration on component mount
   useEffect(() => {
     if (user?.id) {
       fetchConfig();
     }
   }, [user?.id, viewingOrganization, isViewingOtherOrganization]);
-
   const fetchConfig = async () => {
     if (!user?.id) return;
-    
     setLoading(true);
     try {
       // Determine which user's config to fetch
-      const targetUserId = isViewingOtherOrganization && viewingOrganization 
-        ? viewingOrganization.id 
-        : user.id;
-
+      const targetUserId = isViewingOtherOrganization && viewingOrganization ? viewingOrganization.id : user.id;
       console.log('Fetching config for user:', targetUserId);
-
-      const { data, error } = await supabase
-        .from('configurations')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .limit(1)
-        .maybeSingle();
-          
+      const {
+        data,
+        error
+      } = await supabase.from('configurations').select('*').eq('user_id', targetUserId).limit(1).maybeSingle();
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
-      
       if (data) {
         setConfigId(data.id);
         setGameSettings({
@@ -84,57 +80,52 @@ export default function Admin() {
       toast({
         title: "Error",
         description: "Failed to load configuration settings.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-  
+
   // Handle saving game settings
   const handleSaveGameSettings = async () => {
     if (!user?.id) {
       toast({
         title: "Error",
         description: "You must be logged in to save configurations.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
     // Determine which user's config to save
-    const targetUserId = isViewingOtherOrganization && viewingOrganization 
-      ? viewingOrganization.id 
-      : user.id;
+    const targetUserId = isViewingOtherOrganization && viewingOrganization ? viewingOrganization.id : user.id;
 
     // Validate percentages
     if (gameSettings.organizationPercentage + gameSettings.jackpotPercentage !== 100) {
       toast({
         title: "Validation Error",
         description: "Organization and Jackpot percentages must add up to 100%.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
     if (gameSettings.ticketPrice <= 0) {
       toast({
         title: "Validation Error",
         description: "Ticket price must be greater than zero.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
     if (gameSettings.minimumStartingJackpot < 0) {
       toast({
         title: "Validation Error",
         description: "Minimum starting jackpot cannot be negative.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
     setLoading(true);
     try {
       const configData = {
@@ -147,56 +138,35 @@ export default function Admin() {
         user_id: targetUserId,
         updated_at: new Date().toISOString()
       };
-
       let result;
       if (configId) {
         // Update existing configuration
-        result = await supabase
-          .from('configurations')
-          .update(configData)
-          .eq('id', configId)
-          .eq('user_id', targetUserId);
+        result = await supabase.from('configurations').update(configData).eq('id', configId).eq('user_id', targetUserId);
       } else {
         // Insert new configuration
-        result = await supabase
-          .from('configurations')
-          .insert(configData)
-          .select()
-          .single();
-        
+        result = await supabase.from('configurations').insert(configData).select().single();
         if (result.data) {
           setConfigId(result.data.id);
         }
       }
-        
       if (result.error) throw result.error;
-      
       toast({
         title: "Settings Saved",
-        description: `Default game settings have been updated${isViewingOtherOrganization ? ` for ${viewingOrganization?.organization_name || viewingOrganization?.email}` : ''}.`,
+        description: `Default game settings have been updated${isViewingOtherOrganization ? ` for ${viewingOrganization?.organization_name || viewingOrganization?.email}` : ''}.`
       });
     } catch (error: any) {
       console.error('Error saving game settings:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to save settings.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-  
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">
-        Admin Panel
-        {isViewingOtherOrganization && (
-          <span className="ml-2 text-lg font-normal text-muted-foreground">
-            (Viewing: {viewingOrganization?.organization_name || viewingOrganization?.email})
-          </span>
-        )}
-      </h1>
+  return <div className="container mx-auto px-4 py-8">
+      
       
       <div className="space-y-6">
         <Card>
@@ -210,117 +180,47 @@ export default function Admin() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="ticketPrice">Default Ticket Price ($)</Label>
-                <Input
-                  id="ticketPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={gameSettings.ticketPrice}
-                  onChange={(e) =>
-                    setGameSettings({
-                      ...gameSettings,
-                      ticketPrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  disabled={loading}
-                />
+                <Input id="ticketPrice" type="number" step="0.01" min="0" value={gameSettings.ticketPrice} onChange={e => setGameSettings({
+                ...gameSettings,
+                ticketPrice: parseFloat(e.target.value) || 0
+              })} disabled={loading} />
               </div>
 
               <div>
                 <Label htmlFor="minimumStartingJackpot">Minimum Starting Jackpot ($)</Label>
-                <Input
-                  id="minimumStartingJackpot"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={gameSettings.minimumStartingJackpot}
-                  onChange={(e) =>
-                    setGameSettings({
-                      ...gameSettings,
-                      minimumStartingJackpot: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  disabled={loading}
-                />
+                <Input id="minimumStartingJackpot" type="number" step="0.01" min="0" value={gameSettings.minimumStartingJackpot} onChange={e => setGameSettings({
+                ...gameSettings,
+                minimumStartingJackpot: parseFloat(e.target.value) || 0
+              })} disabled={loading} />
               </div>
 
               <div>
                 <Label htmlFor="organizationPercentage">Organization Percentage (%)</Label>
-                <Input
-                  id="organizationPercentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={gameSettings.organizationPercentage}
-                  onChange={(e) =>
-                    setGameSettings({
-                      ...gameSettings,
-                      organizationPercentage: parseInt(e.target.value) || 0,
-                      jackpotPercentage: 100 - (parseInt(e.target.value) || 0),
-                    })
-                  }
-                  disabled={loading}
-                />
+                <Input id="organizationPercentage" type="number" min="0" max="100" value={gameSettings.organizationPercentage} onChange={e => setGameSettings({
+                ...gameSettings,
+                organizationPercentage: parseInt(e.target.value) || 0,
+                jackpotPercentage: 100 - (parseInt(e.target.value) || 0)
+              })} disabled={loading} />
               </div>
 
               <div>
                 <Label htmlFor="jackpotPercentage">Jackpot Percentage (%)</Label>
-                <Input
-                  id="jackpotPercentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={gameSettings.jackpotPercentage}
-                  onChange={(e) =>
-                    setGameSettings({
-                      ...gameSettings,
-                      jackpotPercentage: parseInt(e.target.value) || 0,
-                      organizationPercentage: 100 - (parseInt(e.target.value) || 0),
-                    })
-                  }
-                  disabled={loading}
-                />
+                <Input id="jackpotPercentage" type="number" min="0" max="100" value={gameSettings.jackpotPercentage} onChange={e => setGameSettings({
+                ...gameSettings,
+                jackpotPercentage: parseInt(e.target.value) || 0,
+                organizationPercentage: 100 - (parseInt(e.target.value) || 0)
+              })} disabled={loading} />
               </div>
 
               <div>
                 <Label htmlFor="penaltyPercentage">Penalty Percentage (%)</Label>
-                <Input
-                  id="penaltyPercentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={gameSettings.penaltyPercentage}
-                  onChange={(e) =>
-                    setGameSettings({
-                      ...gameSettings,
-                      penaltyPercentage: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={loading}
-                />
+                <Input id="penaltyPercentage" type="number" min="0" max="100" value={gameSettings.penaltyPercentage} onChange={e => setGameSettings({
+                ...gameSettings,
+                penaltyPercentage: parseInt(e.target.value) || 0
+              })} disabled={loading} />
               </div>
 
-              <div className="flex items-start space-x-3 pt-6">
-                <Switch
-                  id="penaltyToOrganization"
-                  checked={gameSettings.penaltyToOrganization}
-                  onCheckedChange={(checked) =>
-                    setGameSettings({
-                      ...gameSettings,
-                      penaltyToOrganization: checked,
-                    })
-                  }
-                  disabled={loading}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <Label htmlFor="penaltyToOrganization">
-                    Penalty to Organization
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    When checked, penalties go to organization net profit. When unchecked, penalties roll over to next game's jackpot.
-                  </p>
-                </div>
-              </div>
+              
             </div>
 
             <Button onClick={handleSaveGameSettings} disabled={loading}>
@@ -331,6 +231,5 @@ export default function Admin() {
 
         <CardPayoutConfig />
       </div>
-    </div>
-  );
+    </div>;
 }
