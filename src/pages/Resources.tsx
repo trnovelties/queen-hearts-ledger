@@ -39,7 +39,7 @@ export default function Resources() {
       <Tabs defaultValue="rules" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="rules">Organization Rules</TabsTrigger>
-          <TabsTrigger value="tax-forms">Tax Forms & Compliance</TabsTrigger>
+          <TabsTrigger value="tax-forms">Tax Forms</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rules" className="space-y-4 mt-6">
@@ -48,7 +48,7 @@ export default function Resources() {
 
         <TabsContent value="tax-forms" className="space-y-6 mt-6">
           <div>
-            <h2 className="text-2xl font-bold text-primary mb-2">Tax Forms & Compliance</h2>
+            <h2 className="text-2xl font-bold text-primary mb-2">Tax Forms</h2>
             <p className="text-muted-foreground">
               Resources and forms for organizations conducting Queen of Hearts games in Florida
             </p>
@@ -125,42 +125,6 @@ export default function Resources() {
               </Card>
             ))}
           </div>
-
-          {/* Quick Links Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Links</CardTitle>
-              <CardDescription>
-                Additional resources for tax compliance and form ordering
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-col space-y-2">
-                <Button
-                  variant="ghost"
-                  className="justify-start h-auto p-3"
-                  onClick={() => window.open('https://www.irs.gov/businesses/small-businesses-self-employed/gambling-tax-law-for-organizations', '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">IRS Gambling Tax Guidelines</div>
-                    <div className="text-xs text-muted-foreground">Official IRS guidance for organizations</div>
-                  </div>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="justify-start h-auto p-3"
-                  onClick={() => window.open('https://www.irs.gov/forms-pubs/forms-and-publications-pdf-files', '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">IRS Forms & Publications</div>
-                    <div className="text-xs text-muted-foreground">Browse all IRS forms and publications</div>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
