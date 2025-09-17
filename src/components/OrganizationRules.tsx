@@ -15,6 +15,7 @@ interface OrganizationRule {
   id: string;
   organization_name: string;
   rules_content: string;
+  startup_costs?: string;
 }
 
 export function OrganizationRules() {
@@ -37,11 +38,13 @@ export function OrganizationRules() {
       const userId = getCurrentUserId();
       if (!userId) return;
 
-      // Try to get existing rules
+      // Get the most recent rules for this user
       const { data, error } = await supabase
         .from('organization_rules')
         .select('*')
         .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -49,16 +52,25 @@ export function OrganizationRules() {
         return;
       }
 
+      // Get user's organization name
+      const { data: userData } = await supabase
+        .from('users')
+        .select('organization_name')
+        .eq('id', userId)
+        .single();
+
+      const organizationName = userData?.organization_name || 'YOUR ORGANIZATION NAME HERE';
+
       if (data) {
         setRules(data);
         setFormData({
-          organization_name: data.organization_name,
+          organization_name: data.organization_name || organizationName,
           rules_content: data.rules_content
         });
       } else {
         // Create default rules if none exist
         const defaultRules = {
-          organization_name: 'YOUR ORGANIZATION NAME HERE',
+          organization_name: organizationName,
           rules_content: `1. Tickets are $2.00 each or 3 for $5.00.
 2. Drawing held every [DAY] at [TIME].
 3. Must be present to win weekly drawing.
@@ -74,7 +86,7 @@ export function OrganizationRules() {
           .insert([{ 
             ...defaultRules, 
             user_id: userId,
-            startup_costs: '' // Provide empty string for the optional field
+            startup_costs: ''
           }])
           .select()
           .single();
@@ -98,27 +110,70 @@ export function OrganizationRules() {
 
     try {
       const doc = new jsPDF();
-      
-      // Set up the PDF
-      doc.setFontSize(20);
-      doc.text(rules.organization_name, 20, 30);
-      
-      doc.setFontSize(16);
-      doc.text('Queen of Hearts Game Rules', 20, 50);
-      
-      // Add rules content
-      doc.setFontSize(12);
-      const splitText = doc.splitTextToSize(rules.rules_content, 170);
-      doc.text(splitText, 20, 70);
-      
-      // Add disclaimer at bottom
+      const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
-      doc.setFontSize(10);
-      doc.text('These rules are provided for informational purposes.', 20, pageHeight - 30);
-      doc.text('Please consult your organization\'s bylaws and local regulations.', 20, pageHeight - 20);
+      let yPosition = 30;
+
+      // Header - Organization Name
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      const orgName = rules.organization_name || 'YOUR ORGANIZATION NAME HERE';
+      const orgNameLines = doc.splitTextToSize(orgName, pageWidth - 40);
+      doc.text(orgNameLines, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += orgNameLines.length * 8 + 10;
+
+      // Subtitle
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Queen of Hearts Game Rules', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 20;
+
+      // Rules Content
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
       
-      // Save the PDF
-      const fileName = `${rules.organization_name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rules.pdf`;
+      // Split rules into lines and format them properly
+      const rulesLines = rules.rules_content.split('\n').filter(line => line.trim());
+      const margin = 20;
+      const lineHeight = 6;
+
+      rulesLines.forEach((line, index) => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 50) {
+          doc.addPage();
+          yPosition = 30;
+        }
+
+        // Format numbered rules
+        const trimmedLine = line.trim();
+        if (trimmedLine.match(/^\d+\./)) {
+          // This is a numbered rule - make it bold and add some spacing
+          doc.setFont('helvetica', 'bold');
+          const wrappedLines = doc.splitTextToSize(trimmedLine, pageWidth - 2 * margin);
+          doc.text(wrappedLines, margin, yPosition);
+          yPosition += wrappedLines.length * lineHeight + 3;
+          doc.setFont('helvetica', 'normal');
+        } else if (trimmedLine.length > 0) {
+          // Regular text
+          const wrappedLines = doc.splitTextToSize(trimmedLine, pageWidth - 2 * margin);
+          doc.text(wrappedLines, margin, yPosition);
+          yPosition += wrappedLines.length * lineHeight + 2;
+        } else {
+          // Empty line - add some space
+          yPosition += lineHeight;
+        }
+      });
+
+      // Footer disclaimer
+      yPosition = Math.max(yPosition + 20, pageHeight - 40);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      const disclaimerText = 'These rules are provided for informational purposes. Please consult your organization\'s bylaws and local regulations.';
+      const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * margin);
+      doc.text(disclaimerLines, pageWidth / 2, yPosition, { align: 'center' });
+
+      // Save the PDF with organization name in filename
+      const fileName = `${orgName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_queen_of_hearts_rules.pdf`;
       doc.save(fileName);
       
       toast({
@@ -140,18 +195,33 @@ export function OrganizationRules() {
       const userId = getCurrentUserId();
       if (!userId) return;
 
-      const { error } = await supabase
-        .from('organization_rules')
-        .upsert([
-          {
-            ...formData,
-            user_id: userId,
+      // If we have an existing rules record, update it; otherwise insert new one
+      if (rules?.id) {
+        const { error } = await supabase
+          .from('organization_rules')
+          .update({
+            organization_name: formData.organization_name,
+            rules_content: formData.rules_content,
             updated_at: new Date().toISOString(),
-            startup_costs: '' // Provide empty string for the optional field
-          }
-        ]);
+            startup_costs: rules.startup_costs || ''
+          })
+          .eq('id', rules.id)
+          .eq('user_id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('organization_rules')
+          .insert([
+            {
+              ...formData,
+              user_id: userId,
+              startup_costs: ''
+            }
+          ]);
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",
