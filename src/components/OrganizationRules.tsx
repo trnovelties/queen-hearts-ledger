@@ -115,18 +115,18 @@ export function OrganizationRules() {
       let yPosition = 30;
 
       // Header - Organization Name
-      doc.setFontSize(18);
+      doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
       const orgName = rules.organization_name || 'YOUR ORGANIZATION NAME HERE';
       const orgNameLines = doc.splitTextToSize(orgName, pageWidth - 40);
       doc.text(orgNameLines, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += orgNameLines.length * 8 + 10;
+      yPosition += orgNameLines.length * 7 + 5;
 
       // Subtitle
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
       doc.text('Queen of Hearts Game Rules', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 20;
+      yPosition += 15;
 
       // Rules Content
       doc.setFontSize(11);
