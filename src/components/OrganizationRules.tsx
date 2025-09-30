@@ -245,7 +245,14 @@ export function OrganizationRules() {
               <div>
                 <h4 className="font-medium mb-2">Game Rules:</h4>
                 <div className="whitespace-pre-line text-sm text-muted-foreground bg-muted p-4 rounded">
-                  {rules?.rules_content || 'No rules set yet.'}
+                  {rules?.rules_content || `1. Tickets are $2.00 each or 3 for $5.00.
+2. Drawing held every [DAY] at [TIME].
+3. Must be present to win weekly drawing.
+4. Winner picks a card from the board.
+5. If Queen of Hearts is picked, winner gets the jackpot.
+6. If any other card is picked, winner gets the amount shown on the card.
+7. Game continues until Queen of Hearts is drawn.
+8. New game starts the following week after jackpot is won.`}
                 </div>
               </div>
 
