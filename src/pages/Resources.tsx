@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, ExternalLink, AlertTriangle } from "lucide-react";
 import { OrganizationRules } from "@/components/OrganizationRules";
+import { TicketLogForm } from "@/components/TicketLogForm";
 
 const taxForms = [
   {
@@ -37,9 +38,10 @@ export default function Resources() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="rules" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="rules">Organization Rules</TabsTrigger>
           <TabsTrigger value="tax-forms">Tax Forms</TabsTrigger>
+          <TabsTrigger value="ticket-log">Ticket Log Form</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rules" className="space-y-4 mt-6">
@@ -125,6 +127,10 @@ export default function Resources() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="ticket-log" className="space-y-6 mt-6">
+          <TicketLogForm />
         </TabsContent>
       </Tabs>
     </div>
