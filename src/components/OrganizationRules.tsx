@@ -313,21 +313,8 @@ export function OrganizationRules() {
             Official game rules for your organization's Queen of Hearts fundraiser
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-muted p-6 rounded-lg">
-            <p className="text-sm text-muted-foreground mb-4">
-              Download a professionally formatted PDF with your organization's rules, automatically populated with your configured settings:
-            </p>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Organization name: <span className="font-semibold text-foreground">{organizationName}</span></li>
-              <li>• Ticket price: <span className="font-semibold text-foreground">${organizationConfig?.ticket_price.toFixed(2)}</span></li>
-              <li>• Jackpot percentage: <span className="font-semibold text-foreground">{organizationConfig?.jackpot_percentage}%</span></li>
-              <li>• Starting jackpot: <span className="font-semibold text-foreground">${organizationConfig?.minimum_starting_jackpot.toFixed(2)}</span></li>
-              <li>• Custom card payouts from your configuration</li>
-            </ul>
-          </div>
-
-          <Button 
+        <CardContent>
+          <Button
             variant="default" 
             onClick={generatePDF}
             className="flex items-center gap-2"
