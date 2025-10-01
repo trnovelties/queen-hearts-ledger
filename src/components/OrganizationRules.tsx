@@ -161,12 +161,12 @@ export function OrganizationRules() {
         .order('updated_at', { ascending: false });
 
       if (rulesData && rulesData.length > 0) {
-        const profRule = rulesData.find(r => r.rule_type === 'professional');
-        const custRule = rulesData.find(r => r.rule_type === 'custom');
+        const profRule = rulesData.find((r: any) => r.rule_type === 'professional');
+        const custRule = rulesData.find((r: any) => r.rule_type === 'custom');
         
-        if (profRule) setProfessionalRules(profRule);
+        if (profRule) setProfessionalRules(profRule as OrganizationRule);
         if (custRule) {
-          setCustomRules(custRule);
+          setCustomRules(custRule as OrganizationRule);
           setCustomFormData({
             organization_name: custRule.organization_name || orgName,
             rules_content: custRule.rules_content
