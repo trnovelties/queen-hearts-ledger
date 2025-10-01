@@ -435,7 +435,7 @@ export function OrganizationRules() {
                 disabled={!organizationConfig}
               >
                 <Download className="h-4 w-4" />
-                Download Auto-Generated PDF
+                Download
               </Button>
             </TabsContent>
 
