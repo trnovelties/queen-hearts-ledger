@@ -198,8 +198,10 @@ function AppContent({
             </h1>
           </div>
           
-          <div className="flex items-center p-4">
+          <div className="flex flex-col items-center p-4 gap-1">
+            <div className="text-base font-semibold text-foreground">TR Novelties</div>
             <img src="https://isjbdwxngfrgftfannzi.supabase.co/storage/v1/object/public/app_assets/Queen%20of%20Heartts%20Frame%2018.png" alt="Queen of Hearts App Logo" className="h-10 w-10 object-contain rounded-full border-2 border-red-300" />
+            <div className="text-xs text-muted-foreground">All rights reserved</div>
           </div>
         </header>
 
