@@ -80,37 +80,38 @@ export function OrganizationRules() {
         img.onload = resolve;
       });
 
-      // Page 1 - Header matching Figma layout (595x842 A4)
-      const cardWidth = 33; // 117 points from Figma
-      const cardHeight = 24; // 86 points from Figma (scaled proportionally)
+      // Page 1 - Header matching Figma layout (595x842 A4) - using exact Figma dimensions
+      const cardWidth = 117; // Exact from Figma
+      const cardHeight = 86; // Exact from Figma
+      const textFrameWidth = 277; // Exact from Figma
+      const spacing = 20; // Exact from Figma
       const headerTop = 18; // Padding top from Figma
       
       // Calculate center position for the horizontal layout
-      const textFrameWidth = 77; // 277 points from Figma (scaled to fit jsPDF)
-      const headerContentWidth = cardWidth + 20 + textFrameWidth + 20 + cardWidth; // images + spacing + text + spacing + image
-      const headerStartX = (pageWidth - headerContentWidth) / 2;
+      const headerContentWidth = cardWidth + spacing + textFrameWidth + spacing + cardWidth; // Total: 551
+      const headerStartX = (pageWidth - headerContentWidth) / 2; // (595 - 551) / 2 = 22
       
       // Add left Queen card image
       doc.addImage(img, 'PNG', headerStartX, headerTop, cardWidth, cardHeight);
       
       // Text frame positioned between images
-      const textFrameX = headerStartX + cardWidth + 20; // 20px spacing from Figma
-      const textFrameY = headerTop; // Align with top of images
+      const textFrameX = headerStartX + cardWidth + spacing;
+      const textFrameY = headerTop + 20; // Text frame is 20px down from top (vertically centered in 86px height)
       
       // Organization name (red text, 20px bold, left aligned within text frame)
       doc.setTextColor(255, 0, 0);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text(organizationName.toUpperCase(), textFrameX, textFrameY + 10);
+      doc.text(organizationName.toUpperCase(), textFrameX, textFrameY + 16); // +16 for baseline
 
       // "Rules for the Queen of Hearts" subtitle (black, 18px medium, center aligned within text frame)
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'normal');
-      doc.text('Rules for the Queen of Hearts', textFrameX + textFrameWidth / 2, textFrameY + 22, { align: 'center' });
+      doc.text('Rules for the Queen of Hearts', textFrameX + textFrameWidth / 2, textFrameY + 38, { align: 'center' }); // +24 (first text height) + 14 for baseline
 
       // Add right Queen card image
-      doc.addImage(img, 'PNG', textFrameX + textFrameWidth + 20, headerTop, cardWidth, cardHeight);
+      doc.addImage(img, 'PNG', textFrameX + textFrameWidth + spacing, headerTop, cardWidth, cardHeight);
 
       // Draw horizontal line (26px spacing after header frame from Figma)
       const lineY = headerTop + cardHeight + 7;
