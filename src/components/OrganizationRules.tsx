@@ -7,7 +7,7 @@ import { useAdmin } from "@/context/AdminContext";
 import { CardLoading } from "@/components/ui/loading";
 import { Download, FileText } from "lucide-react";
 import jsPDF from 'jspdf';
-import queenCardImage from '@/assets/queen-header-card.png';
+import queenCardImage from '@/assets/queen-of-hearts-card.png';
 
 interface OrganizationConfig {
   ticket_price: number;
@@ -81,8 +81,8 @@ export function OrganizationRules() {
       });
 
       // Page 1 - Header with proper layout
-      const cardWidth = 12;
-      const cardHeight = 17;
+      const cardWidth = 20;
+      const cardHeight = 28;
       const headerTop = 15;
       
       // Add Queen card images at top corners with proper spacing
@@ -93,7 +93,7 @@ export function OrganizationRules() {
       doc.setTextColor(255, 0, 0);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      const centerY = headerTop + 8;
+      const centerY = headerTop + 12;
       doc.text(organizationName.toUpperCase(), pageWidth / 2, centerY, { align: 'center' });
 
       // "Rules for the Queen of Hearts" subtitle (black, smaller) - below org name
@@ -111,7 +111,7 @@ export function OrganizationRules() {
       let yPos = lineY + 12;
 
       // Content bullets
-      doc.setFontSize(16);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
 
       const printRuleWithRedText = (text: string, currentY: number) => {
@@ -264,8 +264,14 @@ export function OrganizationRules() {
       doc.text(`    • Queens (except Queen of Hearts)= $${payoutQueen}`, margin, yPos);
       yPos += lineHeight;
       doc.text(`    • Joker's= $${payoutJoker}`, margin, yPos);
-      yPos += lineHeight + 4;
+      yPos += lineHeight + 3;
       doc.setTextColor(0, 0, 0);
+
+      // Page 2
+      doc.addPage();
+      yPos = 20;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
 
       // Rule: Prize payments
       doc.setFont('helvetica', 'bold');
