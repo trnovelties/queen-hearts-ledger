@@ -80,38 +80,48 @@ export function OrganizationRules() {
         img.onload = resolve;
       });
 
-      // Page 1 - Header with proper layout
-      const cardWidth = 20;
-      const cardHeight = 28;
-      const headerTop = 15;
+      // Page 1 - Header matching Figma layout (595x842 A4)
+      const cardWidth = 33; // 117 points from Figma
+      const cardHeight = 24; // 86 points from Figma (scaled proportionally)
+      const headerTop = 18; // Padding top from Figma
       
-      // Add Queen card images at top corners with proper spacing
-      doc.addImage(img, 'PNG', margin + 5, headerTop, cardWidth, cardHeight);
-      doc.addImage(img, 'PNG', pageWidth - margin - cardWidth - 5, headerTop, cardWidth, cardHeight);
-
-      // Organization name (red text, bold, centered) - positioned between cards
+      // Calculate center position for the horizontal layout
+      const headerContentWidth = cardWidth + 20 + 77 + 20 + cardWidth; // images + spacing + text + spacing + image
+      const headerStartX = (pageWidth - headerContentWidth) / 2;
+      
+      // Add left Queen card image
+      doc.addImage(img, 'PNG', headerStartX, headerTop, cardWidth, cardHeight);
+      
+      // Text frame positioned between images
+      const textFrameX = headerStartX + cardWidth + 20; // 20px spacing from Figma
+      const textFrameY = headerTop + 5; // Vertically centered in 86px frame
+      
+      // Organization name (red text, 20px bold, left aligned)
       doc.setTextColor(255, 0, 0);
-      doc.setFontSize(18);
+      doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      const centerY = headerTop + 12;
-      doc.text(organizationName.toUpperCase(), pageWidth / 2, centerY, { align: 'center' });
+      doc.text(organizationName.toUpperCase(), textFrameX, textFrameY + 7);
 
-      // "Rules for the Queen of Hearts" subtitle (black, smaller) - below org name
+      // "Rules for the Queen of Hearts" subtitle (black, 18px medium, center)
       doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
+      doc.setFontSize(18);
       doc.setFont('helvetica', 'normal');
-      doc.text('Rules for the Queen of Hearts', pageWidth / 2, centerY + 8, { align: 'center' });
+      const subtitleWidth = 77; // 277 points from Figma (scaled)
+      doc.text('Rules for the Queen of Hearts', textFrameX + subtitleWidth / 2, textFrameY + 20, { align: 'center' });
 
-      // Draw horizontal line with proper spacing below header
-      const lineY = headerTop + cardHeight + 8;
+      // Add right Queen card image
+      doc.addImage(img, 'PNG', textFrameX + 77 + 20, headerTop, cardWidth, cardHeight);
+
+      // Draw horizontal line (26px spacing after header frame from Figma)
+      const lineY = headerTop + cardHeight + 7;
       doc.setLineWidth(0.5);
       doc.line(margin, lineY, pageWidth - margin, lineY);
 
-      // Start content with healthy gap after line
-      let yPos = lineY + 12;
+      // Start content with 26px gap after line (matching Figma itemSpacing)
+      let yPos = lineY + 10;
 
-      // Content bullets
-      doc.setFontSize(10);
+      // Content bullets (12px from Figma)
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
 
       const printRuleWithRedText = (text: string, currentY: number) => {
@@ -247,7 +257,7 @@ export function OrganizationRules() {
       doc.text(`• If the Queen of Hearts is not drawn, the winning payouts are as follows:`, margin, yPos);
       yPos += lineHeight + 2;
 
-      // Card payouts (in red, indented)
+      // Card payouts (in red, no bullets, single line spacing)
       doc.setTextColor(255, 0, 0);
       const payout2to10 = (organizationConfig.card_payouts['2 of Hearts'] || 25).toFixed(2);
       const payoutJackKing = (organizationConfig.card_payouts['Jack of Hearts'] || 30).toFixed(2);
@@ -255,23 +265,27 @@ export function OrganizationRules() {
       const payoutQueen = (organizationConfig.card_payouts['Queen of Spades'] || 40).toFixed(2);
       const payoutJoker = (organizationConfig.card_payouts['Joker'] || 50).toFixed(2);
       
-      doc.text(`    • 2"-10's= $${payout2to10}`, margin, yPos);
+      yPos += 2; // Small spacing before payouts
+      doc.text(`2'-10's= $${payout2to10}`, margin, yPos);
       yPos += lineHeight;
-      doc.text(`    • Jack's and Kings= $${payoutJackKing}`, margin, yPos);
+      doc.text(`Jack's and Kings= $${payoutJackKing}`, margin, yPos);
       yPos += lineHeight;
-      doc.text(`    • Ace's= $${payoutAce}`, margin, yPos);
+      doc.text(`Ace's= $${payoutAce}`, margin, yPos);
       yPos += lineHeight;
-      doc.text(`    • Queens (except Queen of Hearts)= $${payoutQueen}`, margin, yPos);
+      doc.text(`Queens (except Queen of Hearts)= $${payoutQueen}`, margin, yPos);
       yPos += lineHeight;
-      doc.text(`    • Joker's= $${payoutJoker}`, margin, yPos);
-      yPos += lineHeight + 3;
+      doc.text(`Joker's= $${payoutJoker}`, margin, yPos);
+      yPos += lineHeight + 6; // Continue on same page
       doc.setTextColor(0, 0, 0);
 
-      // Page 2
-      doc.addPage();
-      yPos = 20;
+      // Check if we need a new page
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
       doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
+      doc.setFontSize(12);
 
       // Rule: Prize payments
       doc.setFont('helvetica', 'bold');
