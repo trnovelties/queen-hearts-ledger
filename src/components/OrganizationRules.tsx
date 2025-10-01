@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
 import { CardLoading } from "@/components/ui/loading";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Save, Edit } from "lucide-react";
 import jsPDF from 'jspdf';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import queenCardImage from '@/assets/queen-of-hearts-card.png';
 
 interface OrganizationConfig {
@@ -23,6 +26,8 @@ export function OrganizationRules() {
   const [isLoading, setIsLoading] = useState(true);
   const [organizationConfig, setOrganizationConfig] = useState<OrganizationConfig | null>(null);
   const [organizationName, setOrganizationName] = useState('');
+  const [customRules, setCustomRules] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,6 +58,17 @@ export function OrganizationRules() {
       
       if (configData) {
         setOrganizationConfig(configData);
+      }
+
+      // Fetch custom rules
+      const { data: rulesData } = await supabase
+        .from('organization_rules')
+        .select('rules_content')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (rulesData) {
+        setCustomRules(rulesData.rules_content || '');
       }
 
     } catch (error) {
@@ -297,6 +313,94 @@ export function OrganizationRules() {
     }
   };
 
+  const saveCustomRules = async () => {
+    try {
+      setIsSaving(true);
+      const userId = getCurrentUserId();
+      if (!userId) return;
+
+      const { error } = await supabase
+        .from('organization_rules')
+        .upsert({
+          user_id: userId,
+          organization_name: organizationName,
+          rules_content: customRules,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Custom rules saved successfully."
+      });
+    } catch (error) {
+      console.error('Error saving custom rules:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save custom rules.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const generateCustomRulesPDF = () => {
+    if (!customRules.trim()) {
+      toast({
+        title: "No Content",
+        description: "Please add custom rules before generating PDF.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const margin = 15;
+
+      // Header
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(organizationName.toUpperCase(), pageWidth / 2, 20, { align: 'center' });
+
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Custom Queen of Hearts Rules', pageWidth / 2, 30, { align: 'center' });
+
+      // Line
+      doc.setLineWidth(0.5);
+      doc.line(margin, 35, pageWidth - margin, 35);
+
+      // Content - strip HTML tags and format
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = customRules;
+      const textContent = tempDiv.textContent || tempDiv.innerText || '';
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(textContent, pageWidth - 2 * margin);
+      doc.text(lines, margin, 45);
+
+      const fileName = `${organizationName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_custom_rules.pdf`;
+      doc.save(fileName);
+
+      toast({
+        title: "Success",
+        description: "Custom rules PDF downloaded successfully."
+      });
+    } catch (error) {
+      console.error('Error generating custom rules PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate custom rules PDF.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isLoading) {
     return <CardLoading message="Loading organization rules..." />;
   }
@@ -310,19 +414,73 @@ export function OrganizationRules() {
             <CardTitle>Queen of Hearts Rules</CardTitle>
           </div>
           <CardDescription>
-            Official game rules for your organization's Queen of Hearts fundraiser
+            Manage your organization's Queen of Hearts game rules
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            variant="default" 
-            onClick={generatePDF}
-            className="flex items-center gap-2"
-            disabled={!organizationConfig}
-          >
-            <Download className="h-4 w-4" />
-            Download Rules PDF
-          </Button>
+          <Tabs defaultValue="auto-generated" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="auto-generated">Auto-Generated Rules</TabsTrigger>
+              <TabsTrigger value="custom">Custom Rules</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="auto-generated" className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Download professionally formatted rules automatically populated with your organization's settings.
+              </p>
+              <Button
+                variant="default" 
+                onClick={generatePDF}
+                className="flex items-center gap-2"
+                disabled={!organizationConfig}
+              >
+                <Download className="h-4 w-4" />
+                Download Auto-Generated PDF
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="custom" className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Create and edit custom rules specific to your organization.
+              </p>
+              <div className="border rounded-md">
+                <ReactQuill
+                  theme="snow"
+                  value={customRules}
+                  onChange={setCustomRules}
+                  modules={{
+                    toolbar: [
+                      [{ 'header': [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      ['clean']
+                    ]
+                  }}
+                  className="min-h-[300px]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  onClick={saveCustomRules}
+                  className="flex items-center gap-2"
+                  disabled={isSaving}
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Saving...' : 'Save Custom Rules'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={generateCustomRulesPDF}
+                  className="flex items-center gap-2"
+                  disabled={!customRules.trim()}
+                >
+                  <Download className="h-4 w-4" />
+                  Download Custom PDF
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
