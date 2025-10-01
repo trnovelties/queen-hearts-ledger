@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/context/AdminContext";
 import { CardLoading } from "@/components/ui/loading";
-import { Download, Edit, FileText } from "lucide-react";
+import { Download, Edit } from "lucide-react";
 import jsPDF from 'jspdf';
 interface OrganizationRule {
   id: string;
@@ -17,90 +16,6 @@ interface OrganizationRule {
   rules_content: string;
   startup_costs?: string;
 }
-
-interface OrganizationConfig {
-  ticket_price: number;
-  jackpot_percentage: number;
-  organization_percentage: number;
-  minimum_starting_jackpot: number;
-  card_payouts: Record<string, number | string>;
-}
-
-// Utility function to replace placeholders with actual organization data
-const replacePlaceholders = (
-  template: string,
-  orgName: string,
-  config: OrganizationConfig | null
-): string => {
-  if (!config) return template;
-
-  let result = template;
-  
-  // Replace organization name
-  result = result.replace(/\[ORGANIZATION NAME HERE\]/g, orgName);
-  result = result.replace(/\[Organization Name Here\]/g, orgName);
-  result = result.replace(/YOUR ORGANIZATION NAME HERE/g, orgName);
-  
-  // Replace ticket price
-  const ticketPrice = config.ticket_price.toFixed(2);
-  result = result.replace(/\[TICKET PRICE\]/g, `$${ticketPrice}`);
-  result = result.replace(/\$\[AMOUNT\]/g, `$${ticketPrice}`);
-  
-  // Replace percentages
-  const jackpotPercent = config.jackpot_percentage.toFixed(0);
-  const orgPercent = config.organization_percentage.toFixed(0);
-  result = result.replace(/\[JACKPOT PERCENTAGE\]%/g, `${jackpotPercent}%`);
-  result = result.replace(/\[ORGANIZATION PERCENTAGE\]%/g, `${orgPercent}%`);
-  
-  // Replace minimum starting jackpot
-  const minJackpot = config.minimum_starting_jackpot.toFixed(2);
-  result = result.replace(/\[MINIMUM STARTING JACKPOT\]/g, `$${minJackpot}`);
-  result = result.replace(/\$\[STARTING AMOUNT\]/g, `$${minJackpot}`);
-  
-  // Replace card payout amounts
-  if (config.card_payouts) {
-    // Replace numbered cards (2-10)
-    for (let i = 2; i <= 10; i++) {
-      const cardKeys = [
-        `${i} of Hearts`,
-        `${i} of Diamonds`,
-        `${i} of Clubs`,
-        `${i} of Spades`
-      ];
-      const sampleCard = cardKeys.find(key => config.card_payouts[key]);
-      if (sampleCard && typeof config.card_payouts[sampleCard] === 'number') {
-        const amount = (config.card_payouts[sampleCard] as number).toFixed(2);
-        result = result.replace(new RegExp(`\\[${i} PAYOUT\\]`, 'g'), `$${amount}`);
-      }
-    }
-    
-    // Replace face cards
-    const jackPayout = config.card_payouts['Jack of Hearts'];
-    const queenPayout = config.card_payouts['Queen of Hearts'] === 'jackpot' ? 
-      'jackpot' : config.card_payouts['Queen of Diamonds'];
-    const kingPayout = config.card_payouts['King of Hearts'];
-    const acePayout = config.card_payouts['Ace of Hearts'];
-    const jokerPayout = config.card_payouts['Joker'];
-    
-    if (typeof jackPayout === 'number') {
-      result = result.replace(/\[JACK PAYOUT\]/g, `$${jackPayout.toFixed(2)}`);
-    }
-    if (typeof queenPayout === 'number') {
-      result = result.replace(/\[QUEEN PAYOUT\]/g, `$${queenPayout.toFixed(2)}`);
-    }
-    if (typeof kingPayout === 'number') {
-      result = result.replace(/\[KING PAYOUT\]/g, `$${kingPayout.toFixed(2)}`);
-    }
-    if (typeof acePayout === 'number') {
-      result = result.replace(/\[ACE PAYOUT\]/g, `$${acePayout.toFixed(2)}`);
-    }
-    if (typeof jokerPayout === 'number') {
-      result = result.replace(/\[JOKER PAYOUT\]/g, `$${jokerPayout.toFixed(2)}`);
-    }
-  }
-  
-  return result;
-};
 export function OrganizationRules() {
   const {
     getCurrentUserId
@@ -108,9 +23,6 @@ export function OrganizationRules() {
   const [rules, setRules] = useState<OrganizationRule | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] = useState<'professional' | 'basic' | 'custom'>('custom');
-  const [professionalTemplate, setProfessionalTemplate] = useState<string>('');
-  const [organizationConfig, setOrganizationConfig] = useState<OrganizationConfig | null>(null);
   const [formData, setFormData] = useState({
     organization_name: '',
     rules_content: ''
@@ -120,51 +32,7 @@ export function OrganizationRules() {
   } = useToast();
   useEffect(() => {
     fetchRules();
-    fetchProfessionalTemplate();
-    fetchOrganizationConfig();
   }, []);
-
-  const fetchProfessionalTemplate = async () => {
-    try {
-      // Fetch the professional template from database
-      const { data, error } = await supabase
-        .from('organization_rules')
-        .select('rules_content')
-        .eq('organization_name', 'YOUR ORGANIZATION NAME HERE')
-        .single();
-
-      if (data && !error) {
-        setProfessionalTemplate(data.rules_content);
-      }
-    } catch (error) {
-      console.error('Error fetching professional template:', error);
-    }
-  };
-
-  const fetchOrganizationConfig = async () => {
-    try {
-      const userId = getCurrentUserId();
-      if (!userId) return;
-
-      const { data, error } = await supabase
-        .from('configurations')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (data && !error) {
-        setOrganizationConfig({
-          ticket_price: data.ticket_price,
-          jackpot_percentage: data.jackpot_percentage,
-          organization_percentage: data.organization_percentage,
-          minimum_starting_jackpot: data.minimum_starting_jackpot || 500,
-          card_payouts: data.card_payouts as Record<string, number | string>
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching organization config:', error);
-    }
-  };
   const fetchRules = async () => {
     try {
       const userId = getCurrentUserId();
@@ -193,12 +61,6 @@ export function OrganizationRules() {
           organization_name: data.organization_name || organizationName,
           rules_content: data.rules_content
         });
-        // Determine template type
-        if (data.organization_name === 'YOUR ORGANIZATION NAME HERE') {
-          setSelectedTemplate('professional');
-        } else {
-          setSelectedTemplate('custom');
-        }
       } else {
         // Create default rules if none exist
         const defaultRules = {
@@ -225,7 +87,6 @@ export function OrganizationRules() {
         } else {
           setRules(newRules);
           setFormData(defaultRules);
-          setSelectedTemplate('basic');
         }
       }
     } catch (error) {
@@ -323,41 +184,6 @@ export function OrganizationRules() {
       });
     }
   };
-  const handleTemplateChange = async (template: 'professional' | 'basic' | 'custom') => {
-    setSelectedTemplate(template);
-    
-    const userId = getCurrentUserId();
-    if (!userId) return;
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_name')
-      .eq('id', userId)
-      .single();
-    
-    const orgName = userData?.organization_name || 'YOUR ORGANIZATION NAME HERE';
-
-    if (template === 'professional' && professionalTemplate) {
-      const populatedRules = replacePlaceholders(professionalTemplate, orgName, organizationConfig);
-      setFormData({
-        organization_name: orgName,
-        rules_content: populatedRules
-      });
-    } else if (template === 'basic') {
-      setFormData({
-        organization_name: orgName,
-        rules_content: `1. Tickets are $${organizationConfig?.ticket_price.toFixed(2) || '2.00'} each or 3 for $5.00.
-2. Drawing held every [DAY] at [TIME].
-3. Must be present to win weekly drawing.
-4. Winner picks a card from the board.
-5. If Queen of Hearts is picked, winner gets the jackpot (${organizationConfig?.jackpot_percentage || 60}% of ticket sales).
-6. If any other card is picked, winner gets the amount shown on the card.
-7. Game continues until Queen of Hearts is drawn.
-8. New game starts the following week after jackpot is won.`
-      });
-    }
-  };
-
   const handleSave = async () => {
     try {
       const userId = getCurrentUserId();
@@ -414,28 +240,16 @@ export function OrganizationRules() {
           {!isEditing ? <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold mb-2">{rules?.organization_name || 'YOUR ORGANIZATION NAME HERE'}</h3>
-                {selectedTemplate !== 'custom' && (
-                  <p className="text-sm text-muted-foreground">
-                    Using {selectedTemplate === 'professional' ? 'Professional' : 'Basic'} Template
-                  </p>
-                )}
               </div>
               
               <div>
                 <h4 className="font-medium mb-2">Game Rules:</h4>
-                <div className="whitespace-pre-line text-sm text-muted-foreground bg-muted p-4 rounded max-h-96 overflow-y-auto">
-                  {rules?.rules_content || `1. Tickets are $2.00 each or 3 for $5.00.
-2. Drawing held every [DAY] at [TIME].
-3. Must be present to win weekly drawing.
-4. Winner picks a card from the board.
-5. If Queen of Hearts is picked, winner gets the jackpot.
-6. If any other card is picked, winner gets the amount shown on the card.
-7. Game continues until Queen of Hearts is drawn.
-8. New game starts the following week after jackpot is won.`}
+                <div className="whitespace-pre-line text-sm text-muted-foreground bg-muted p-4 rounded">
+                  {rules?.rules_content || 'No rules set yet.'}
                 </div>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2">
                 <Button variant="outline" onClick={handleDownloadPDF} className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   Download PDF
@@ -448,49 +262,6 @@ export function OrganizationRules() {
               </div>
             </div> : <div className="space-y-4">
               <div>
-                <Label htmlFor="template_select">Select Template</Label>
-                <Select value={selectedTemplate} onValueChange={(value: 'professional' | 'basic' | 'custom') => handleTemplateChange(value)}>
-                  <SelectTrigger id="template_select">
-                    <SelectValue placeholder="Choose a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">Professional Template</div>
-                          <div className="text-xs text-muted-foreground">Comprehensive legal-compliant rules</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="basic">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">Basic Template</div>
-                          <div className="text-xs text-muted-foreground">Simple essential rules</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="custom">
-                      <div className="flex items-center gap-2">
-                        <Edit className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">Custom Rules</div>
-                          <div className="text-xs text-muted-foreground">Write your own rules</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                {selectedTemplate !== 'custom' && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Template auto-populated with your organization's settings. You can still edit the content below.
-                  </p>
-                )}
-              </div>
-
-              <div>
                 <Label htmlFor="organization_name">Organization Name</Label>
                 <Input id="organization_name" value={formData.organization_name} onChange={e => setFormData({
               ...formData,
@@ -500,13 +271,10 @@ export function OrganizationRules() {
 
               <div>
                 <Label htmlFor="rules_content">Game Rules</Label>
-                <Textarea id="rules_content" value={formData.rules_content} onChange={e => {
-              setFormData({
-                ...formData,
-                rules_content: e.target.value
-              });
-              setSelectedTemplate('custom');
-            }} placeholder="Enter the game rules" rows={15} className="font-mono text-sm" />
+                <Textarea id="rules_content" value={formData.rules_content} onChange={e => setFormData({
+              ...formData,
+              rules_content: e.target.value
+            })} placeholder="Enter the game rules" rows={10} />
               </div>
 
               <div className="flex gap-2">
