@@ -419,7 +419,7 @@ export function OrganizationRules() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="auto-generated" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 bg-red-50 border border-red-100">
               <TabsTrigger value="auto-generated">Official Rules</TabsTrigger>
               <TabsTrigger value="custom">Custom Rules</TabsTrigger>
             </TabsList>
