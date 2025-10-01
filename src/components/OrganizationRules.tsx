@@ -80,32 +80,35 @@ export function OrganizationRules() {
         img.onload = resolve;
       });
 
-      // Page 1 - Header
-      const cardWidth = 25;
-      const cardHeight = 35;
-      const cardY = 10;
+      // Page 1 - Header with proper layout
+      const cardWidth = 20;
+      const cardHeight = 28;
+      const headerTop = 15;
       
-      // Add Queen card images at top corners
-      doc.addImage(img, 'PNG', margin, cardY, cardWidth, cardHeight);
-      doc.addImage(img, 'PNG', pageWidth - margin - cardWidth, cardY, cardWidth, cardHeight);
+      // Add Queen card images at top corners with proper spacing
+      doc.addImage(img, 'PNG', margin + 5, headerTop, cardWidth, cardHeight);
+      doc.addImage(img, 'PNG', pageWidth - margin - cardWidth - 5, headerTop, cardWidth, cardHeight);
 
-      // Organization name (red text, bold, centered)
+      // Organization name (red text, bold, centered) - positioned between cards
       doc.setTextColor(255, 0, 0);
-      doc.setFontSize(16);
+      doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.text(organizationName.toUpperCase(), pageWidth / 2, 22, { align: 'center' });
+      const centerY = headerTop + 12;
+      doc.text(organizationName.toUpperCase(), pageWidth / 2, centerY, { align: 'center' });
 
-      // "Rules for the Queen of Hearts" subtitle (black, smaller)
+      // "Rules for the Queen of Hearts" subtitle (black, smaller) - below org name
       doc.setTextColor(0, 0, 0);
-      doc.setFontSize(11);
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('Rules for the Queen of Hearts', pageWidth / 2, 29, { align: 'center' });
+      doc.text('Rules for the Queen of Hearts', pageWidth / 2, centerY + 8, { align: 'center' });
 
-      // Draw horizontal line
+      // Draw horizontal line with proper spacing below header
+      const lineY = headerTop + cardHeight + 8;
       doc.setLineWidth(0.5);
-      doc.line(margin, 38, pageWidth - margin, 38);
+      doc.line(margin, lineY, pageWidth - margin, lineY);
 
-      let yPos = 46;
+      // Start content with healthy gap after line
+      let yPos = lineY + 12;
 
       // Content bullets
       doc.setFontSize(10);
