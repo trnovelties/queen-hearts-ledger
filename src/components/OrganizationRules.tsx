@@ -80,81 +80,189 @@ export function OrganizationRules() {
         img.onload = resolve;
       });
 
-      // Page 1
-      // Add Queen card images at top (left and right)
-      doc.addImage(img, 'PNG', 20, 10, 30, 40);
-      doc.addImage(img, 'PNG', pageWidth - 50, 10, 30, 40);
+      // Page 1 - Header
+      const cardWidth = 25;
+      const cardHeight = 35;
+      const cardY = 10;
+      
+      // Add Queen card images at top corners
+      doc.addImage(img, 'PNG', margin, cardY, cardWidth, cardHeight);
+      doc.addImage(img, 'PNG', pageWidth - margin - cardWidth, cardY, cardWidth, cardHeight);
 
-      // Organization name (red text, centered)
-      doc.setTextColor(220, 38, 127);
-      doc.setFontSize(20);
+      // Organization name (red text, bold, centered)
+      doc.setTextColor(255, 0, 0);
+      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text(organizationName, pageWidth / 2, 20, { align: 'center' });
+      doc.text(organizationName.toUpperCase(), pageWidth / 2, 22, { align: 'center' });
 
-      // "Rules for the Queen of Hearts" subtitle
+      // "Rules for the Queen of Hearts" subtitle (black, smaller)
       doc.setTextColor(0, 0, 0);
-      doc.setFontSize(14);
-      doc.text('Rules for the Queen of Hearts', pageWidth / 2, 30, { align: 'center' });
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Rules for the Queen of Hearts', pageWidth / 2, 29, { align: 'center' });
 
       // Draw horizontal line
       doc.setLineWidth(0.5);
-      doc.line(margin, 45, pageWidth - margin, 45);
+      doc.line(margin, 38, pageWidth - margin, 38);
 
-      let yPos = 55;
+      let yPos = 46;
 
       // Content bullets
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
 
-      const rules = [
-        `• To be eligible to play you must be a current dues paying member in good standing and/or a spouse of a current dues paying member in good standing, and/or a current holder of a widower membership card.`,
+      const printRuleWithRedText = (text: string, currentY: number) => {
+        const fragments = text.split(/(\$\d+\.\d+|\d+%|[A-Z][a-z]+ [A-Z][a-z]+ [A-Z][a-z]+)/);
+        let xPos = margin;
+        const maxWidth = pageWidth - 2 * margin;
         
-        `• Suggested donation for each ticket is $${organizationConfig.ticket_price.toFixed(2)} (CASH ONLY). Altered and/or torn tickets will be discarded and disqualified.`,
+        fragments.forEach((fragment) => {
+          if (fragment.match(/\$\d+\.\d+|\d+%/)) {
+            doc.setTextColor(255, 0, 0);
+          } else {
+            doc.setTextColor(0, 0, 0);
+          }
+          doc.text(fragment, xPos, currentY);
+          xPos += doc.getTextWidth(fragment);
+        });
         
-        `• A new, standard 52 card deck, plus two jokers, for a total of 54 cards will be used.`,
-        
-        `• Tickets may be available anytime the ${organizationName} is open; however, tickets will stop being available 30 minutes before the drawing. Each ticket must have the name of the eligible player and Slot Number to be selected. An eligible player's signature to win. An eligible player's phone number on the ticket is optional.`,
-        
-        `• Each Monday at 7:30 p.m., a ticket will be drawn, and the prize will be from the funds collected from the prior week. The ${organizationName}. DRAWINGS MAY NOT BE HELD ON HOLIDAYS OR SPECIAL FUNCTIONS AND WILL BE POSTED IN THE ${organizationName} PRIOR TO THE EVENT. THERE WILL BE NO EXCEPTIONS TO THE CANCELATION POLICY OTHER THAN A WRITTEN DIRECTIVE.`,
-        
-        `• The total prize jackpot will accumulate weekly until the Queen of Hearts is drawn. The jackpot will start with $${organizationConfig.minimum_starting_jackpot.toFixed(2)} and will increase once the ticket acquired surpass the starting amount. The jackpot amount will be at ${organizationConfig.jackpot_percentage}% of tickets acquired above and beyond the original $${organizationConfig.minimum_starting_jackpot.toFixed(2)} jackpot.`,
-        
-        `• If your ticket is drawn from the tumbler, the slot number indicated on the back of the chosen ticket will be revealed. If the Queen of Hearts, the winner will receive the jackpot money, which will be ${organizationConfig.jackpot_percentage}% of money generated (if not present, the winner will receive ${100 - (organizationConfig.penalty_percentage || 10)}% of the jackpot money.`,
-        
-        `• If the Queen of Hearts is not drawn, the winning payouts are as follows:`
-      ];
+        doc.setTextColor(0, 0, 0);
+      };
 
-      rules.forEach((rule) => {
-        const lines = doc.splitTextToSize(rule, pageWidth - 2 * margin);
-        if (yPos + (lines.length * lineHeight) > pageHeight - 20) {
-          doc.addPage();
-          yPos = 20;
+      // Rule 1
+      const rule1 = `• To be eligible to play you must be a current dues paying member in good standing and/or a spouse of a current dues paying member in good standing, and/or a current holder of a widower membership card.`;
+      const lines1 = doc.splitTextToSize(rule1, pageWidth - 2 * margin);
+      doc.text(lines1, margin, yPos);
+      yPos += lines1.length * lineHeight + 2;
+
+      // Rule 2 with red price
+      doc.text(`• Suggested donation for each ticket is `, margin, yPos);
+      const textWidth1 = doc.getTextWidth(`• Suggested donation for each ticket is `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(`$${organizationConfig.ticket_price.toFixed(2)}`, margin + textWidth1, yPos);
+      const priceWidth = doc.getTextWidth(`$${organizationConfig.ticket_price.toFixed(2)}`);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` (CASH ONLY). Altered and/or torn tickets will be`, margin + textWidth1 + priceWidth, yPos);
+      yPos += lineHeight;
+      doc.text(`discarded and disqualified.`, margin, yPos);
+      yPos += lineHeight + 2;
+
+      // Rule 3
+      doc.text(`• A new, standard 52 card deck, plus two jokers, for a total of 54 cards will be used.`, margin, yPos);
+      yPos += lineHeight + 2;
+
+      // Rule 4 with red organization name
+      const rule4Part1 = `• Tickets may be available anytime the `;
+      doc.text(rule4Part1, margin, yPos);
+      const w1 = doc.getTextWidth(rule4Part1);
+      doc.setTextColor(255, 0, 0);
+      doc.text(organizationName, margin + w1, yPos);
+      const w2 = doc.getTextWidth(organizationName);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` is open; however, tickets will stop being`, margin + w1 + w2, yPos);
+      yPos += lineHeight;
+      const lines4 = doc.splitTextToSize(`available 30 minutes before the drawing. Each ticket must have the name of the eligible player and Slot Number to be selected. An eligible player's signature to win. An eligible player's phone number on the ticket is optional.`, pageWidth - 2 * margin);
+      doc.text(lines4, margin, yPos);
+      yPos += lines4.length * lineHeight + 2;
+
+      // Rule 5 with red organization names
+      const rule5Text = `• Each Monday at 7:30 p.m., a ticket will be drawn, and the prize will be from the funds collected from the prior week. The ${organizationName}. DRAWINGS MAY NOT BE HELD ON HOLIDAYS OR SPECIAL FUNCTIONS AND WILL BE POSTED IN THE ${organizationName} PRIOR TO THE EVENT. THERE WILL BE NO EXCEPTIONS TO THE CANCELATION POLICY OTHER THAN A WRITTEN DIRECTIVE.`;
+      const rule5Lines = doc.splitTextToSize(rule5Text, pageWidth - 2 * margin);
+      rule5Lines.forEach((line: string) => {
+        if (line.includes(organizationName)) {
+          const parts = line.split(organizationName);
+          let currentX = margin;
+          parts.forEach((part, idx) => {
+            doc.setTextColor(0, 0, 0);
+            doc.text(part, currentX, yPos);
+            currentX += doc.getTextWidth(part);
+            if (idx < parts.length - 1) {
+              doc.setTextColor(255, 0, 0);
+              doc.text(organizationName, currentX, yPos);
+              currentX += doc.getTextWidth(organizationName);
+            }
+          });
+          doc.setTextColor(0, 0, 0);
+        } else {
+          doc.text(line, margin, yPos);
         }
-        doc.text(lines, margin, yPos);
-        yPos += lines.length * lineHeight + 2;
+        yPos += lineHeight;
       });
+      yPos += 2;
 
-      // Card payouts (in red)
-      yPos += 3;
-      doc.setTextColor(220, 38, 127);
-      doc.setFont('helvetica', 'normal');
+      // Rule 6 with red dollar amounts and percentage
+      const minJackpot = organizationConfig.minimum_starting_jackpot.toFixed(2);
+      const jackpotPct = organizationConfig.jackpot_percentage;
       
-      const payouts = [
-        `    • 2"-10's= $${(organizationConfig.card_payouts['2 of Hearts'] || 25).toFixed(2)}`,
-        `    • Jack's and Kings= $${(organizationConfig.card_payouts['Jack of Hearts'] || 30).toFixed(2)}`,
-        `    • Ace's= $${(organizationConfig.card_payouts['Ace of Hearts'] || 35).toFixed(2)}`,
-        `    • Queens (except Queen of Hearts)= $${(organizationConfig.card_payouts['Queen of Spades'] || 40).toFixed(2)}`,
-        `    • Joker's= $${(organizationConfig.card_payouts['Joker'] || 50).toFixed(2)}`
-      ];
+      doc.text(`• The total prize jackpot will accumulate weekly until the Queen of Hearts is drawn. The`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`jackpot will start with `, margin, yPos);
+      let xp = margin + doc.getTextWidth(`jackpot will start with `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(`$${minJackpot}`, xp, yPos);
+      xp += doc.getTextWidth(`$${minJackpot}`);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` and will increase once the ticket acquired surpass the starting`, xp, yPos);
+      yPos += lineHeight;
+      doc.text(`amount.  The jackpot amount will be at `, margin, yPos);
+      xp = margin + doc.getTextWidth(`amount.  The jackpot amount will be at `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(`${jackpotPct}%`, xp, yPos);
+      xp += doc.getTextWidth(`${jackpotPct}%`);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` of tickets acquired above and beyond the original `, xp, yPos);
+      yPos += lineHeight;
+      doc.setTextColor(255, 0, 0);
+      doc.text(`$${minJackpot}`, margin, yPos);
+      const dollarW = doc.getTextWidth(`$${minJackpot}`);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` jackpot.`, margin + dollarW, yPos);
+      yPos += lineHeight + 2;
 
-      payouts.forEach((payout) => {
-        if (yPos > pageHeight - 20) {
-          doc.addPage();
-          yPos = 20;
-        }
-        doc.text(payout, margin, yPos);
-        yPos += lineHeight + 1;
-      });
+      // Rule 7 with red percentages
+      const penaltyPct = 100 - (organizationConfig.penalty_percentage || 10);
+      doc.text(`• If your ticket is drawn from the tumbler, the slot number indicated on the back of the chosen`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`ticket will be revealed. If the Queen of Hearts, the winner will receive the jackpot money,`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`which will be `, margin, yPos);
+      xp = margin + doc.getTextWidth(`which will be `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(`${jackpotPct}%`, xp, yPos);
+      xp += doc.getTextWidth(`${jackpotPct}%`);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` of money generated (if not present, the winner will receive `, xp, yPos);
+      yPos += lineHeight;
+      doc.setTextColor(255, 0, 0);
+      doc.text(`${penaltyPct}%`, margin, yPos);
+      const penaltyW = doc.getTextWidth(`${penaltyPct}%`);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` of the jackpot money.`, margin + penaltyW, yPos);
+      yPos += lineHeight + 2;
+
+      // Rule 8
+      doc.text(`• If the Queen of Hearts is not drawn, the winning payouts are as follows:`, margin, yPos);
+      yPos += lineHeight + 2;
+
+      // Card payouts (in red, indented)
+      doc.setTextColor(255, 0, 0);
+      const payout2to10 = (organizationConfig.card_payouts['2 of Hearts'] || 25).toFixed(2);
+      const payoutJackKing = (organizationConfig.card_payouts['Jack of Hearts'] || 30).toFixed(2);
+      const payoutAce = (organizationConfig.card_payouts['Ace of Hearts'] || 35).toFixed(2);
+      const payoutQueen = (organizationConfig.card_payouts['Queen of Spades'] || 40).toFixed(2);
+      const payoutJoker = (organizationConfig.card_payouts['Joker'] || 50).toFixed(2);
+      
+      doc.text(`    • 2"-10's= $${payout2to10}`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`    • Jack's and Kings= $${payoutJackKing}`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`    • Ace's= $${payoutAce}`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`    • Queens (except Queen of Hearts)= $${payoutQueen}`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`    • Joker's= $${payoutJoker}`, margin, yPos);
+      yPos += lineHeight + 3;
+      doc.setTextColor(0, 0, 0);
 
       // Page 2
       doc.addPage();
@@ -162,39 +270,122 @@ export function OrganizationRules() {
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
 
-      const page2Rules = [
-        `**Prize payments will be taken from the prize money and not the lodge's portion in accordance with IRS rules.**`,
-        
-        `• If an ineligible person's card is drawn, that card will be discarded and there will be no payout for that person. A valid ticket will be drawn again for an eligible person to choose a new card that night. If by chance an ineligible person chooses the Queen of Hearts, a new game will begin the following week.`,
-        
-        `• If a ticket is chosen and the slot number is not identified, then that ticket will be discarded and a new ticket will be drawn from the tumbler.`,
-        
-        `• If a ticket is chosen and the slot written on the ticket has already been selected, then that ticket will be discarded and a new ticket will be drawn from the tumbler.`,
-        
-        `• Once a card is selected, that card will be removed from play and displayed face up on the board in the slot from which it came. Each week after the drawing, all tickets will be discarded, and new tickets will be available starting the following day.`,
-        
-        `• All payouts will be paid by ${organizationName} check the following week. The Queen of Hearts jackpot will be paid out by ${organizationName} check within 30 days from the drawing as long as all IRS documentation has been completed.`,
-        
-        `• The Game board will be locked once the game is completed each week.`,
-        
-        `• The ${organizationName} portion of the money generated will go to our general and fundraising operations.`,
-        
-        `• In accordance with the IRS, winnings over $600 will receive a W-2G to report winnings. Taxes on any prize over $5,000 will be assessed and Federal Withholding reported to the IRS by the ${organizationName} to conform to all federal, state and ${organizationName} laws and policies. The winner must provide photo identification, a valid membership card and tax information so that all appropriate IRS documents (including IRS Form W-2G and Form 5754, if issued by the ${organizationName}. Form W-2G will vary year by year and will be the responsibility of the winner to pay (winner needs to verify the amount required to be witheld for the year in which winnings are awarded). A winner from an out of state may also have state taxes withheld in accordance with the laws of that state.`,
-        
-        `• To start a new game of Queen of Hearts, a Queen of Hearts committee member will place a new set of cards in the Game board. The Queen of Hearts committee members are allowed to play the Queen of Hearts Game.`,
-        
-        `• Each week the winner will be posted listing the number of the winning ticket (slot number) and the amount won.`
-      ];
+      // Rule: Prize payments
+      doc.setFont('helvetica', 'bold');
+      doc.text(`**Prize payments will be taken from the prize money and not the lodge's portion in`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`accordance with IRS rules.**`, margin, yPos);
+      yPos += lineHeight + 2;
+      doc.setFont('helvetica', 'normal');
 
-      page2Rules.forEach((rule) => {
-        const lines = doc.splitTextToSize(rule, pageWidth - 2 * margin);
-        if (yPos + (lines.length * lineHeight) > pageHeight - 20) {
-          doc.addPage();
-          yPos = 20;
+      // Rule: Ineligible person
+      const lines2_1 = doc.splitTextToSize(`• If an ineligible person's card is drawn, that card will be discarded and there will be no payout for that person. A valid ticket will be drawn again for an eligible person to choose a new card that night. If by chance an ineligible person chooses the Queen of Hearts, a new game will begin the following week.`, pageWidth - 2 * margin);
+      doc.text(lines2_1, margin, yPos);
+      yPos += lines2_1.length * lineHeight + 2;
+
+      // Rule: Slot not identified
+      const lines2_2 = doc.splitTextToSize(`• If a ticket is chosen and the slot number is not identified, then that ticket will be discarded and a new ticket will be drawn from the tumbler.`, pageWidth - 2 * margin);
+      doc.text(lines2_2, margin, yPos);
+      yPos += lines2_2.length * lineHeight + 2;
+
+      // Rule: Slot already selected
+      const lines2_3 = doc.splitTextToSize(`• If a ticket is chosen and the slot written on the ticket has already been selected, then that ticket will be discarded and a new ticket will be drawn from the tumbler.`, pageWidth - 2 * margin);
+      doc.text(lines2_3, margin, yPos);
+      yPos += lines2_3.length * lineHeight + 2;
+
+      // Rule: Card removed from play
+      const lines2_4 = doc.splitTextToSize(`• Once a card is selected, that card will be removed from play and displayed face up on the board in the slot from which it came. Each week after the drawing, all tickets will be discarded, and new tickets will be available starting the following day.`, pageWidth - 2 * margin);
+      doc.text(lines2_4, margin, yPos);
+      yPos += lines2_4.length * lineHeight + 2;
+
+      // Rule: Payouts with red organization name
+      doc.text(`• All payouts will be paid by `, margin, yPos);
+      xp = margin + doc.getTextWidth(`• All payouts will be paid by `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(organizationName, xp, yPos);
+      xp += doc.getTextWidth(organizationName);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` check the following week. The Queen of Hearts`, xp, yPos);
+      yPos += lineHeight;
+      doc.text(`jackpot will be paid out by `, margin, yPos);
+      xp = margin + doc.getTextWidth(`jackpot will be paid out by `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(organizationName, xp, yPos);
+      xp += doc.getTextWidth(organizationName);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` check within 30 days from the drawing as long`, xp, yPos);
+      yPos += lineHeight;
+      doc.text(`as all IRS documentation has been completed.`, margin, yPos);
+      yPos += lineHeight + 2;
+
+      // Rule: Game board locked
+      doc.text(`• The Game board will be locked once the game is completed each week.`, margin, yPos);
+      yPos += lineHeight + 2;
+
+      // Rule: Organization portion with red text
+      doc.text(`• The `, margin, yPos);
+      xp = margin + doc.getTextWidth(`• The `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(organizationName, xp, yPos);
+      xp += doc.getTextWidth(organizationName);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` portion of the money generated will go to our general and`, xp, yPos);
+      yPos += lineHeight;
+      doc.text(`fundraising operations.`, margin, yPos);
+      yPos += lineHeight + 2;
+
+      // Rule: IRS with red organization names
+      const irsText1 = `• In accordance with the IRS, winnings over $600 will receive a W-2G to report winnings.`;
+      doc.text(irsText1, margin, yPos);
+      yPos += lineHeight;
+      const irsText2 = `Taxes on any prize over $5,000 will be assessed and Federal Withholding reported to the`;
+      doc.text(irsText2, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`IRS by the `, margin, yPos);
+      xp = margin + doc.getTextWidth(`IRS by the `);
+      doc.setTextColor(255, 0, 0);
+      doc.text(organizationName, xp, yPos);
+      xp += doc.getTextWidth(organizationName);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` to conform to all federal, state and `, xp, yPos);
+      yPos += lineHeight;
+      doc.setTextColor(255, 0, 0);
+      doc.text(organizationName, margin, yPos);
+      const orgW = doc.getTextWidth(organizationName);
+      doc.setTextColor(0, 0, 0);
+      doc.text(` laws and policies.  The winner must provide photo identification, a valid`, margin + orgW, yPos);
+      yPos += lineHeight;
+      const irsLines = doc.splitTextToSize(`membership card and tax information so that all appropriate IRS documents (including IRS Form W-2G and Form 5754, if issued by the ${organizationName}. Form W-2G will vary year by year and will be the responsibility of the winner to pay (winner needs to verify the amount required to be witheld for the year in which winnings are awarded). A winner from an out of state may also have state taxes withheld in accordance with the laws of that state.`, pageWidth - 2 * margin);
+      irsLines.forEach((line: string) => {
+        if (line.includes(organizationName)) {
+          const parts = line.split(organizationName);
+          let currentX = margin;
+          parts.forEach((part, idx) => {
+            doc.setTextColor(0, 0, 0);
+            doc.text(part, currentX, yPos);
+            currentX += doc.getTextWidth(part);
+            if (idx < parts.length - 1) {
+              doc.setTextColor(255, 0, 0);
+              doc.text(organizationName, currentX, yPos);
+              currentX += doc.getTextWidth(organizationName);
+            }
+          });
+          doc.setTextColor(0, 0, 0);
+        } else {
+          doc.text(line, margin, yPos);
         }
-        doc.text(lines, margin, yPos);
-        yPos += lines.length * lineHeight + 2;
+        yPos += lineHeight;
       });
+      yPos += 2;
+
+      // Rule: Start new game
+      const lines2_last = doc.splitTextToSize(`• To start a new game of Queen of Hearts, a Queen of Hearts committee member will place a new set of cards in the Game board. The Queen of Hearts committee members are allowed to play the Queen of Hearts Game.`, pageWidth - 2 * margin);
+      doc.text(lines2_last, margin, yPos);
+      yPos += lines2_last.length * lineHeight + 2;
+
+      // Rule: Winner posted
+      const lines2_final = doc.splitTextToSize(`• Each week the winner will be posted listing the number of the winning ticket (slot number) and the amount won.`, pageWidth - 2 * margin);
+      doc.text(lines2_final, margin, yPos);
 
       const fileName = `${organizationName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_rules.pdf`;
       doc.save(fileName);
