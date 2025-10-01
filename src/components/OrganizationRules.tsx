@@ -81,8 +81,8 @@ export function OrganizationRules() {
       });
 
       // Page 1 - Header with proper layout
-      const cardWidth = 15;
-      const cardHeight = 21;
+      const cardWidth = 12;
+      const cardHeight = 17;
       const headerTop = 15;
       
       // Add Queen card images at top corners with proper spacing
@@ -93,7 +93,7 @@ export function OrganizationRules() {
       doc.setTextColor(255, 0, 0);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      const centerY = headerTop + 10;
+      const centerY = headerTop + 8;
       doc.text(organizationName.toUpperCase(), pageWidth / 2, centerY, { align: 'center' });
 
       // "Rules for the Queen of Hearts" subtitle (black, smaller) - below org name
@@ -264,17 +264,8 @@ export function OrganizationRules() {
       doc.text(`    • Queens (except Queen of Hearts)= $${payoutQueen}`, margin, yPos);
       yPos += lineHeight;
       doc.text(`    • Joker's= $${payoutJoker}`, margin, yPos);
-      yPos += lineHeight + 2;
+      yPos += lineHeight + 4;
       doc.setTextColor(0, 0, 0);
-
-      // Check if we need a new page
-      if (yPos > pageHeight - 40) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(16);
 
       // Rule: Prize payments
       doc.setFont('helvetica', 'bold');
