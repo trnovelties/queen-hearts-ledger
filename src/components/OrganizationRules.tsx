@@ -86,7 +86,8 @@ export function OrganizationRules() {
       const headerTop = 18; // Padding top from Figma
       
       // Calculate center position for the horizontal layout
-      const headerContentWidth = cardWidth + 20 + 77 + 20 + cardWidth; // images + spacing + text + spacing + image
+      const textFrameWidth = 77; // 277 points from Figma (scaled to fit jsPDF)
+      const headerContentWidth = cardWidth + 20 + textFrameWidth + 20 + cardWidth; // images + spacing + text + spacing + image
       const headerStartX = (pageWidth - headerContentWidth) / 2;
       
       // Add left Queen card image
@@ -94,23 +95,22 @@ export function OrganizationRules() {
       
       // Text frame positioned between images
       const textFrameX = headerStartX + cardWidth + 20; // 20px spacing from Figma
-      const textFrameY = headerTop + 5; // Vertically centered in 86px frame
+      const textFrameY = headerTop; // Align with top of images
       
-      // Organization name (red text, 20px bold, left aligned)
+      // Organization name (red text, 20px bold, left aligned within text frame)
       doc.setTextColor(255, 0, 0);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text(organizationName.toUpperCase(), textFrameX, textFrameY + 7);
+      doc.text(organizationName.toUpperCase(), textFrameX, textFrameY + 10);
 
-      // "Rules for the Queen of Hearts" subtitle (black, 18px medium, center)
+      // "Rules for the Queen of Hearts" subtitle (black, 18px medium, center aligned within text frame)
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'normal');
-      const subtitleWidth = 77; // 277 points from Figma (scaled)
-      doc.text('Rules for the Queen of Hearts', textFrameX + subtitleWidth / 2, textFrameY + 20, { align: 'center' });
+      doc.text('Rules for the Queen of Hearts', textFrameX + textFrameWidth / 2, textFrameY + 22, { align: 'center' });
 
       // Add right Queen card image
-      doc.addImage(img, 'PNG', textFrameX + 77 + 20, headerTop, cardWidth, cardHeight);
+      doc.addImage(img, 'PNG', textFrameX + textFrameWidth + 20, headerTop, cardWidth, cardHeight);
 
       // Draw horizontal line (26px spacing after header frame from Figma)
       const lineY = headerTop + cardHeight + 7;
@@ -275,25 +275,29 @@ export function OrganizationRules() {
       doc.text(`Queens (except Queen of Hearts)= $${payoutQueen}`, margin, yPos);
       yPos += lineHeight;
       doc.text(`Joker's= $${payoutJoker}`, margin, yPos);
-      yPos += lineHeight + 6; // Continue on same page
-      doc.setTextColor(0, 0, 0);
-
-      // Check if we need a new page
-      if (yPos > pageHeight - 60) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
+      yPos += lineHeight + 4;
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
 
+      // Check if we need a new page before continuing
+      if (yPos > pageHeight - 80) {
+        doc.addPage();
+        yPos = 20;
+      }
+
       // Rule: Prize payments
       doc.setFont('helvetica', 'bold');
-      doc.text(`**Prize payments will be taken from the prize money and not the lodge's portion in`, margin, yPos);
+      doc.text(`**Prize payments will be taken from the prize money and not the organization's portion in`, margin, yPos);
       yPos += lineHeight;
       doc.text(`accordance with IRS rules.**`, margin, yPos);
       yPos += lineHeight + 2;
       doc.setFont('helvetica', 'normal');
+
+      // Check if we need a new page
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = 20;
+      }
 
       // Rule: Ineligible person
       const lines2_1 = doc.splitTextToSize(`• If an ineligible person's card is drawn, that card will be discarded and there will be no payout for that person. A valid ticket will be drawn again for an eligible person to choose a new card that night. If by chance an ineligible person chooses the Queen of Hearts, a new game will begin the following week.`, pageWidth - 2 * margin);
