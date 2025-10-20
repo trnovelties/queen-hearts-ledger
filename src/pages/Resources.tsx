@@ -31,6 +31,14 @@ const taxForms = [
     url: "https://www.irs.gov/forms-pubs/about-form-w-2-g",
     type: "Information Page",
     special: "Must be ordered as original forms (7 copies required)"
+  },
+  {
+    id: "w9",
+    title: "Form W-9",
+    fullTitle: "Request for Taxpayer Identification Number and Certification",
+    description: "Used to request the taxpayer identification number (TIN) of a U.S. person for reporting purposes",
+    url: "https://www.irs.gov/pub/irs-pdf/fw9.pdf",
+    type: "Direct PDF"
   }
 ];
 
