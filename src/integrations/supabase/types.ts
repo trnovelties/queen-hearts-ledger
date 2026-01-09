@@ -419,11 +419,14 @@ export type Database = {
           organization_name: string | null
           role: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "users"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      is_current_user_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_current_user_admin: { Args: never; Returns: boolean }
       update_user_profile: {
         Args: {
           p_about: string
