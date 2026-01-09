@@ -294,7 +294,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                 ) : selectedMetric === "netSales" ? (
                   <Bar 
                     dataKey="Revenue" 
-                    fill="#1F4E4A" 
+                    fill="#ff6666" 
                     radius={[4, 4, 0, 0]}
                     name="Net Sales (Ticket Revenue)"
                   />
