@@ -49,7 +49,7 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
     }
   }, [games, selectedJackpotGame]);
   
-  const [selectedMetric, setSelectedMetric] = useState<"income" | "expense">("expense");
+  const [selectedMetric, setSelectedMetric] = useState<"income" | "expense" | "netSales">("expense");
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -236,16 +236,19 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                "Overall Performance"}
             </CardTitle>
             <CardDescription>
-              {selectedMetric === "income" ? "Income (Net Profit) analysis" : "Expense (Distribution) analysis"}
+              {selectedMetric === "income" ? "Income (Net Profit) analysis" : 
+               selectedMetric === "netSales" ? "Total ticket revenue by game" : 
+               "Expense (Distribution) analysis"}
             </CardDescription>
           </div>
-          <Select value={selectedMetric} onValueChange={(value) => setSelectedMetric(value as "income" | "expense")}>
-            <SelectTrigger className="w-[150px]">
+          <Select value={selectedMetric} onValueChange={(value) => setSelectedMetric(value as "income" | "expense" | "netSales")}>
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select metric" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="income">Income</SelectItem>
               <SelectItem value="expense">Expense</SelectItem>
+              <SelectItem value="netSales">Net Sales</SelectItem>
             </SelectContent>
           </Select>
         </CardHeader>
@@ -287,6 +290,13 @@ export function FinancialCharts({ games, reportType, selectedGame }: FinancialCh
                     strokeWidth={3}
                     dot={{ fill: "#ff6666", r: 5 }}
                     name="Income (Net Profit)"
+                  />
+                ) : selectedMetric === "netSales" ? (
+                  <Bar 
+                    dataKey="Revenue" 
+                    fill="#1F4E4A" 
+                    radius={[4, 4, 0, 0]}
+                    name="Net Sales (Ticket Revenue)"
                   />
                 ) : (
                   <Bar 
