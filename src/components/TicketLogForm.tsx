@@ -266,7 +266,7 @@ export const TicketLogForm = () => {
           </div>
           
           <div className="space-y-2 text-sm pt-4">
-            <p className="font-medium">For Bartenders/Staff:</p>
+            <p className="font-medium">For Volunteer:</p>
             <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
               <li>Fill in the Date for each day's sales</li>
               <li>Record the Starting and Ending ticket numbers</li>
