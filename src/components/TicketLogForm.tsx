@@ -201,9 +201,9 @@ export const TicketLogForm = () => {
             <Printer className="h-5 w-5" />
             Ticket Log Form Generator
           </CardTitle>
-          <CardDescription>
-            Generate a printable ticket log form for daily sales tracking. Bartenders or staff can use this form to manually record ticket sales throughout the day.
-          </CardDescription>
+        <CardDescription>
+          Generate a printable ticket log form for daily sales tracking. Volunteers can use this form to manually record ticket sales throughout the day.
+        </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
