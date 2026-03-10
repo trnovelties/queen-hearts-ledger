@@ -84,12 +84,34 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         .select('card_payouts, version')
         .eq('user_id', user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (configError) {
         console.error('Error fetching configuration:', configError);
         toast.error("Failed to fetch current configuration");
         return;
+      }
+
+      // If no config exists yet, create one with defaults
+      if (!config) {
+        console.log('No configuration found for user, creating default...');
+        const { data: newConfig, error: createError } = await supabase
+          .from('configurations')
+          .insert({ user_id: user.id })
+          .select('card_payouts, version')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating default configuration:', createError);
+          toast.error("Failed to create default configuration");
+          return;
+        }
+        
+        // Use the newly created config
+        Object.assign(config || {}, newConfig);
+        var effectiveConfig = newConfig;
+      } else {
+        var effectiveConfig = config;
       }
 
       // Get carryover from last game's contribution
