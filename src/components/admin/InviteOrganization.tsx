@@ -104,7 +104,7 @@ export function InviteOrganization() {
                 className="text-xs font-mono bg-muted"
               />
               <Button variant="outline" size="icon" onClick={handleCopy}>
-                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
