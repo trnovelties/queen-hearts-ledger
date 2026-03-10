@@ -93,6 +93,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
       }
 
       // If no config exists yet, create one with defaults
+      let effectiveConfig = config;
       if (!config) {
         console.log('No configuration found for user, creating default...');
         const { data: newConfig, error: createError } = await supabase
@@ -106,12 +107,7 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
           toast.error("Failed to create default configuration");
           return;
         }
-        
-        // Use the newly created config
-        Object.assign(config || {}, newConfig);
-        var effectiveConfig = newConfig;
-      } else {
-        var effectiveConfig = config;
+        effectiveConfig = newConfig;
       }
 
       // Get carryover from last game's contribution
