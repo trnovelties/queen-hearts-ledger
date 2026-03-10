@@ -58,9 +58,14 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, supabaseServiceKey)
 
     // Generate an invite link for the email
+    const siteUrl = req.headers.get('origin') || 'https://queen-hearts-ledger.lovable.app'
+    
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: 'invite',
       email: email.trim(),
+      options: {
+        redirectTo: `${siteUrl}/reset-password`,
+      },
     })
 
     if (error) {
@@ -71,8 +76,14 @@ Deno.serve(async (req) => {
       })
     }
 
-    // The generated link contains a token - we need to construct the proper redirect URL
-    const actionLink = data.properties?.action_link
+    // Replace the localhost redirect in the action_link with the actual site URL
+    let actionLink = data.properties?.action_link || ''
+    if (actionLink) {
+      // The action_link has redirect_to pointing to localhost, fix it
+      const url = new URL(actionLink)
+      url.searchParams.set('redirect_to', `${siteUrl}/reset-password`)
+      actionLink = url.toString()
+    }
     
     return new Response(JSON.stringify({ 
       invite_link: actionLink,
