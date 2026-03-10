@@ -84,12 +84,30 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         .select('card_payouts, version')
         .eq('user_id', user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (configError) {
         console.error('Error fetching configuration:', configError);
         toast.error("Failed to fetch current configuration");
         return;
+      }
+
+      // If no config exists yet, create one with defaults
+      let effectiveConfig = config;
+      if (!config) {
+        console.log('No configuration found for user, creating default...');
+        const { data: newConfig, error: createError } = await supabase
+          .from('configurations')
+          .insert({ user_id: user.id })
+          .select('card_payouts, version')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating default configuration:', createError);
+          toast.error("Failed to create default configuration");
+          return;
+        }
+        effectiveConfig = newConfig;
       }
 
       // Get carryover from last game's contribution
@@ -112,8 +130,8 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         jackpot_percentage: formData.jackpotPercentage,
         minimum_starting_jackpot: formData.minimumStartingJackpot,
         carryover_jackpot: carryoverJackpot,
-        card_payouts: config.card_payouts,
-        configuration_version: config.version,
+        card_payouts: effectiveConfig!.card_payouts,
+        configuration_version: effectiveConfig!.version,
         user_id: user.id
       };
 
