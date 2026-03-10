@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building, Users, Eye, Shield } from "lucide-react";
 import { useAdmin } from "@/context/AdminContext";
 import { OrganizationSelector } from "./OrganizationSelector";
+import { InviteOrganization } from "./InviteOrganization";
 import { GameManagement } from "../GameManagement";
 
 export function AdminDashboard() {
@@ -61,6 +62,9 @@ export function AdminDashboard() {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Invite Organization */}
+      <InviteOrganization />
 
       {/* Organization Selector */}
       <OrganizationSelector />
