@@ -4,17 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, Mail, Link2 } from "lucide-react";
 
 export function InviteOrganization() {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleGenerateLink = async () => {
+  const handleGenerateLink = () => {
     if (!email.trim()) {
       toast({ title: "Error", description: "Please enter an email address.", variant: "destructive" });
       return;
@@ -26,26 +24,11 @@ export function InviteOrganization() {
       return;
     }
 
-    setLoading(true);
-    setInviteLink(null);
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/signup/${encodeURIComponent(email.trim())}`;
+    setInviteLink(link);
     setCopied(false);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-invite-link', {
-        body: { email: email.trim() },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      setInviteLink(data.invite_link);
-      toast({ title: "Invite Link Generated", description: `Signup link created for ${email.trim()}.` });
-    } catch (err: any) {
-      console.error('Error generating invite link:', err);
-      toast({ title: "Error", description: err.message || "Failed to generate invite link.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    toast({ title: "Signup Link Generated", description: `Link created for ${email.trim()}.` });
   };
 
   const handleCopy = async () => {
@@ -53,7 +36,7 @@ export function InviteOrganization() {
     try {
       await navigator.clipboard.writeText(inviteLink);
       setCopied(true);
-      toast({ title: "Copied!", description: "Invite link copied to clipboard." });
+      toast({ title: "Copied!", description: "Signup link copied to clipboard." });
       setTimeout(() => setCopied(false), 3000);
     } catch {
       toast({ title: "Error", description: "Failed to copy link.", variant: "destructive" });
@@ -85,12 +68,11 @@ export function InviteOrganization() {
                 setInviteLink(null);
                 setCopied(false);
               }}
-              disabled={loading}
             />
           </div>
-          <Button onClick={handleGenerateLink} disabled={loading || !email.trim()}>
+          <Button onClick={handleGenerateLink} disabled={!email.trim()}>
             <Link2 className="w-4 h-4 mr-2" />
-            {loading ? "Generating..." : "Generate Link"}
+            Generate Link
           </Button>
         </div>
 
@@ -108,7 +90,7 @@ export function InviteOrganization() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Copy this link and send it to the organization. They'll use it to set their password and access the app.
+              Copy this link and send it to the organization. They'll use it to create their account.
             </p>
           </div>
         )}
