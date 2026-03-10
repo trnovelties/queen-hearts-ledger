@@ -130,8 +130,8 @@ export function GameForm({ open, onOpenChange, games, onComplete }: GameFormProp
         jackpot_percentage: formData.jackpotPercentage,
         minimum_starting_jackpot: formData.minimumStartingJackpot,
         carryover_jackpot: carryoverJackpot,
-        card_payouts: config.card_payouts,
-        configuration_version: config.version,
+        card_payouts: effectiveConfig!.card_payouts,
+        configuration_version: effectiveConfig!.version,
         user_id: user.id
       };
 
