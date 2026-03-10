@@ -29,6 +29,7 @@ const App = () => (
             <Toaster />
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/signup/:email" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
