@@ -63,6 +63,9 @@ export function AdminDashboard() {
         </CardHeader>
       </Card>
 
+      {/* Invite Organization */}
+      <InviteOrganization />
+
       {/* Organization Selector */}
       <OrganizationSelector />
     </div>
